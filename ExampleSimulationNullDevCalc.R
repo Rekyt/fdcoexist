@@ -63,11 +63,17 @@ plot(1:time, composition[5, 1,], type = "l")
 
 # Compute FD on last community -------------------------------------------------
 
+# Vector to consider available traits
+#   TRUE  = trait is available to compute FD,
+#   FALSE = traits is unavailable.
+available_traits = rep(TRUE, n_traits)
+
 # Get names of the species that are present at least in a single patch
 present_species = colnames(final)[colSums(final) != 0]
 
 # Compute FD metrics
-final_FD <- dbFD(traits[present_species, ], final[, present_species],
+final_FD <- dbFD(traits[present_species, available_traits],
+                 final[, present_species],
                  calc.FRic = TRUE, stand.FRic = TRUE,
                  scale.RaoQ = TRUE,
                  calc.FDiv = TRUE)
