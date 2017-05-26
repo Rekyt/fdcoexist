@@ -1,18 +1,13 @@
-#######################
-### Code for example metacommunity simulation and beta-null deviation calculations
-### with "Differentiating between niche and neutral assembly in metacommunities using
-### null models of beta-diversity"
-### Prepared May 14, 2014
-### Authors Caroline Tucker, Lauren Shoemaker, Brett Melbourne
-#######################
+# Packages ---------------------------------------------------------------------
 
+library(FD)
 
-## Load required source files and libraries
-library(reldist)
-library(vegan)
-library(bipartite)
+# Source other functions -------------------------------------------------------
+
 source("R/multigen_function.r")
 
+
+# Initial values ---------------------------------------------------------------
 ## Set number of patches, species, time
 patches  <- 10   # Number of patches
 species  <- 25   # Number of species
@@ -27,13 +22,15 @@ composition <- array(NA, dim = c(patches, species, time),
 
 composition[,,"time1"] <- initpop # N
 
-#create env obj
+# Generate environment
 env <- 1:patches
 names(env) <- dimnames(composition)[[1]]
 
+# Competition + Dispersion coefficients
 A = 0.001	# Alpha scalar
 d = 0.05 # Dispersal percentage
 
+# Generate tarits
 traits <- generate_traits(species,
                           rep(min(env), n_traits),
                           rep(max(env), n_traits))
@@ -48,12 +45,29 @@ names(trait_type) <- colnames(traits)
 
 
 
+# Actual simulation ------------------------------------------------------------
+
 results <- multigen(traits = traits, trait_type = trait_type, env = env,
                     time = time, species = species, patches = patches,
                     composition = composition, A = A, d = d)
 
+# threshold number of individuals
+final <- ifelse(results[,,time] < 2, 0, results[,, time])
+
+
+# Plots ------------------------------------------------------------------------
+
 plot(1:time, composition[5,13,], type = "l")
 plot(1:time, composition[5, 1,], type = "l")
 
-# threshold number of individuals
-final <- ifelse(composition[,,time] < 2, 0, stoch[,])
+
+# Compute FD on last community -------------------------------------------------
+
+# Get names of the species that are present at least in a single patch
+present_species = colnames(final)[colSums(final) != 0]
+
+# Compute FD metrics
+final_FD <- dbFD(traits[present_species, ], final[, present_species],
+                 calc.FRic = TRUE, stand.FRic = TRUE,
+                 scale.RaoQ = TRUE,
+                 calc.FDiv = TRUE)
