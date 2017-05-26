@@ -11,7 +11,7 @@
 library(reldist)
 library(vegan)
 library(bipartite)
-source("MetacommunityDynamicsFctsOikos.r")
+source("multigen_function.r")
 
 ## Set number of patches, species, time
 patches <- 10  # Number of patches
@@ -30,32 +30,10 @@ names(env) <- dimnames(composition)[[1]]
 traits <- seq(from=1, to=patches, length.out=species)
 names(traits) <- dimnames(composition)[[2]]
 
-#Calculate dist trait 
-disttraits <- as.matrix(dist(traits))
+A = 0.001	#Alpha scalar
+d = 0.05 #Dispersal percentage
 
-#Calculate R 
-#calculates R given some env and trait combo
-envtrtcurve <- function(trti, envx, k=2, c=0.5){ k*exp(-1*((trti-envx)^2)/2*c^2)}
-
-#plot(envtrtcurve(1, env, 2, 0.5)~env, type="l")
-#points(envtrtcurve(6, env, 1, 0.5)~env, type="l")
-
-Rmatrix <- sapply(traits, envtrtcurve, envx=env)
-
-alphaterm <- function(distance, Nts){#needs pop sizes at time t
-	Nts %*% distance
-}
-
-alpha <- alphaterm(disttraits, composition[,,1])
-
-A = 0.001
-
-bevHoltFct <- function(R, N, A, alpha){ ((R * N) * 1)/(1 + A * alpha)
-	}
-
-for(m in seq(1, time - 1)){		
-	composition[,,m+1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)	
-}
+results <- multigen(traits=traits, env=env, time=time, species=species, patches=patches, composition=composition, A=A, d=d)
 
 plot(1:time, composition[5,13,], type="l")
 plot(1:time, composition[5,1,], type="l")
