@@ -12,7 +12,7 @@ source("R/multigen_function.r")
 patches  <- 10   # Number of patches
 species  <- 25   # Number of species
 time     <- 150	 # Length of model run (generations)
-initpop  <- 25   # initial population size
+initpop  <- 20   # initial population size
 n_traits <- 1    # number of traits
 
 composition <- array(NA, dim = c(patches, species, time),
@@ -27,7 +27,7 @@ env <- 1:patches
 names(env) <- dimnames(composition)[[1]]
 
 # Competition + Dispersion coefficients
-A = 0.0001	# Alpha scalar
+A = 0.0005	# Alpha scalar
 d = 0.05 # Dispersal percentage
 
 # Generate tarits
@@ -49,7 +49,7 @@ names(trait_type) <- colnames(traits)
 
 results <- multigen(traits = traits, trait_type = trait_type, env = env,
                     time = time, species = species, patches = patches,
-                    composition = composition, A = A, d = d, k=5, c=1)
+                    composition = composition, A = A, d = d, k=1.15, c=0.5)
 
 # threshold number of individuals
 final <- ifelse(results[,,time] < 2, 0, results[,, time])

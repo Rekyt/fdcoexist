@@ -57,7 +57,7 @@ multigen <- function(traits, trait_type, env, time, species, patches,
 
 	# Calculate fitness term (R)
 	Rmatrix <- apply(traits, 1, function(x, types) {
-	    sapply(env, envtrtcurve, trti = x, types = types)
+	    sapply(env, envtrtcurve, trti = x, types = types, k=k, c=c)
 	},
 	types = trait_type)
 
