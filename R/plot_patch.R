@@ -1,7 +1,7 @@
 
 # Graphical function to plot species dynamics through time in a focal patch
 
-plot_patch <- function(patch, time){
+plot_patch <- function(results, patch, time){
   require(ggplot2)
   
   patch_data <- list()
