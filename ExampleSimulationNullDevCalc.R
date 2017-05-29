@@ -13,7 +13,7 @@ patches  <- 10   # Number of patches
 species  <- 25   # Number of species
 time     <- 150	 # Length of model run (generations)
 initpop  <- 25   # initial population size
-n_traits <- 3    # number of traits
+n_traits <- 1    # number of traits
 
 composition <- array(NA, dim = c(patches, species, time),
                      dimnames = list(paste0("patches", 1:patches),
@@ -27,7 +27,7 @@ env <- 1:patches
 names(env) <- dimnames(composition)[[1]]
 
 # Competition + Dispersion coefficients
-A = 0.001	# Alpha scalar
+A = 0.0001	# Alpha scalar
 d = 0.05 # Dispersal percentage
 
 # Generate tarits
@@ -49,7 +49,7 @@ names(trait_type) <- colnames(traits)
 
 results <- multigen(traits = traits, trait_type = trait_type, env = env,
                     time = time, species = species, patches = patches,
-                    composition = composition, A = A, d = d)
+                    composition = composition, A = A, d = d, k=5, c=1)
 
 # threshold number of individuals
 final <- ifelse(results[,,time] < 2, 0, results[,, time])
@@ -57,8 +57,19 @@ final <- ifelse(results[,,time] < 2, 0, results[,, time])
 
 # Plots ------------------------------------------------------------------------
 
-plot(1:time, composition[5,13,], type = "l")
-plot(1:time, composition[5, 1,], type = "l")
+plot(1:time, results[5, 1, 1:time], type = "l", ylim=c(0,150))
+points(1:time, results[5, 4, 1:time], type = "l", col="red")
+points(1:time, results[5, 8, 1:time], type = "l", col="blue")
+points(1:time, results[5, 12, 1:time], type = "l", col="green")
+points(1:time, results[5, 20, 1:time], type = "l", col="purple")
+points(1:time, results[5, 25, 1:time], type = "l", col="grey")
+#
+plot(1:time, results[9, 1, 1:time], type = "l", ylim=c(0,150))
+points(1:time, results[9, 4, 1:time], type = "l", col="red")
+points(1:time, results[9, 8, 1:time], type = "l", col="blue")
+points(1:time, results[9, 12, 1:time], type = "l", col="green")
+points(1:time, results[9, 20, 1:time], type = "l", col="purple")
+points(1:time, results[9, 25, 1:time], type = "l", col="grey")
 
 
 # Compute FD on last community -------------------------------------------------
