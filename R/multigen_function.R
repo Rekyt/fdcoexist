@@ -15,6 +15,7 @@ bevHoltFct <- function(R, N, A, alpha){
 # min_val = vector minimum values with length number of traits
 # max_val = vector of maximum values with length number of traits
 generate_traits <- function(n_species, min_val, max_val) {
+    
     traits_matrix <- mapply(runif, n = n_species, min = min_val, max = max_val)
     row.names(traits_matrix) <- paste0("species", seq_len(n_species))
     colnames(traits_matrix) <- paste0("trait", seq_along(min_val))
@@ -48,7 +49,7 @@ alphaterm <- function(distance, Nts){ # needs pop sizes at time t
 
 
 multigen <- function(traits, trait_type, env, time, species, patches,
-                     composition, A, d) {
+                     composition, A, d, k, c) {
 
     # Calculate dist trait
     disttraits <- as.matrix(dist(traits[, trait_type == "A" |
