@@ -21,12 +21,12 @@ species  <- 25   # Number of species
 time     <- 150	 # Length of model run (generations)
 initpop  <- 150   # initial population size
 n_traits <- 1    # number of traits
-k        <- 1.05 # Niche height
-c        <- 0.25 # Niche breadth
+k        <- 1.45 # Niche height
+c        <- 10 # Niche breadth
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
-d = 0.01 # Dispersal percentage
+d = 0.5 # Dispersal percentage
 
 # Generate environment
 env <- 1:patches
@@ -92,5 +92,42 @@ p15_both = plot_patch(single_trait_both$compo,   15, 100) +
 
 plot_patches = plot_grid(p5_grow, p5_comp, p5_both, p15_grow, p15_comp,
                          p15_both, ncol = 3, nrow = 2)
+plot_patches
+```
+
+## Compute CWM & CWV
+
+```{r}
+compute_cwm = function(simulation_routine, trait_df = traits) {
+    cwm_df = (simulation_routine$compo[,,150] / rowSums(simulation_routine$compo[,,150])) %*% trait_df
+    
+    cwm_df = as.data.frame(cwm_df)
+    cwm_df = tibble::rownames_to_column(cwm_df, "patch")
+    cwm_df$env      = seq(patches)
+    
+    return(cwm_df)
+}
+
+both_cwm = compute_cwm(single_trait_both, traits)
+colnames(both_cwm)[2] = c("both_cwm")
+growth_cwm = compute_cwm(single_trait_growth, traits)
+colnames(growth_cwm)[2] = c("growth_cwm")
+compet_cwm = compute_cwm(single_trait_compet, traits)
+colnames(compet_cwm)[2] = c("compet_cwm")
+
+all_cwm = merge(both_cwm, growth_cwm, c("patch", "env"))
+all_cwm = merge(all_cwm, compet_cwm, c("patch", "env"))
+all_cwm = tidyr::gather(all_cwm, "cwm_type", "cwm_value", dplyr::contains("cwm"))
+
+plot_cwm = ggplot(all_cwm, aes(env, cwm_value, color = cwm_type)) +
+    geom_abline(slope = 1, intercept = 0) +
+    geom_point() +
+    labs(x = "Environmental Value",
+         y = "Community Weighted Mean",
+         subtitle = "Timestep: 150, Trait Both") +
+    scale_color_discrete(labels = c(pred_cwm = "Optimal\nTrait",
+                                    trait1   = "Obs. CWM")) +
+    theme_bw()
+plot_cwm
 ```
 
