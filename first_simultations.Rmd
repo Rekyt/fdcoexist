@@ -1,0 +1,96 @@
+---
+title: "Simple Test coexistence"
+author: "XX"
+date: "4 juin 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(cowplot)
+```
+
+## R Markdown
+
+```{r}
+devtools::load_all()
+#### Keep stable for all
+patches  <- 25   # Number of patches
+species  <- 25   # Number of species
+time     <- 150	 # Length of model run (generations)
+initpop  <- 150   # initial population size
+n_traits <- 1    # number of traits
+k        <- 1.05 # Niche height
+c        <- 0.25 # Niche breadth
+
+# Competition + Dispersion coefficients
+A =  0.0005	# Alpha scalar 
+d = 0.01 # Dispersal percentage
+
+# Generate environment
+env <- 1:patches
+
+composition <- array(NA, dim = c(patches, species, time),
+                     dimnames = list(paste0("patches", 1:patches),
+                                     paste0("species", 1:species),
+                                     paste0("time", 1:time))) #where values = N
+names(env) <- dimnames(composition)[[1]]
+
+composition[,,"time1"] <- initpop # N
+
+# Generate traits
+traits <- generate_traits(species,
+                          rep(min(env), n_traits),
+                          rep(max(env), n_traits))
+
+# Single trait competition, single trait growth, single trait both -------------
+# Goal: compare between the three above-mentioned cases
+
+## Single Trait Competition
+trait_type = c(trait1 = "A")
+single_trait_compet = multigen(traits = traits, trait_type = trait_type,
+                               env = env, time = time, species = species,
+                               patches = patches, composition = composition,
+                               A = A, d = d, k = k, c = c)
+single_trait_compet_final = ifelse(single_trait_compet$compo[,,time] < 2, 0, single_trait_compet$compo[,,time])
+
+## Single Trait Growth
+trait_type = c(trait1 = "R")
+single_trait_growth = multigen(traits = traits, trait_type = trait_type,
+                               env = env, time = time, species = species,
+                               patches = patches, composition = composition,
+                               A = A, d = d, k = k, c = c)
+single_trait_growth_final = ifelse(single_trait_growth$compo[,,time] < 2, 0,
+                                   single_trait_growth$compo[,,time])
+
+## Both
+trait_type = c(trait1 = "RA")
+single_trait_both = multigen(traits = traits, trait_type = trait_type,
+                             env = env, time = time, species = species,
+                             patches = patches, composition = composition,
+                             A = A, d = d, k = k, c = c)
+
+single_trait_both_final = ifelse(single_trait_both$compo[,,time] < 2, 0,
+                                 single_trait_both$compo[,,time])
+```
+
+```{r}
+p5_comp = plot_patch(single_trait_compet$compo, 5, 100) +
+    labs(subtitle = "Competition")
+p5_grow = plot_patch(single_trait_growth$compo, 5, 100) +
+    labs(subtitle = "Growth")
+p5_both = plot_patch(single_trait_both$compo,   5, 100) +
+    labs(subtitle = "Both")
+
+p15_comp = plot_patch(single_trait_compet$compo, 15, 100) +
+    labs(subtitle = "Competition")
+p15_grow = plot_patch(single_trait_growth$compo, 15, 100)  +
+    labs(subtitle = "Growth")
+p15_both = plot_patch(single_trait_both$compo,   15, 100) +
+    labs(subtitle = "Both")
+
+plot_patches = plot_grid(p5_grow, p5_comp, p5_both, p15_grow, p15_comp,
+                         p15_both, ncol = 3, nrow = 2)
+```
+
