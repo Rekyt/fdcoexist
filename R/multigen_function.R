@@ -27,7 +27,7 @@ alphaterm <- function(distance, Nts) {
 #'
 #' @export
 bevHoltFct <- function(R, N, A, alpha){
-    ((R * N) * 1)/(1 + A * alpha)
+    (R * N)/(1 + A * alpha)
 }
 
 #' Generate Traits data.frame
@@ -43,7 +43,7 @@ bevHoltFct <- function(R, N, A, alpha){
 #' @export
 generate_traits <- function(n_species, min_val, max_val) {
 
-    traits_matrix <- mapply(runif, n = n_species, min = min_val, max = max_val)
+    traits_matrix <- mapply(seq, from = min_val, to = max_val, length.out = n_species)
     row.names(traits_matrix) <- paste0("species", seq_len(n_species))
     colnames(traits_matrix) <- paste0("trait", seq_along(min_val))
 
@@ -69,10 +69,14 @@ generate_traits <- function(n_species, min_val, max_val) {
 #' @export
 envtrtcurve <- function(trti, envx, types, k = 2, c = 0.5) {
 
-    fitness_traits <- trti[types == "R" | types == "RA"]
+    if (!(sum(c("R", "RA") %in% types))) {
+        R <- k
+    } else {
+        fitness_traits <- trti[types == "R" | types == "RA"]
 
-    # Each trait has similar impact
-    R <- k * exp(-((fitness_traits - envx)^2)/2*c^2)
+        # Each trait has similar impact
+        R <- k * exp(-((fitness_traits - envx)^2)/2*c^2)
+    }
 
     Rfinal <- mean(R)  # Each trait contributes equally to fitness
 
@@ -103,19 +107,36 @@ multigen <- function(traits, trait_type, env, time, species, patches,
                      composition, A, d, k, c) {
 
     # Calculate dist trait
-    disttraits <- as.matrix(dist(traits[, trait_type == "A" |
-                                            trait_type == "RA"]))
+    if (!(sum(c("A", "RA") %in% trait_type))) {
+
+        # If there is no defined competition trait, there is no competition
+        disttraits <- matrix(0, nrow = species, ncol = species)
+    } else {
+
+        disttraits <- as.matrix(dist(traits[, trait_type == "A" |
+                                                trait_type == "RA"]))
+
+        # Scale trait distance to balance growth
+        disttraits <- (disttraits - min(disttraits)) / (max(disttraits) - min(disttraits))
+    }
 
 	# Calculate fitness term (R)
 	Rmatrix <- apply(traits, 1, function(x, types) {
-	    sapply(env, envtrtcurve, trti = x, types = types, k=k, c=c)
+	    sapply(env, envtrtcurve, trti = x, types = types, k = k, c = c)
 	},
 	types = trait_type)
+
+
+	# List of alphaterms
+	alphalist = vector("numeric", length = time - 1)
 
 	for (m in seq(1, time - 1)) {
 
 	    # Calculate niche term (alpha)
-	    alpha <- alphaterm(disttraits, composition[,,m])
+	    alpha <- alphaterm(disttraits, composition[,,m]) * k
+
+	    alphalist[m] = alpha
+
 	    composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)
 	    # threshold number of individuals
 	    composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
@@ -132,6 +153,7 @@ multigen <- function(traits, trait_type, env, time, species, patches,
 	    total <- stay + immigrants
 	    composition[,,m + 1] <- total
 	}
-    return(composition)
+    return(list(compo = composition,
+                alpha = alphalist))
 }
 
