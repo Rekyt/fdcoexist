@@ -12,7 +12,7 @@
 #' @param Nts      vector of abundances of species at time t
 #' @export
 alphaterm <- function(distance, Nts) {
-	Nts %*% distance
+	Nts %*% (1 - distance)
 }
 
 #' Beverton-Holt function
@@ -43,7 +43,8 @@ bevHoltFct <- function(R, N, A, alpha){
 #' @export
 generate_traits <- function(n_species, min_val, max_val) {
 
-    traits_matrix <- mapply(seq, from = min_val, to = max_val, length.out = n_species)
+    traits_matrix <- mapply(seq, from = min_val, to = max_val,
+                            length.out = n_species)
     row.names(traits_matrix) <- paste0("species", seq_len(n_species))
     colnames(traits_matrix) <- paste0("trait", seq_along(min_val))
 
@@ -75,7 +76,7 @@ envtrtcurve <- function(trti, envx, types, k = 2, c = 0.5) {
         fitness_traits <- trti[types == "R" | types == "RA"]
 
         # Each trait has similar impact
-        R <- k * exp(-((fitness_traits - envx)^2)/2*c^2)
+        R <- k * exp(-((fitness_traits - envx)^2)/(2*c^2))
     }
 
     Rfinal <- mean(R)  # Each trait contributes equally to fitness
@@ -93,11 +94,11 @@ envtrtcurve <- function(trti, envx, types, k = 2, c = 0.5) {
 #'                   or `N`)
 #' @param env a vector of environmenal values
 #' @param time a integer giving the number of generations
-#' @param species ?
+#' @param species a integer giving the number of species
 #' @param patches the number of patches?
-#' @param composition ?
+#' @param composition the actual array containing species abundances per site over time
 #' @param A the scalar of competition coefficent (see [bevHoltFct()])
-#' @param d ?
+#' @param d dispersal scale
 #' @param k a scalar for computation fo growth rate
 #' @param c a constant to compute growth rates
 #'
@@ -117,7 +118,7 @@ multigen <- function(traits, trait_type, env, time, species, patches,
                                                 trait_type == "RA"]))
 
         # Scale trait distance to balance growth
-        disttraits <- (disttraits - min(disttraits)) / (max(disttraits) - min(disttraits))
+        disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
     }
 
 	# Calculate fitness term (R)
@@ -128,14 +129,14 @@ multigen <- function(traits, trait_type, env, time, species, patches,
 
 
 	# List of alphaterms
-	alphalist = vector("numeric", length = time - 1)
+	alphalist = list()
 
 	for (m in seq(1, time - 1)) {
 
 	    # Calculate niche term (alpha)
-	    alpha <- alphaterm(disttraits, composition[,,m]) * k
+	    alpha <- alphaterm(disttraits, composition[,,m])
 
-	    alphalist[m] = alpha
+	    alphalist[[m]] = alpha
 
 	    composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)
 	    # threshold number of individuals
