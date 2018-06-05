@@ -151,7 +151,7 @@ multigen <- function(traits, trait_type, env, time, species, patches,
 
 	    # All immigrants move evenly to all patches
 	    immigrants <- apply(migrate, 2, "sum")/patches
-	    total <- stay + immigrants
+	    total <- t(t(stay) + immigrants) # beware of vector recycling when summing both matrices
 	    composition[,,m + 1] <- total
 	}
     return(list(compo = composition,
