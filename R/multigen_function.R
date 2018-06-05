@@ -12,7 +12,7 @@
 #' @param Nts      vector of abundances of species at time t
 #' @export
 alphaterm <- function(distance, Nts) {
-	Nts %*% (1 - distance)
+    Nts %*% (1 - distance)
 }
 
 #' Beverton-Holt function
@@ -65,10 +65,14 @@ generate_traits <- function(n_species, min_val, max_val) {
 #' @param types a vector of trait types indicating if traits should be used to
 #'              compute growth rate (types `RA` or `R`)
 #' @param k     scalar for growth rate
-#' @param c     constant in gaussian function (standard deviation)
+#' @param width     constant in gaussian function (standard deviation)
 #'
 #' @export
-envtrtcurve <- function(trti, envx, types, k = 2, c = 0.5) {
+env_curve <- function(trti, envx, types, k = 2, width = 0.5) {
+
+    if (length(width) != 1 & length(width) != length(envx)) {
+        stop("There are either too many or not enough values for width")
+    }
 
     if (!(sum(c("R", "RA") %in% types))) {
         R <- k
@@ -76,7 +80,7 @@ envtrtcurve <- function(trti, envx, types, k = 2, c = 0.5) {
         fitness_traits <- trti[types == "R" | types == "RA"]
 
         # Each trait has similar impact
-        R <- k * exp(-((fitness_traits - envx)^2)/(2*c^2))
+        R <- k * exp(-((fitness_traits - envx)^2)/(2*width^2))
     }
 
     Rfinal <- mean(R)  # Each trait contributes equally to fitness
@@ -100,12 +104,12 @@ envtrtcurve <- function(trti, envx, types, k = 2, c = 0.5) {
 #' @param A the scalar of competition coefficent (see [bevHoltFct()])
 #' @param d dispersal scale
 #' @param k a scalar for computation fo growth rate
-#' @param c a constant to compute growth rates
+#' @param width a constant to compute growth rates
 #'
 #' @importFrom stats dist
 #' @export
 multigen <- function(traits, trait_type, env, time, species, patches,
-                     composition, A, d, k, c) {
+                     composition, A, d, k, width) {
 
     # Calculate dist trait
     if (!(sum(c("A", "RA") %in% trait_type))) {
@@ -121,39 +125,39 @@ multigen <- function(traits, trait_type, env, time, species, patches,
         disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
     }
 
-	# Calculate fitness term (R)
-	Rmatrix <- apply(traits, 1, function(x, types) {
-	    sapply(env, envtrtcurve, trti = x, types = types, k = k, c = c)
-	},
-	types = trait_type)
+    # Calculate fitness term (R)
+    Rmatrix <- apply(traits, 1, function(x, types) {
+        sapply(env, env_curve, trti = x, types = types, k = k, width = width)
+    },
+    types = trait_type)
 
 
-	# List of alphaterms
-	alphalist = list()
+    # List of alphaterms
+    alphalist = list()
 
-	for (m in seq(1, time - 1)) {
+    for (m in seq(1, time - 1)) {
 
-	    # Calculate niche term (alpha)
-	    alpha <- alphaterm(disttraits, composition[,,m])
+        # Calculate niche term (alpha)
+        alpha <- alphaterm(disttraits, composition[,,m])
 
-	    alphalist[[m]] = alpha
+        alphalist[[m]] = alpha
 
-	    composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)
-	    # threshold number of individuals
-	    composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
-	                                    composition[,, m + 1])
-	    ## Dispersal
-	    # Probability of dispersal proportional to number of individuals in patch
-	    # given a certain probability
-	    migrate <- d * composition[,, m + 1]
+        composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)
+        # threshold number of individuals
+        composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
+                                        composition[,, m + 1])
+        ## Dispersal
+        # Probability of dispersal proportional to number of individuals in patch
+        # given a certain probability
+        migrate <- d * composition[,, m + 1]
 
-	    stay <- composition[,, m + 1] - migrate
+        stay <- composition[,, m + 1] - migrate
 
-	    # All immigrants move evenly to all patches
-	    immigrants <- apply(migrate, 2, "sum")/patches
-	    total <- t(t(stay) + immigrants) # beware of vector recycling when summing both matrices
-	    composition[,,m + 1] <- total
-	}
+        # All immigrants move evenly to all patches
+        immigrants <- apply(migrate, 2, "sum")/patches
+        total <- t(t(stay) + immigrants) # beware of vector recycling when summing both matrices
+        composition[,,m + 1] <- total
+    }
     return(list(compo = composition,
                 alpha = alphalist))
 }

@@ -22,7 +22,7 @@ time     <- 150	 # Length of model run (generations)
 initpop  <- 50   # initial population size
 n_traits <- 1    # number of traits
 k        <- 1.45 # Niche height
-c        <- 10 # Niche breadth
+width    <- 10 # Niche breadth
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
@@ -52,7 +52,7 @@ trait_type = c(trait1 = "A")
 single_trait_compet = multigen(traits = traits, trait_type = trait_type,
                                env = env, time = time, species = species,
                                patches = patches, composition = composition,
-                               A = A, d = d, k = k, c = c)
+                               A = A, d = d, k = k, width = width)
 single_trait_compet_final = ifelse(single_trait_compet$compo[,,time] < 2, 0, single_trait_compet$compo[,,time])
 
 ## Single Trait Growth
@@ -60,7 +60,7 @@ trait_type = c(trait1 = "R")
 single_trait_growth = multigen(traits = traits, trait_type = trait_type,
                                env = env, time = time, species = species,
                                patches = patches, composition = composition,
-                               A = A, d = d, k = k, c = c)
+                               A = A, d = d, k = k, width = width)
 single_trait_growth_final = ifelse(single_trait_growth$compo[,,time] < 2, 0,
                                    single_trait_growth$compo[,,time])
 
@@ -69,7 +69,7 @@ trait_type = c(trait1 = "RA")
 single_trait_both = multigen(traits = traits, trait_type = trait_type,
                              env = env, time = time, species = species,
                              patches = patches, composition = composition,
-                             A = A, d = d, k = k, c = c)
+                             A = A, d = d, k = k, width = width)
 
 single_trait_both_final = ifelse(single_trait_both$compo[,,time] < 2, 0,
                                  single_trait_both$compo[,,time])
@@ -185,7 +185,7 @@ time     <- 150	 # Length of model run (generations)
 initpop  <- 50   # initial population size
 n_traits <- 1    # number of traits
 k        <- 1.45 # Niche height
-c        <- 10 # Niche breadth
+width    <- 10 # Niche breadth
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
@@ -221,7 +221,7 @@ two_traits <- apply(trait_types, 1,
                         two_traits_types = multigen(traits = traits, trait_type = x,
                                                     env = env, time = time, species = species,
                                                     patches = patches, composition = composition,
-                                                    A = A, d = d, k = k, c = c)
+                                                    A = A, d = d, k = k, width = width)
                     })
 names(two_traits) <- paste(trait_types[, 1], trait_types[, 2], sep = "_")
 
