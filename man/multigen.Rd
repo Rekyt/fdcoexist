@@ -5,7 +5,7 @@
 \title{Function to run the simulation}
 \usage{
 multigen(traits, trait_type, env, time, species, patches, composition, A, d, k,
-  c)
+  width)
 }
 \arguments{
 \item{traits}{a species-traits data.frame}
@@ -17,19 +17,19 @@ or \code{N})}
 
 \item{time}{a integer giving the number of generations}
 
-\item{species}{?}
+\item{species}{a integer giving the number of species}
 
 \item{patches}{the number of patches?}
 
-\item{composition}{?}
+\item{composition}{the actual array containing species abundances per site over time}
 
 \item{A}{the scalar of competition coefficent (see \code{\link[=bevHoltFct]{bevHoltFct()}})}
 
-\item{d}{?}
+\item{d}{dispersal scale}
 
 \item{k}{a scalar for computation fo growth rate}
 
-\item{c}{a constant to compute growth rates}
+\item{width}{a constant to compute growth rates}
 }
 \description{
 Using specified parameters this function run the simulation

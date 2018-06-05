@@ -55,7 +55,7 @@ generate_traits <- function(n_species, min_val, max_val) {
 #' Species growth rate for a given trait and environment
 #'
 #' Using traits that affect growth rate and specified environments, this
-#' functionr returns a data.frame of expected growth rates given the traits and
+#' function returns a data.frame of expected growth rates given the traits and
 #' the environmental value. Suppose a gaussian relationship between growth rate
 #' and environmental value. The total growth rate is then the average of the
 #' growth rates computed with each trait.
@@ -126,11 +126,12 @@ multigen <- function(traits, trait_type, env, time, species, patches,
     }
 
     # Calculate fitness term (R)
-    Rmatrix <- apply(traits, 1, function(x, types) {
-        sapply(env, env_curve, trti = x, types = types, k = k, width = width)
-    },
-    types = trait_type)
-
+    env_param <- cbind(env, k, width)
+    Rmatrix <- apply(traits, 1, function(x) { # Loop over the species traits
+        apply(env_param, 1, function(y){ # Loop over env, k, width combinations
+            env_curve(x, y[1], types = trait_type, k = y[2], width = y[3])
+        })
+    })
 
     # List of alphaterms
     alphalist = list()
