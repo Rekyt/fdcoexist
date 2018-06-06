@@ -9,6 +9,8 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(cowplot)
+library(dplyr)
+library(FD)
 ```
 
 # Single trait
@@ -254,7 +256,6 @@ plot_prop_sp_rich <- ggplot(sp_rich_final, aes(1/width, richness, color = prop_t
     ylab("Patch richness")
 
 # Compute FD metrics (richness, dispersion, eveness)
-library(FD)
 timestep = 10
 FD_prop <- lapply(names(multiple_traits),
                   function(x){
@@ -305,57 +306,87 @@ plot_prop_feve <- ggplot(FD_prop, aes(1/width, feve, color = prop)) +
 
 plot_grid(plot_prop_frich, plot_prop_fdis, plot_prop_feve, nrow = 1)
 
-##
-# Null models: resample species amongst patches
-po = multiple_traits[["prop1"]]$compo[, , 10]
-nb_perm = 9#999
-# Null model 2 (Bernard-Verdier et al. 2012) => shuffling abundances of species within patches
-null_matrices <- replicate(nb_perm, t(apply(po, 1, sample)), simplify = FALSE)
-# Convert to relative abundances
-null_matrices <- lapply(null_matrices, function(y) y/rowSums(y))
-# Add species in column names
-null_matrices = lapply(null_matrices, as.data.frame)
-null_matrices = lapply(null_matrices, setNames, paste0("species", seq(species)))
-# Remove empty rows in null matrices
-null_matrices = lapply(null_matrices, function(x) x[!is.na(rowSums(x)), ])
+# Null models: resample species within each patch (NM2)
+# FD null for each proportion case
+nb_perm = 99#99
+timestep = 10
+FD_null_prop <- lapply(names(multiple_traits),
+                       function(x){
+                           # Null model 2 (Bernard-Verdier et al. 2012) => shuffling abundances of species within patches
+                           null_matrices <- replicate(nb_perm,
+                                                      t(apply(multiple_traits[[x]]$compo[, , timestep], 1, sample)),
+                                                      simplify = FALSE)
+                           # Convert to relative abundances
+                           null_matrices <- lapply(null_matrices, function(y) y/rowSums(y))
+                           # Add species in column names
+                           null_matrices = lapply(null_matrices, as.data.frame)
+                           null_matrices = lapply(null_matrices, setNames, paste0("species", seq(species)))
+                           # Remove empty rows in null matrices
+                           null_matrices = lapply(null_matrices, function(x) x[!is.na(rowSums(x)), ])
+                           
+                           # FD computation over the null matrices
+                           FD_null <- lapply(null_matrices,
+                                             function(y){
+                                                 FD_null_patches <- sapply(seq_len(nrow(y)), function(z){
+                                                     ab_patch = y[z, ]
+                                                     ab_patch = ab_patch[, colSums(ab_patch) > 0] # Removal of species with null abundance
+                                                     #ab_patch = z[, z > 0, drop = FALSE] 
+                                                     if(length(ab_patch) > 1){ # Patch must contain at least 2 species
+                                                         FD_patch = dbFD(traits[rownames(traits) %in%
+                                                                                    names(ab_patch), ],
+                                                                         a = ab_patch,
+                                                                         w.abun = TRUE)
+                                                         data.frame(prop = x,
+                                                                    patch = rownames(ab_patch),
+                                                                    frich = FD_patch$FRic,
+                                                                    fdis = FD_patch$FDis,
+                                                                    feve = FD_patch$FEve)
+                                                     }
+                                                 })
+                                                 FD_null_patches <- do.call(rbind, FD_null_patches)
+                                             })
+                           FD_null <- do.call(rbind, FD_null)
+                           
+                           FD_null <- group_by(FD_null, patch)
+                           FD_null <- summarise_if(FD_null,
+                                                   is.numeric,
+                                                   list(mean = function(x) mean(x, na.rm = TRUE),
+                                                        sd = function(x) sd(x, na.rm = TRUE)))
+                           FD_null <- data.frame(FD_null)
+                           FD_null$prop <- x
+                           return(FD_null)
+                       })
 
-# FD computation over the null matrices
-FD_null <- lapply(null_matrices,
-                  function(y){
-                      FD_null_patches <- sapply(seq_len(nrow(y)), function(z){
-                          ab_patch = y[z, ]
-                          ab_patch = ab_patch[, colSums(ab_patch) > 0] # Removal of species with null abundance
-                          #ab_patch = z[, z > 0, drop = FALSE] 
-                          if(length(ab_patch) > 1){ # Patch must contain at least 2 species
-                              FD_patch = dbFD(traits[rownames(traits) %in%
-                                                         names(ab_patch), ],
-                                              a = ab_patch,
-                                              w.abun = TRUE)
-                              data.frame(prop = "prop1", # => x
-                                         patch = rownames(ab_patch),
-                                         frich = FD_patch$FRic,
-                                         fdis = FD_patch$FDis,
-                                         feve = FD_patch$FEve)
-                          }
-                      })
-                      FD_null_patches <- do.call(rbind, FD_null_patches)
-                  })
-FD_null <- do.call(rbind, FD_null)
+FD_null_prop <- do.call(rbind, FD_null_prop)
 
-library(dplyr)
-FD_null2 <- group_by(FD_null, prop)
-FD_null2 <- summarise_if(FD_null2,
-                         is.numeric,
-                         list(mean = function(x) mean(x, na.rm = TRUE),
-                              sd = function(x) sd(x, na.rm = TRUE)))
+FD_prop <- left_join(FD_prop, FD_null_prop, by = c("prop", "patch"))
+FD_prop$frich_SES <- (FD_prop$frich - FD_prop$frich_mean) / FD_prop$frich_sd
+FD_prop$fdis_SES <- (FD_prop$fdis - FD_prop$fdis_mean) / FD_prop$fdis_sd
+FD_prop$feve_SES <- (FD_prop$feve - FD_prop$feve_mean) / FD_prop$feve_sd
 
+# Plot
+plot_prop_frich_SES <- ggplot(FD_prop, aes(1/width, frich_SES, color = as.factor(prop))) +
+    geom_line(size = 1) +
+    scale_color_manual(values = viridis::viridis(3)) +
+    xlab("Environmental intensity (1/width)") +
+    ylab("Patch functional richness SES") +
+    theme(legend.position = "none")
 
-tapply(FD_null$frich, FD_null$patch, mean, na.rm = TRUE)
-tapply(FD_null$frich, FD_null$patch, sd, na.rm = TRUE)
-FD_SES
+plot_prop_fdis_SES <- ggplot(FD_prop, aes(1/width, fdis_SES, color = prop)) +
+    geom_line(size = 1) +
+    scale_color_manual(values = viridis::viridis(3)) +
+    xlab("Environmental intensity (1/width)") +
+    ylab("Patch functional dispersion SES") +
+    theme(legend.position = "none")
 
-# Standard effect size
-# (obs - mean(Null)) / sigma(Null)
+plot_prop_feve_SES <- ggplot(FD_prop, aes(1/width, feve_SES, color = prop)) +
+    geom_line(size = 1) +
+    scale_color_manual("Proportion of traits\ncontributing to R A",
+                       values = viridis::viridis(3)) +
+    xlab("Environmental intensity (1/width)") +
+    ylab("Patch functional evenness SES")
+
+plot_grid(plot_prop_frich_SES, plot_prop_fdis_SES, plot_prop_feve_SES, nrow = 1)
 
 ```
 
