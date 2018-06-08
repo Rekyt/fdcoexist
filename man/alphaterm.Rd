@@ -17,4 +17,18 @@ From a competition matrix (for the moment the distance between species
 traits) and a vector of abundances by species, return the alpha term in the
 Beverton-Holt equation. The order of species between the two should be the
 same as no checks are done.
+Typically the competition matrix is an euclidean trait distance matrix
+between species. The closer the species are the higher the combination.
+The term is computed as follow:
+}
+\details{
+\deqn{
+    \alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 -
+                                                              \delta_{ij})
+}{
+    alpha_i = sum_{j = 1, j != i}^{S} Ntjx * (1 - delta_ij)
+},
+where alpha_i is the competition term of species i; Ntjx the abundance of
+species j, at time t, in patch x and delta_ij the functional distance between
+species i and species j.
 }

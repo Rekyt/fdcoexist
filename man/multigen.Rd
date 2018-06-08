@@ -8,28 +8,34 @@ multigen(traits, trait_type, env, time, species, patches, composition, A, d, k,
   width)
 }
 \arguments{
-\item{traits}{a species-traits data.frame}
+\item{traits}{a species-traits data.frame with species as rownames and
+traits as numeric columns with names matching \code{trait_type}}
 
-\item{trait_type}{a character vector indicating trait types (\code{R}, \code{A}, \code{RA}
-or \code{N})}
+\item{trait_type}{a character vector indicating trait types (\code{R}=contributing
+to growth only, \code{A} = contributing to competition only,
+\code{RA} = contributing to both growth and competition or
+\code{N} = trait not contributing to growth nor competition)}
 
-\item{env}{a vector of environmenal values}
+\item{env}{a vector of environmental values}
 
-\item{time}{a integer giving the number of generations}
+\item{time}{an integer giving the total number of generations}
 
-\item{species}{a integer giving the number of species}
+\item{species}{an integer giving the total number of species to simulate}
 
-\item{patches}{the number of patches?}
+\item{patches}{an integer giving the total number of patches to simulate}
 
-\item{composition}{the actual array containing species abundances per site over time}
+\item{composition}{the actual array containing species abundances per site
+over time, giving the initial populations of each species}
 
 \item{A}{the scalar of competition coefficent (see \code{\link[=bevHoltFct]{bevHoltFct()}})}
 
-\item{d}{dispersal scale}
+\item{d}{a numeric value between 0 and 1 giving the percentage of
+dispersal occurring across all patches}
 
-\item{k}{a scalar for computation fo growth rate}
+\item{k}{a scalar giving the maximum growth rate in optimal
+environment}
 
-\item{width}{a constant to compute growth rates}
+\item{width}{a numeric giving niche breadth of all species}
 }
 \description{
 Using specified parameters this function run the simulation

@@ -7,6 +7,19 @@
 #' traits) and a vector of abundances by species, return the alpha term in the
 #' Beverton-Holt equation. The order of species between the two should be the
 #' same as no checks are done.
+#' Typically the competition matrix is an euclidean trait distance matrix
+#' between species. The closer the species are the higher the combination.
+#' The term is computed as follow:
+#'
+#' \deqn{
+#'     \alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 -
+#'                                                               \delta_{ij})
+#' }{
+#'     alpha_i = sum_{j = 1, j != i}^{S} Ntjx * (1 - delta_ij)
+#' },
+#' where alpha_i is the competition term of species i; Ntjx the abundance of
+#' species j, at time t, in patch x and delta_ij the functional distance between
+#' species i and species j.
 #'
 #' @param distance competiton matrix of species
 #' @param Nts      vector of abundances of species at time t
@@ -17,10 +30,17 @@ alphaterm <- function(distance, Nts) {
 
 #' Beverton-Holt function
 #'
-#' To simulate growth easily, use the Beverton-Holt equation (ref?)
+#' To simulate growth easily, use the Beverton-Holt equation. Which is:
 #'
-#' @param R     a vector of species growth rates
-#' @param N     a vector of species population sizes
+#' \deqn{
+#'    N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha}
+#' }{
+#'    N(t+1) = (R * N(t))/(1 + A * alpha)
+#' }
+#' where t is time, i is the species of interest and x the patch it occupies.
+#'
+#' @param R     a numeric vector of species growth rates
+#' @param N     a numeric vector of species population sizes
 #' @param A     a scalar for competition coefficient
 #' @param alpha the competition coefficient see [alphaterm()] for its
 #'              computation
@@ -55,17 +75,27 @@ generate_traits <- function(n_species, min_val, max_val) {
 #' Species growth rate for a given trait and environment
 #'
 #' Using traits that affect growth rate and specified environments, this
-#' function returns a data.frame of expected growth rates given the traits and
-#' the environmental value. Suppose a gaussian relationship between growth rate
-#' and environmental value. The total growth rate is then the average of the
+#' function returns a numeric value of expected growth rates given the traits
+#' and the environmental value. The total growth rate is then the average of the
 #' growth rates computed with each trait.
 #'
-#' @param trti  a data.frame of species' traits
-#' @param envx  a data.frame
-#' @param types a vector of trait types indicating if traits should be used to
-#'              compute growth rate (types `RA` or `R`)
-#' @param k     scalar for growth rate
-#' @param width     constant in gaussian function (standard deviation)
+#' For the moment the environmental filter follows a Gaussian distribution:
+#'
+#' \deqn{
+#'     R_{i, x} = k \times \exp(- \frac{(trait_i - env_x)^2}{2\times {width}^2})
+#' }{
+#'     R_ix = k * exp((t_i - env_x)^2/(2 * width^2))
+#' },
+#' where t_i is trait of species i, env_x the environmental value in patch x, k
+#' a scalar giving the maximal growth rate and width the environmental breadth
+#' of species.
+#'
+#' @param trti  a numeric vector of species trait values
+#' @param envx  a
+#' @param types a character vector of trait types indicating if traits should be
+#'              used to compute growth rate (types `RA` or `R`)
+#' @param k     a scalar giving the maximum growth rate in optimal environment
+#' @param width a numeric for niche breadth, constant in gaussian function
 #'
 #' @export
 env_curve <- function(trti, envx, types, k = 2, width = 0.5) {
@@ -93,18 +123,24 @@ env_curve <- function(trti, envx, types, k = 2, width = 0.5) {
 #'
 #' Using specified parameters this function run the simulation
 #'
-#' @param traits a species-traits data.frame
-#' @param trait_type a character vector indicating trait types (`R`, `A`, `RA`
-#'                   or `N`)
-#' @param env a vector of environmenal values
-#' @param time a integer giving the number of generations
-#' @param species a integer giving the number of species
-#' @param patches the number of patches?
-#' @param composition the actual array containing species abundances per site over time
-#' @param A the scalar of competition coefficent (see [bevHoltFct()])
-#' @param d dispersal scale
-#' @param k a scalar for computation fo growth rate
-#' @param width a constant to compute growth rates
+#' @param traits      a species-traits data.frame with species as rownames and
+#'                    traits as numeric columns with names matching `trait_type`
+#' @param trait_type  a character vector indicating trait types (`R`=contributing
+#'                    to growth only, `A` = contributing to competition only,
+#'                    `RA` = contributing to both growth and competition or
+#'                    `N` = trait not contributing to growth nor competition)
+#' @param env         a vector of environmental values
+#' @param time        an integer giving the total number of generations
+#' @param species     an integer giving the total number of species to simulate
+#' @param patches     an integer giving the total number of patches to simulate
+#' @param composition the actual array containing species abundances per site
+#'                    over time, giving the initial populations of each species
+#' @param A           the scalar of competition coefficent (see [bevHoltFct()])
+#' @param d           a numeric value between 0 and 1 giving the percentage of
+#'                    dispersal occurring across all patches
+#' @param k           a scalar giving the maximum growth rate in optimal
+#'                    environment
+#' @param width       a numeric giving niche breadth of all species
 #'
 #' @importFrom stats dist
 #' @export

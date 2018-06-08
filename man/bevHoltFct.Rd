@@ -7,9 +7,9 @@
 bevHoltFct(R, N, A, alpha)
 }
 \arguments{
-\item{R}{a vector of species growth rates}
+\item{R}{a numeric vector of species growth rates}
 
-\item{N}{a vector of species population sizes}
+\item{N}{a numeric vector of species population sizes}
 
 \item{A}{a scalar for competition coefficient}
 
@@ -17,5 +17,13 @@ bevHoltFct(R, N, A, alpha)
 computation}
 }
 \description{
-To simulate growth easily, use the Beverton-Holt equation (ref?)
+To simulate growth easily, use the Beverton-Holt equation. Which is:
+}
+\details{
+\deqn{
+   N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha}
+}{
+   N(t+1) = (R * N(t))/(1 + A * alpha)
+}
+where t is time, i is the species of interest and x the patch it occupies.
 }
