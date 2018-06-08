@@ -2,17 +2,18 @@
 % Please edit documentation in R/plot_patch.R
 \name{plot_patch}
 \alias{plot_patch}
-\title{Plot the dynamics of a single patch}
+\title{Plot patch dynamics}
 \usage{
 plot_patch(results, patch, time)
 }
 \arguments{
-\item{results}{results array of a given simulation}
+\item{results}{results array of a given simulation (a \code{\link[=multigen]{multigen()}} output)}
 
-\item{patch}{patch number}
+\item{patch}{an integer indicating the patch number}
 
-\item{time}{time number}
+\item{time}{an integer indicating the maximum timestep to look at}
 }
 \description{
-Plot the dynamics of a single patch
+Plot the dynamics of species in a single patch over time. Automatically
+assigns one color per species.
 }

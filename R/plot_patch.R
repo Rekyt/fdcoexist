@@ -1,18 +1,20 @@
-
 # Graphical function to plot species dynamics through time in a focal patch
 
-#' Plot the dynamics of a single patch
+#' Plot patch dynamics
 #'
-#' @param results results array of a given simulation
-#' @param patch patch number
-#' @param time time number
+#' Plot the dynamics of species in a single patch over time. Automatically
+#' assigns one color per species.
+#'
+#' @param results results array of a given simulation (a [multigen()] output)
+#' @param patch an integer indicating the patch number
+#' @param time an integer indicating the maximum timestep to look at
 #'
 #' @import ggplot2
 #' @export
 plot_patch <- function(results, patch, time){
 
   patch_data <- list()
-  for (i in 1:time){
+  for (i in 1:time) {
     patch_data[[i]] <- results[patch,, i]
   }
 
