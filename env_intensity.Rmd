@@ -3,6 +3,8 @@ title: "Coexistence with varying environmental filtering intensity"
 author: "XX"
 date: "5 juin 2018"
 output: pdf_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -177,17 +179,42 @@ plot_grid(plot_cwm,
 
 ```
 
+
+## Generate several traits with various scenarios
+
+### Moderately correlated traits
 ```{r}
+generate_cor_traits = function(number_patches, number_other = 9, cor_coef = 0.7) {
+    
+    # Initial Trait
+    x1 = seq(1, number_patches)
+    
+
+    cov_mat = matrix(c(1, cor_coef, 0, sqrt(1 - cor_coef^2)), nrow = 2)
+    
+    n_other = number_other
+    
+    res = lapply(seq(n_other), function(x) {
+        x2 = runif(number_patches, 1, number_patches)
+        
+        cov_mat %*% matrix(c(x1, x2), nrow = 2, byrow = TRUE)
+    })
+    
+    res = do.call(rbind, lapply(res, function(x) x[2,]))
+    res = rbind(x1, res)
+    
+    t(res)
+}
 
 devtools::load_all()
-#### Keep stable for all
+# Initial parameters -----------------------------------------------------------
 patches  <- 25   # Number of patches
 species  <- 25   # Number of species
 time     <- 150	 # Length of model run (generations)
 initpop  <- 50   # initial population size
-n_traits <- 10    # number of traits
+n_traits <- 4    # number of traits
 k        <- 1.45 # Niche height
-width    <- seq(10, 0.25, length.out = patches) # Niche breadth
+width    <- seq(10, 10, length.out = patches) # Niche breadth
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
@@ -204,20 +231,23 @@ names(env) <- dimnames(composition)[[1]]
 
 composition[,,"time1"] <- initpop # N
 
-# Generate traits
+# Generate traits --------------------------------------------------------------
 set.seed(1)
-traits <- matrix(runif(species*n_traits, min(env), max(env)),
-                 species,
-                 n_traits)
+traits <- generate_cor_traits(patches, n_traits - 1, cor_coef = 0.7)
 colnames(traits) <- paste0("trait", seq(n_traits))
 rownames(traits) <- paste0("species", seq(species))
 
 # Number of trait influencing growth or competition
-trait_types = t(data.frame(prop1 = c(rep("R", 8), rep("A", 2)),
-                           prop2 = c(rep("R", 5), rep("A", 5)),
-                           prop3 = c(rep("R", 2), rep("A", 8))))
+trait_types = t(data.frame(prop_8_2 = c(rep("R", round(0.8*n_traits)),
+                                        rep("A", n_traits - round(0.8*n_traits))),
+                           prop_5_5 = c(rep("R", round(0.5*n_traits)),
+                                        rep("A", n_traits - round(0.5*n_traits))),
+                           prop_2_8 = c(rep("R", round(0.2*n_traits)),
+                                        rep("A", n_traits - round(0.2*n_traits)))))
 colnames(trait_types) = colnames(traits)
 
+
+# Simulations ------------------------------------------------------------------
 multiple_traits <- apply(trait_types, 1,
                          function(x){
                              multiple_traits_types = multigen(traits = traits, trait_type = x,
@@ -227,6 +257,10 @@ multiple_traits <- apply(trait_types, 1,
                          })
 names(multiple_traits) <- rownames(trait_types)
 
+
+# Plots ------------------------------------------------------------------------
+
+# Plot individual patches 
 plot_patches_list <- lapply(names(multiple_traits),
                             function(x){
                                 plot_patch(multiple_traits[[x]]$compo, 15, 150) +
@@ -245,6 +279,8 @@ sp_rich_final <- lapply(names(multiple_traits),
 
 sp_rich_final <- as.data.frame(sp_rich_final)
 colnames(sp_rich_final) <- names(multiple_traits)
+sp_rich_final <- tibble::rownames_to_column(sp_rich_final, "patch")
+sp_rich_final$patch <- as.numeric(gsub("patches", "", sp_rich_final$patch))
 sp_rich_final$width <- width
 
 sp_rich_final <- tidyr::gather(sp_rich_final, "prop_type", "richness", dplyr::contains("prop"))
@@ -255,34 +291,53 @@ plot_prop_sp_rich <- ggplot(sp_rich_final, aes(1/width, richness, color = prop_t
     xlab("Environmental intensity (1/width)") +
     ylab("Patch richness")
 
+plot_prop_sp_rich_patch <- ggplot(sp_rich_final, aes(patch, richness, color = prop_type)) +
+    geom_line(size = 1) +
+    scale_color_manual(values = viridis::viridis(3)) +
+    xlab("Patch Index") +
+    ylab("Patch richness")
+
+```
+
+```{r FD_compute}
+# Compute FD metrics -----------------------------------------------------------
 # Compute FD metrics (richness, dispersion, eveness)
-timestep = 10
+timestep = 150
 FD_prop <- lapply(names(multiple_traits),
-                  function(x){
+                  function(x) {
+                      
+                      
                       patch_sp_timestep <- multiple_traits[[x]]$compo[,,timestep]
                       ab_rel = patch_sp_timestep / rowSums(patch_sp_timestep)
                       ab_rel = ab_rel[!is.na(rowSums(ab_rel)), ]
+                      
+                      # Compute Functional Diversity at Patch Scale
                       FD_patches <- sapply(seq_len(nrow(ab_rel)), function(y){
                           ab_patch = ab_rel[y, ][ab_rel[y, ] > 0] # Removal of species with null abundance
-                          if(length(ab_patch) > 1){ # Patch must contain at least 2 species
+                          if (length(ab_patch) > 1) { # Patch must contain at least 2 species
                               FD_patch = dbFD(traits[rownames(traits) %in%
                                                          names(ab_patch), ],
                                               a = ab_patch,
                                               w.abun = TRUE)
+                              
                               data.frame(prop = x,
                                          patch = rownames(ab_rel[y, , drop = FALSE]),
                                          frich = FD_patch$FRic,
                                          fdis = FD_patch$FDis,
                                          feve = FD_patch$FEve)
                           }
-                      })
-                      FD_patches <- do.call(rbind, FD_patches)
+                      }, simplify = FALSE)
+                      bind_rows(FD_patches)
                   })
-FD_prop <- do.call(rbind, FD_prop)
+FD_prop <- bind_rows(FD_prop)
 
 width_df <- data.frame(patch = paste0("patches", 1:patches),
                        width = width)
 FD_prop <- merge(FD_prop, width_df, by = "patch")
+
+FD_prop$patch <- as.numeric(gsub("patches", "", FD_prop$patch))
+
+FD_melt <- tidyr::gather(FD_prop, "fd_metric", "fd_value", frich:feve)
 
 # Plot FD against environmental filtering strength
 plot_prop_frich <- ggplot(FD_prop, aes(1/width, frich, color = prop)) +
@@ -306,6 +361,17 @@ plot_prop_feve <- ggplot(FD_prop, aes(1/width, feve, color = prop)) +
 
 plot_grid(plot_prop_frich, plot_prop_fdis, plot_prop_feve, nrow = 1)
 
+plot_fd_patch <- ggplot(FD_melt, aes(patch, fd_value, color = prop)) +
+    geom_line() +
+    facet_grid(fd_metric~., scales = "free_y") +
+    scale_color_manual("Proportion of traits\ncontributing to R A",
+                       values = viridis::viridis(3)) +
+    labs(x = "Patch Index",
+         y = "FD value")
+```
+
+```{r null_models}
+# Null models ------------------------------------------------------------------
 # Null models: resample species within each patch (NM2)
 # FD null for each proportion case
 nb_perm = 99#99
@@ -359,12 +425,13 @@ FD_null_prop <- lapply(names(multiple_traits),
 
 FD_null_prop <- do.call(rbind, FD_null_prop)
 
+# Compute FD SES ---------------------------------------------------------------
 FD_prop <- left_join(FD_prop, FD_null_prop, by = c("prop", "patch"))
 FD_prop$frich_SES <- (FD_prop$frich - FD_prop$frich_mean) / FD_prop$frich_sd
 FD_prop$fdis_SES <- (FD_prop$fdis - FD_prop$fdis_mean) / FD_prop$fdis_sd
 FD_prop$feve_SES <- (FD_prop$feve - FD_prop$feve_mean) / FD_prop$feve_sd
 
-# Plot
+# Plot FD SES ------------------------------------------------------------------
 plot_prop_frich_SES <- ggplot(FD_prop, aes(1/width, frich_SES, color = as.factor(prop))) +
     geom_line(size = 1) +
     scale_color_manual(values = viridis::viridis(3)) +
