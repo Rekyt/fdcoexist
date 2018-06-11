@@ -90,18 +90,32 @@ generate_traits <- function(n_species, min_val, max_val) {
 #' a scalar giving the maximal growth rate and width the environmental breadth
 #' of species.
 #'
-#' @param trti  a numeric vector of species trait values
-#' @param envx  a
-#' @param types a character vector of trait types indicating if traits should be
-#'              used to compute growth rate (types `RA` or `R`)
-#' @param k     a scalar giving the maximum growth rate in optimal environment
-#' @param width a numeric for niche breadth, constant in gaussian function
+#' @param trti   a numeric vector of species trait values
+#' @param envx   a
+#' @param types  a character vector of trait types indicating if traits should be
+#'               used to compute growth rate (types `RA` or `R`)
+#' @param k      a scalar giving the maximum growth rate in optimal environment
+#' @param width  a numeric for niche breadth, constant in gaussian function
+#' @param weight a numeric vector indicating the contribution of each growth
+#'               trait to growth
 #'
 #' @export
-env_curve <- function(trti, envx, types, k = 2, width = 0.5) {
+env_curve <- function(trti, envx, types, k = 2, width = 0.5, weight = NULL) {
 
     if (length(width) != 1 & length(width) != length(envx)) {
         stop("There are either too many or not enough values for width")
+    }
+
+    if (!is.null(weight) & !is.numeric(weight)) {
+        stop("Weight(s) should be numeric")
+    }
+
+    if (is.null(weight)) {
+        weight = rep(1, sum(c("R", "RA") %in% types))
+    }
+
+    if (length(weight) != sum(c("R", "RA") %in% types)) {
+        stop("Please specify a weight for each trait")
     }
 
     if (!(sum(c("R", "RA") %in% types))) {
@@ -113,7 +127,8 @@ env_curve <- function(trti, envx, types, k = 2, width = 0.5) {
         R <- k * exp(-((fitness_traits - envx)^2)/(2*width^2))
     }
 
-    Rfinal <- mean(R)  # Each trait contributes equally to fitness
+    # Weigh each trait function of contribution to growth
+    Rfinal <- weighted.mean(R, weight)
 
     return(Rfinal)
 }
