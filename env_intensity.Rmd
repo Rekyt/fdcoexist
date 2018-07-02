@@ -248,7 +248,7 @@ composition[,,"time1"] <- initpop # N
 
 # Generate traits --------------------------------------------------------------
 set.seed(1)
-traits <- generate_cor_traits(patches, n_traits - 1, cor_coef = 0.7)
+traits <- generate_cor_traits(patches, n_traits - 1, cor_coef = 0.3)
 colnames(traits) <- paste0("trait", seq(n_traits))
 rownames(traits) <- paste0("species", seq(species))
 
@@ -522,7 +522,10 @@ names(all_landscape) = names(multiple_traits)
 
 all_land = bind_rows(all_landscape, .id = "simulation_type")
 
-lalaland = ggplot(all_land, aes(compet_dist, optim_dist)) +
+# A plot showing the number of individuals at t=150 depending on the distance
+# to the environmental optimum (y-axis), and the distance to the trait
+# experiencing maximum competition (x-axis)
+plot_dist_compet_dist_env = ggplot(all_land, aes(compet_dist, optim_dist)) +
     stat_summary_2d(aes(z = N)) +
     facet_wrap(~simulation_type) +
     scale_fill_viridis_c(trans = "log10") +
@@ -534,17 +537,57 @@ lalaland = ggplot(all_land, aes(compet_dist, optim_dist)) +
     theme_bw() +
     theme(legend.position = "bottom")
 
-plot_laughlin = ggplot(all_land, aes(optim_env, patch_optim)) +
-    stat_summary_2d(aes(z = N)) +
-    facet_wrap(~simulation_type, labeller = c(R2_A8 = "20% Growth\n80% Competiton",
-                                              R5_A5 = "50% Growth\n50% Competiton",
-                                              R8_A2 = "80% Growth\n20% Competiton") %>%
-                   as_labeller()) +
-    scale_fill_viridis_c(trans = "log10") +
-    labs(x    = "Species Optimum",
-         y    = "Environmental Value",
-         fill = "Number of Individuals") +
+# data.frame containing CWM values for all the traits, as well as growth-related
+# traits (optim_env) for each patch and each simulation scenario
+cwm_patch_trait = all_land %>%
+    inner_join(traits %>%
+                   as.data.frame() %>%
+                   rownames_to_column("species"),
+               by = "species") %>%
+    group_by(simulation_type, patch) %>%
+    mutate(rel_abund = N/sum(N)) %>%
+    ungroup() %>%
+    gather("trait_name", "trait_value", contains("trait"), optim_env) %>%
+    group_by(simulation_type, patch, trait_name) %>%
+    summarise(cwm_trait = sum(rel_abund*trait_value),
+              patch_optim = mean(patch_optim))
+
+# Plot of Trait CWM in function of environmental value, colored by scenario
+plot_cwm = ggplot(cwm_patch_trait, aes(patch_optim, cwm_trait,
+                                       color = simulation_type)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(size = 1.5) +
+    geom_smooth(method = "lm", se = FALSE) +
+    facet_wrap(~trait_name, ncol = 3) +
+    labs(x     = "Environmental Value",
+         y     = "CWM of Trait",
+         color = "Scenario") +
+    scale_color_discrete(labels = c(R2_A8 = "20% Growth\n80% Competiton",
+                                    R5_A5 = "50% Growth\n50% Competiton",
+                                    R8_A2 = "80% Growth\n20% Competiton")) +
     theme_bw() +
-    theme(legend.position = "bottom")
+    theme(legend.key.height = unit(2, "lines"))
+plot_cwm
+
+# Plot showing the number of individuals at t=150 for each trait and each
+# environmental value
+plot_individuals_trait_environment = all_land %>%
+    inner_join(traits %>%
+                   as.data.frame() %>%
+                   rownames_to_column("species"),
+               by = "species") %>%
+    gather("trait_name", "trait_value", contains("trait"), optim_env) %>%
+    ggplot(aes(trait_value, patch_optim)) +
+    stat_summary_2d(aes(z = N)) +
+    facet_grid(trait_name ~ simulation_type,
+               labeller = labeller(simulation_type =
+                                       c(R2_A8 = "20% Growth\n80% Competiton",
+                                         R5_A5 = "50% Growth\n50% Competiton",
+                                         R8_A2 = "80% Growth\n20% Competiton"))) +
+    scale_fill_viridis_c(trans = "log10") +
+    labs(x = "Trait Value",
+         y = "Optimal Trait Value",
+         fill = "Number of Individuals") +
+    theme_bw()
 ```
 
