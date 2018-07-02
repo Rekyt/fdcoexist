@@ -111,14 +111,14 @@ env_curve <- function(trti, envx, types, k = 2, width = 0.5, weight = NULL) {
     }
 
     if (is.null(weight)) {
-        weight = rep(1, sum(c("R", "RA") %in% types))
+        weight = rep(1, sum(types %in% c("R", "RA")))
     }
 
-    if (length(weight) != sum(c("R", "RA") %in% types)) {
+    if (length(weight) != sum(types %in% c("R", "RA"))) {
         stop("Please specify a weight for each trait")
     }
 
-    if (!(sum(c("R", "RA") %in% types))) {
+    if (!(sum(types %in% c("R", "RA")))) {
         R <- k
     } else {
         fitness_traits <- trti[types == "R" | types == "RA"]
