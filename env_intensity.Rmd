@@ -184,10 +184,11 @@ plot_grid(plot_cwm,
 
 ### Moderately correlated traits
 ```{r}
-generate_cor_traits = function(number_patches, number_other = 9, cor_coef = 0.7) {
+generate_cor_traits = function(number_patches, number_species, number_other = 9,
+                               cor_coef = 0.7) {
     
     # Initial Trait
-    x1 = seq(1, number_patches)
+    x1 = seq(1, number_patches, length.out = number_species)
     
 
     cov_mat = matrix(c(1, cor_coef, 0, sqrt(1 - cor_coef^2)), nrow = 2)
@@ -197,7 +198,7 @@ generate_cor_traits = function(number_patches, number_other = 9, cor_coef = 0.7)
     res = lapply(seq(n_other), function(x) {
         
         # Independent trait
-        x2 = runif(number_patches, 1, number_patches)
+        x2 = runif(number_species, 1, number_patches)
         
         # Correlated trait in second row
         cov_mat %*% matrix(c(x1, x2), nrow = 2, byrow = TRUE)
@@ -224,7 +225,7 @@ generate_cor_traits = function(number_patches, number_other = 9, cor_coef = 0.7)
 devtools::load_all()
 # Initial parameters -----------------------------------------------------------
 patches  <- 25   # Number of patches
-species  <- 25   # Number of species
+species  <- 1000   # Number of species
 time     <- 150	 # Length of model run (generations)
 initpop  <- 50   # initial population size
 n_traits <- 4    # number of traits
@@ -248,7 +249,7 @@ composition[,,"time1"] <- initpop # N
 
 # Generate traits --------------------------------------------------------------
 set.seed(1)
-traits <- generate_cor_traits(patches, n_traits - 1, cor_coef = 0.3)
+traits <- generate_cor_traits(patches, species, n_traits - 1, cor_coef = 0.3)
 colnames(traits) <- paste0("trait", seq(n_traits))
 rownames(traits) <- paste0("species", seq(species))
 
