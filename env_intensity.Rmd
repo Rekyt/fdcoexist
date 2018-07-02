@@ -195,15 +195,30 @@ generate_cor_traits = function(number_patches, number_other = 9, cor_coef = 0.7)
     n_other = number_other
     
     res = lapply(seq(n_other), function(x) {
+        
+        # Independent trait
         x2 = runif(number_patches, 1, number_patches)
         
+        # Correlated trait in second row
         cov_mat %*% matrix(c(x1, x2), nrow = 2, byrow = TRUE)
+        
     })
     
     res = do.call(rbind, lapply(res, function(x) x[2,]))
     res = rbind(x1, res)
     
-    t(res)
+    res = t(res)
+    
+    # Repaste first column
+    cbind(res[,1],
+          
+          # Scale all the traits between min and max value of x1
+          sapply(2:ncol(res), function(x) {
+              val = res[,x]
+              
+              (val - min(val))/(max(val) - min(val)) * (diff(range(x1))) +
+                  min(x1)
+          }))
 }
 
 devtools::load_all()
@@ -238,22 +253,27 @@ colnames(traits) <- paste0("trait", seq(n_traits))
 rownames(traits) <- paste0("species", seq(species))
 
 # Number of trait influencing growth or competition
-trait_types = t(data.frame(prop_8_2 = c(rep("R", round(0.8*n_traits)),
-                                        rep("A", n_traits - round(0.8*n_traits))),
-                           prop_5_5 = c(rep("R", round(0.5*n_traits)),
-                                        rep("A", n_traits - round(0.5*n_traits))),
-                           prop_2_8 = c(rep("R", round(0.2*n_traits)),
-                                        rep("A", n_traits - round(0.2*n_traits)))))
+trait_types = t(data.frame(R8_A2 = c(rep("R", round(0.8*n_traits)),
+                                     rep("A", n_traits - round(0.8*n_traits))),
+                           R5_A5 = c(rep("R", round(0.5*n_traits)),
+                                     rep("A", n_traits - round(0.5*n_traits))),
+                           R2_A8 = c(rep("R", round(0.2*n_traits)),
+                                     rep("A", n_traits - round(0.2*n_traits)))))
 colnames(trait_types) = colnames(traits)
 
 
 # Simulations ------------------------------------------------------------------
 multiple_traits <- apply(trait_types, 1,
                          function(x){
-                             multiple_traits_types = multigen(traits = traits, trait_type = x,
-                                                              env = env, time = time, species = species,
-                                                              patches = patches, composition = composition,
-                                                              A = A, d = d, k = k, width = width)
+                             multigen(traits = traits,
+                                      trait_type = x,
+                                      env = env,
+                                      time = time,
+                                      species = species,
+                                      patches = patches,
+                                      composition = composition,
+                                      A = A, d = d,
+                                      k = k, width = width)
                          })
 names(multiple_traits) <- rownames(trait_types)
 
@@ -263,8 +283,12 @@ names(multiple_traits) <- rownames(trait_types)
 # Plot individual patches 
 plot_patches_list <- lapply(names(multiple_traits),
                             function(x){
-                                plot_patch(multiple_traits[[x]]$compo, 15, 150) +
-                                    labs(subtitle = x)
+                                single_patch =
+                                    plot_patch(multiple_traits[[x]]$compo, 15,
+                                               150) +
+                                    labs(subtitle = x) 
+                                
+                                directlabels::direct.label(single_patch)
                             })
 
 
@@ -458,4 +482,69 @@ plot_grid(plot_prop_frich_SES, plot_prop_fdis_SES, plot_prop_feve_SES, nrow = 1)
 ```
 
 
+Additional plot to show number of individuals in function of distance to trait that suffer from maximum competition and distance to optimal patch value.
+
+```{r}
+library("tidyverse")
+
+
+landscape_df = function(multiple_traits_scenario, trait_types_row) {
+    
+    growth_traits = names(trait_types_row[trait_types_row %in% c("R", "RA")])
+    compet_traits = names(trait_types_row[trait_types_row %in% c("A", "RA")])
+    
+    
+    population_df = multiple_traits_scenario$compo[,,150] %>%
+        as.data.frame() %>%
+        rownames_to_column("patch") %>%  # Add patch names as column
+        # Transform to tidy data.frame (define name of columns and column name for values)
+        gather("species", "N", -patch)
+    
+    growth_df = enframe(rowMeans(traits[, growth_traits, drop = FALSE]),
+                        "species", "optim_env")
+    
+    compet_df = enframe(abs(rowMeans(traits[, compet_traits, drop = FALSE]) -
+                                12.5), "species", "compet_dist")
+    
+    population_df %>%
+        inner_join(growth_df, by = "species") %>%
+        inner_join(compet_df, by = "species") %>%
+    # Add patch number as a new column and compute distance to optimal value
+    mutate(patch_optim = gsub("patches", "", patch) %>%
+               as.numeric(),
+           optim_dist = abs(optim_env - patch_optim))
+}
+
+all_landscape = lapply(names(multiple_traits), function(scenario) {
+    landscape_df(multiple_traits[[scenario]], trait_types[scenario,])
+})
+names(all_landscape) = names(multiple_traits)
+
+all_land = bind_rows(all_landscape, .id = "simulation_type")
+
+lalaland = ggplot(all_land, aes(compet_dist, optim_dist)) +
+    stat_summary_2d(aes(z = N)) +
+    facet_wrap(~simulation_type) +
+    scale_fill_viridis_c(trans = "log10") +
+    scale_x_reverse() +
+    labs(x        = "Distance to Maximum Competition\n(0 = species experiences maximum competition)",
+         y        = "Distance to Optimal Environmental Value",
+         fill     = "Number of Individuals at t=150",
+         subtitle = "Growth and Competition Landscape") +
+    theme_bw() +
+    theme(legend.position = "bottom")
+
+plot_laughlin = ggplot(all_land, aes(optim_env, patch_optim)) +
+    stat_summary_2d(aes(z = N)) +
+    facet_wrap(~simulation_type, labeller = c(R2_A8 = "20% Growth\n80% Competiton",
+                                              R5_A5 = "50% Growth\n50% Competiton",
+                                              R8_A2 = "80% Growth\n20% Competiton") %>%
+                   as_labeller()) +
+    scale_fill_viridis_c(trans = "log10") +
+    labs(x    = "Species Optimum",
+         y    = "Environmental Value",
+         fill = "Number of Individuals") +
+    theme_bw() +
+    theme(legend.position = "bottom")
+```
 
