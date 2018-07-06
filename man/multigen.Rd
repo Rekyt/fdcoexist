@@ -4,17 +4,19 @@
 \alias{multigen}
 \title{Function to run the simulation}
 \usage{
-multigen(traits, trait_type, env, time, species, patches, composition, A, d, k,
-  width)
+multigen(traits, trait_weights, env, time, species, patches, composition, A, d,
+  k, width)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
-traits as numeric columns with names matching \code{trait_type}}
+traits as numeric columns with names matching
+\code{trait_weights} column \code{trait}}
 
-\item{trait_type}{a character vector indicating trait types (\code{R}=contributing
-to growth only, \code{A} = contributing to competition only,
-\code{RA} = contributing to both growth and competition or
-\code{N} = trait not contributing to growth nor competition)}
+\item{trait_weights}{data.frame with at least three columns equal to \code{trait}
+(giving the name of the concerned traits in \code{traits}
+df), \code{growth_weight} the relative weight of the trait in
+growth and \code{compet_weight} the relative weight of the
+trait in competition.}
 
 \item{env}{a vector of environmental values}
 

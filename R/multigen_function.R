@@ -90,45 +90,38 @@ generate_traits <- function(n_species, min_val, max_val) {
 #' a scalar giving the maximal growth rate and width the environmental breadth
 #' of species.
 #'
-#' @param trti   a numeric vector of species trait values
-#' @param envx   a
-#' @param types  a character vector of trait types indicating if traits should be
-#'               used to compute growth rate (types `RA` or `R`)
+#' @param trait_values  a numeric vector of species trait values
+#' @param env_value     a single numeric value giving the environmental variable
+#' @param trait_weights data.frame with at least three columns equal to `trait`
+#'                      (giving the name of the concerned traits in `traits`
+#'                      df), `growth_weight` the relative weight of the trait in
+#'                      growth and `compet_weight` the relative weight of the
+#'                      trait in competition.
 #' @param k      a scalar giving the maximum growth rate in optimal environment
 #' @param width  a numeric for niche breadth, constant in gaussian function
-#' @param weight a numeric vector indicating the contribution of each growth
-#'               trait to growth
 #'
 #' @export
-env_curve <- function(trti, envx, types, k = 2, width = 0.5, weight = NULL) {
+env_curve <- function(trait_values, env_value, trait_weights, k = 2,
+                      width = 0.5) {
 
     if (length(width) != 1 & length(width) != length(envx)) {
         stop("There are either too many or not enough values for width")
     }
 
-    if (!is.null(weight) & !is.numeric(weight)) {
-        stop("Weight(s) should be numeric")
-    }
-
-    if (is.null(weight)) {
-        weight = rep(1, sum(types %in% c("R", "RA")))
-    }
-
-    if (length(weight) != sum(types %in% c("R", "RA"))) {
-        stop("Please specify a weight for each trait")
-    }
-
-    if (!(sum(types %in% c("R", "RA")))) {
+    if (identical(sum(trait_weights$growth_weight, na.rm = TRUE), 0)) {
         R <- k
     } else {
-        fitness_traits <- trti[types == "R" | types == "RA"]
+        fitness_traits <- subset(trait_weights, growth_weight != 0 &
+                                  !is.na(growth_weight))
+
+        given_values <- trait_values[fitness_traits$traits]
 
         # Each trait has similar impact
-        R <- k * exp(-((fitness_traits - envx)^2)/(2*width^2))
+        R <- k * exp(-((fitness_traits - env_value)^2)/(2*width^2))
     }
 
     # Weigh each trait function of contribution to growth
-    Rfinal <- weighted.mean(R, weight)
+    Rfinal <- weighted.mean(R, fitness_traits$growth_weight)
 
     return(Rfinal)
 }
@@ -138,12 +131,7 @@ env_curve <- function(trti, envx, types, k = 2, width = 0.5, weight = NULL) {
 #'
 #' Using specified parameters this function run the simulation
 #'
-#' @param traits      a species-traits data.frame with species as rownames and
-#'                    traits as numeric columns with names matching `trait_type`
-#' @param trait_type  a character vector indicating trait types (`R`=contributing
-#'                    to growth only, `A` = contributing to competition only,
-#'                    `RA` = contributing to both growth and competition or
-#'                    `N` = trait not contributing to growth nor competition)
+#' @inheritParams check_trait_weights
 #' @param env         a vector of environmental values
 #' @param time        an integer giving the total number of generations
 #' @param species     an integer giving the total number of species to simulate
@@ -157,30 +145,21 @@ env_curve <- function(trti, envx, types, k = 2, width = 0.5, weight = NULL) {
 #'                    environment
 #' @param width       a numeric giving niche breadth of all species
 #'
-#' @importFrom stats dist
 #' @export
-multigen <- function(traits, trait_type, env, time, species, patches,
+multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A, d, k, width) {
 
+    # Check assumptions on trait_weights data.frame
+    check_trait_weights(trait_weights, traits)
+
     # Calculate dist trait
-    if (!(sum(c("A", "RA") %in% trait_type))) {
+    disttraits <- compute_compet_distance(trait_weights, traits)
 
-        # If there is no defined competition trait, there is no competition
-        disttraits <- matrix(0, nrow = species, ncol = species)
-    } else {
-
-        disttraits <- as.matrix(dist(traits[, trait_type == "A" |
-                                                trait_type == "RA"]))
-
-        # Scale trait distance to balance growth
-        disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
-    }
-
-    # Calculate fitness term (R)
+    # Calculate fitness term (R = growth)
     env_param <- cbind(env, k, width)
-    Rmatrix <- apply(traits, 1, function(x) { # Loop over the species traits
+    Rmatrix <- apply(traits, 1, function(x) { # Loop over the species
         apply(env_param, 1, function(y){ # Loop over env, k, width combinations
-            env_curve(x, y[1], types = trait_type, k = y[2], width = y[3])
+            env_curve(x, y[1], trait_weights, k = y[2], width = y[3])
         })
     })
 
@@ -195,22 +174,137 @@ multigen <- function(traits, trait_type, env, time, species, patches,
         alphalist[[m]] = alpha
 
         composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)
+
         # threshold number of individuals
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
                                         composition[,, m + 1])
         ## Dispersal
-        # Probability of dispersal proportional to number of individuals in patch
-        # given a certain probability
+        # Probability of dispersal proportional to number of individuals
+        # in patch given a certain probability 'd'
         migrate <- d * composition[,, m + 1]
 
         stay <- composition[,, m + 1] - migrate
 
         # All immigrants move evenly to all patches
         immigrants <- apply(migrate, 2, "sum")/patches
-        total <- t(t(stay) + immigrants) # beware of vector recycling when summing both matrices
-        composition[,,m + 1] <- total
+        # /!\ vector recycling when summing both matrices
+        total <- t(t(stay) + immigrants)
+        composition[,, m + 1] <- total
     }
     return(list(compo = composition,
                 alpha = alphalist))
 }
 
+#' Check trait weights data.frame
+#'
+#' This is an internal help function to check the trait weights data.frame
+#' (used in [multigen()]). The structure of the given trait weights is fixed:
+#' one column should be named `trait`` with the names of the traits in it. The
+#' two other columns `growth_weight` and `compet_weight` contains respectively
+#' the relative weight of the trait in growth and competition.
+#' The function also additionnally check that the traits in the `trait` column
+#' are in the `traits` data.frame.
+#'
+#' @param trait_weights data.frame with at least three columns equal to `trait`
+#'                      (giving the name of the concerned traits in `traits`
+#'                      df), `growth_weight` the relative weight of the trait in
+#'                      growth and `compet_weight` the relative weight of the
+#'                      trait in competition.
+#' @param traits        a species-traits data.frame with species as rownames and
+#'                      traits as numeric columns with names matching
+#'                      `trait_weights` column `trait`
+#'
+#' @return nothing if data.frame passess the checks, stops early otherwise.
+#' @export
+#' @examples
+#' # Working trait weights data.frame
+#' traits = data.frame(trait1 = 1, trait2 = 2, trait3 = 3)
+#'
+#' weight_1 = data.frame(
+#'    trait = c("trait1", "trait2", "trait3"),
+#'    growth_weight = c(0.5, 0.5, 0),
+#'    compet_weight = c(0, 0.5, 0.5))
+#'
+#' # Silent function
+#' check_trait_weights(weight_1, traits)
+#' \dontrun{
+#' # Not valid trait weights data.frame
+#' not_valid = data.frame(trait = c("trait1", "trait2", "trait3"),
+#'     growth_weight = c(0.5, 0.8, 0),
+#'     compet_weight = c(0, 0.5, 0.9))
+#'
+#' # Stop and error
+#' check_trait_weights(not_valid, traits)
+#' }
+check_trait_weights = function(trait_weights, traits) {
+
+    if (!is.data.frame(trait_weights) & !is.matrix(trait_weights)) {
+        stop("trait_weights should be a data.frame or a matrix")
+    }
+
+    # Check that trait_weightts contains the needed columns
+    needed_cols = c("trait", "growth_weight", "compet_weight")
+
+    if (!all(needed_cols %in% colnames(trait_weights))) {
+
+        absent_columns = setdiff(needed_cols, colnames(trait_weights))
+
+        stop("Column(s) ", paste(absent_columns, collapse = ", "),
+             " is (are) not in trait_weights")
+
+    }
+
+    # Check that traits in trait_weights are in traits data.frame
+    if (!all(trait_weights$trait %in% colnames(traits))) {
+
+        absent_traits = setdiff(trait_weights$trait, colnames(traits))
+
+        stop("Trait(s) ", paste(absent_traits, collapse = ", "),
+             " (is/are) not in trait_weights")
+    }
+}
+
+#' Compute trait distance between species
+#'
+#' This function compute trait distance between species using a trait matrix and
+#' a trait weights data.frame. For all the traits with competition weights not
+#' equal to zero, it computes a weighted 'composite trait' that is then used to
+#' compute euclidea trait distance between species.
+#'
+#' @inheritParams check_trait_weights
+#'
+#' @return an euclidean distance matrix (of type matrix)
+#' @importFrom stats dist weighted.mean
+#' @export
+#'
+#' @examples
+compute_compet_distance = function(trait_weights, traits) {
+
+    # If there is no defined competition trait, there is no competition
+    if (sum(trait_weights$compet_weight, na.rm = TRUE) == 0) {
+
+        disttraits <- matrix(0, nrow = nrow(traits), ncol = nrow(traits))
+
+    } else {
+
+        # Extract weights of traits contributing to competition
+        compet_weights <- subset(trait_weights, !is.na(compet_weight) &
+                                     compet_weight != 0)
+
+        # Get traits contributing to competition in a numeric vector
+        compet_traits <-  unlist(traits[, compet_traits$trait])
+
+        # Compute a "composite" trait considering relative weighting of traits
+        composite_trait <- weighted.mean(compet_traits,
+                                         rep(compet_weights$compet_weight,
+                                             each = nrow(traits)))
+
+        # Compute distance matrix
+        disttraits <- as.matrix(dist(composite_trait))
+
+        # Scale trait distance to balance growth
+        disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
+    }
+
+    disttraits
+}

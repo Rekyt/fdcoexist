@@ -4,15 +4,18 @@
 \alias{env_curve}
 \title{Species growth rate for a given trait and environment}
 \usage{
-env_curve(trti, envx, types, k = 2, width = 0.5)
+env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5)
 }
 \arguments{
-\item{trti}{a numeric vector of species trait values}
+\item{trait_values}{a numeric vector of species trait values}
 
-\item{envx}{a}
+\item{env_value}{a single numeric value giving the environmental variable}
 
-\item{types}{a character vector of trait types indicating if traits should be
-used to compute growth rate (types \code{RA} or \code{R})}
+\item{trait_weights}{data.frame with at least three columns equal to \code{trait}
+(giving the name of the concerned traits in \code{traits}
+df), \code{growth_weight} the relative weight of the trait in
+growth and \code{compet_weight} the relative weight of the
+trait in competition.}
 
 \item{k}{a scalar giving the maximum growth rate in optimal environment}
 
