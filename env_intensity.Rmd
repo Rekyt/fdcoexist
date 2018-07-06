@@ -16,52 +16,32 @@ library("cowplot")
 library("tidyverse")
 library("FD")
 
-
 # Functions --------------------------------------------------------------------
-generate_cor_traits = function(number_patches, number_species, number_other = 9,
-                               cor_coef = 0.7) {
+compute_moments = function(simulation_routine, trait_df = traits) {
+    # CWM computation
+    ab_rel = (simulation_routine$compo[,,150] / rowSums(simulation_routine$compo[,,150]))
+    cwm_df = ab_rel %*% trait_df
+    # Values stored in moments_df
+    moments_df = as.data.frame(cwm_df)
+    colnames(moments_df) = "cwm"
+    moments_df = tibble::rownames_to_column(moments_df, "patch")
+    moments_df$env = seq(patches)
+    # Add CWV
+    cwv_df = (ab_rel %*% trait_df^2) - cwm_df^2
+    cwv_df = as.data.frame(cwv_df)
+    colnames(cwv_df) = "cwv"
+    cwv_df = tibble::rownames_to_column(cwv_df, "patch")
+    moments_df = dplyr::left_join(moments_df, cwv_df, by = "patch")
     
-    # Initial Trait
-    x1 = seq(1, number_patches, length.out = number_species)
-    
-
-    cov_mat = matrix(c(1, cor_coef, 0, sqrt(1 - cor_coef^2)), nrow = 2)
-    
-    n_other = number_other
-    
-    res = lapply(seq(n_other), function(x) {
-        
-        # Independent trait
-        x2 = runif(number_species, 1, number_patches)
-        
-        # Correlated trait in second row
-        cov_mat %*% matrix(c(x1, x2), nrow = 2, byrow = TRUE)
-        
-    })
-    
-    res = do.call(rbind, lapply(res, function(x) x[2,]))
-    res = rbind(x1, res)
-    
-    res = t(res)
-    
-    # Repaste first column
-    cbind(res[,1],
-          
-          # Scale all the traits between min and max value of x1
-          sapply(2:ncol(res), function(x) {
-              val = res[,x]
-              
-              (val - min(val))/(max(val) - min(val)) * (diff(range(x1))) +
-                  min(x1)
-          }))
+    return(moments_df)
 }
 
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
-landscape_df = function(multiple_traits_scenario, trait_types_row) {
+landscape_df = function(multiple_traits_scenario, trait_weights) {
     
-    growth_traits = names(trait_types_row[trait_types_row %in% c("R", "RA")])
-    compet_traits = names(trait_types_row[trait_types_row %in% c("A", "RA")])
+    growth_traits = subset(trait_weights, growth_weight != 0)$trait
+    compet_traits = subset(trait_weights, compet_weight != 0)$trait
     
     
     population_df = multiple_traits_scenario$compo[,,150] %>%
@@ -125,16 +105,20 @@ traits <- generate_traits(species,
 # Goal: compare between the three above-mentioned cases
 
 ## Single Trait Competition
-trait_type = c(trait1 = "A")
-single_trait_compet = multigen(traits = traits, trait_type = trait_type,
+trait_type = data.frame(trait = "trait1",
+                        growth_weight = 0,
+                        compet_weight = 1)
+single_trait_compet = multigen(traits = traits, trait_weights = trait_type,
                                env = env, time = time, species = species,
                                patches = patches, composition = composition,
                                A = A, d = d, k = k, width = width)
 single_trait_compet_final = ifelse(single_trait_compet$compo[,,time] < 2, 0, single_trait_compet$compo[,,time])
 
 ## Single Trait Growth
-trait_type = c(trait1 = "R")
-single_trait_growth = multigen(traits = traits, trait_type = trait_type,
+trait_type = data.frame(trait = "trait1",
+                        growth_weight = 1,
+                        compet_weight = 0)
+single_trait_growth = multigen(traits = traits, trait_weights = trait_type,
                                env = env, time = time, species = species,
                                patches = patches, composition = composition,
                                A = A, d = d, k = k, width = width)
@@ -142,15 +126,16 @@ single_trait_growth_final = ifelse(single_trait_growth$compo[,,time] < 2, 0,
                                    single_trait_growth$compo[,,time])
 
 ## Both
-trait_type = c(trait1 = "RA")
-single_trait_both = multigen(traits = traits, trait_type = trait_type,
+trait_type = data.frame(trait = "trait1",
+                        growth_weight = 1,
+                        compet_weight = 1)
+single_trait_both = multigen(traits = traits, trait_weights = trait_type,
                              env = env, time = time, species = species,
                              patches = patches, composition = composition,
                              A = A, d = d, k = k, width = width)
 
 single_trait_both_final = ifelse(single_trait_both$compo[,,time] < 2, 0,
                                  single_trait_both$compo[,,time])
-
 ```
 
 ```{r}
@@ -176,25 +161,6 @@ plot_patches
 ## Compute CWM & CWV
 
 ```{r}
-compute_moments = function(simulation_routine, trait_df = traits) {
-    # CWM computation
-    ab_rel = (simulation_routine$compo[,,150] / rowSums(simulation_routine$compo[,,150]))
-    cwm_df = ab_rel %*% trait_df
-    # Values stored in moments_df
-    moments_df = as.data.frame(cwm_df)
-    colnames(moments_df) = "cwm"
-    moments_df = tibble::rownames_to_column(moments_df, "patch")
-    moments_df$env = seq(patches)
-    # Add CWV
-    cwv_df = (ab_rel %*% trait_df^2) - cwm_df^2
-    cwv_df = as.data.frame(cwv_df)
-    colnames(cwv_df) = "cwv"
-    cwv_df = tibble::rownames_to_column(cwv_df, "patch")
-    moments_df = dplyr::left_join(moments_df, cwv_df, by = "patch")
-    
-    return(moments_df)
-}
-
 both_cw = compute_moments(single_trait_both, traits)
 colnames(both_cw) = c("patch", "both_cwm", "env", "both_cwv")
 growth_cw = compute_moments(single_trait_growth, traits)
@@ -253,9 +219,9 @@ plot_grid(plot_cwm,
 ```
 
 
-## Generate several traits with various scenarios
+# Multiple traits
 
-### Moderately correlated traits (4 traits, various scenarios)
+## Moderately correlated traits (4 traits, single influence)
 
 ```{r}
 devtools::load_all()
@@ -286,33 +252,35 @@ composition[,,"time1"] <- initpop # N
 # Generate traits --------------------------------------------------------------
 set.seed(1)
 traits <- generate_cor_traits(patches, species, n_traits - 1, cor_coef = 0.3)
-colnames(traits) <- paste0("trait", seq(n_traits))
-rownames(traits) <- paste0("species", seq(species))
 
 # Number of trait influencing growth or competition
-trait_types = t(data.frame(R8_A2 = c(rep("R", round(0.8*n_traits)),
-                                     rep("A", n_traits - round(0.8*n_traits))),
-                           R5_A5 = c(rep("R", round(0.5*n_traits)),
-                                     rep("A", n_traits - round(0.5*n_traits))),
-                           R2_A8 = c(rep("R", round(0.2*n_traits)),
-                                     rep("A", n_traits - round(0.2*n_traits)))))
-colnames(trait_types) = colnames(traits)
+trait_types = list(
+    R3_A1 = data.frame(trait = paste0("trait", 1:4),
+                       growth_weight = c(rep(1/3, 3), 0),
+                       compet_weight = c(rep(0, 3), 1)),
+    R2_A2 = data.frame(trait = paste0("trait", 1:4),
+                       growth_weight = c(rep(1/2, 2), rep(0, 2)),
+                       compet_weight = c(rep(0, 2), rep(1/2, 2))),
+    R1_A3 = data.frame(trait = paste0("trait", 1:4),
+                       growth_weight = c(1, rep(0, 3)),
+                       compet_weight = c(0, rep(1/3, 3)))
+)
 
 
 # Simulations ------------------------------------------------------------------
-multiple_traits <- apply(trait_types, 1,
-                         function(x){
-                             multigen(traits = traits,
-                                      trait_type = x,
-                                      env = env,
-                                      time = time,
-                                      species = species,
-                                      patches = patches,
-                                      composition = composition,
-                                      A = A, d = d,
-                                      k = k, width = width)
-                         })
-names(multiple_traits) <- rownames(trait_types)
+multiple_traits <- lapply(
+    trait_types,
+    function(x){
+        multigen(traits = traits,
+                 trait_weights = x,
+                 env = env,
+                 time = time,
+                 species = species,
+                 patches = patches,
+                 composition = composition,
+                 A = A, d = d,
+                 k = k, width = width)
+    })
 
 
 # Plots ------------------------------------------------------------------------
@@ -344,7 +312,7 @@ sp_rich_final <- tibble::rownames_to_column(sp_rich_final, "patch")
 sp_rich_final$patch <- as.numeric(gsub("patches", "", sp_rich_final$patch))
 sp_rich_final$width <- width
 
-sp_rich_final <- tidyr::gather(sp_rich_final, "prop_type", "richness", dplyr::contains("prop"))
+sp_rich_final <- tidyr::gather(sp_rich_final, "prop_type", "richness", dplyr::contains("R"))
 
 plot_prop_sp_rich <- ggplot(sp_rich_final, aes(1/width, richness, color = prop_type)) +
     geom_line(size = 1) +
@@ -358,9 +326,10 @@ plot_prop_sp_rich_patch <- ggplot(sp_rich_final, aes(patch, richness, color = pr
     xlab("Patch Index") +
     ylab("Patch richness")
 
+plot_grid(plot_prop_sp_rich, plot_prop_sp_rich_patch)
 ```
 
-#### FD patterns
+### FD patterns
 
 ```{r FD_compute}
 # Compute FD metrics -----------------------------------------------------------
@@ -433,7 +402,7 @@ plot_fd_patch <- ggplot(FD_melt, aes(patch, fd_value, color = prop)) +
          y = "FD value")
 ```
 
-#### Compute Null Models
+### Compute Null Models
 
 ```{r null_models}
 # Null models ------------------------------------------------------------------
@@ -522,13 +491,13 @@ plot_grid(plot_prop_frich_SES, plot_prop_fdis_SES, plot_prop_feve_SES, nrow = 1)
 
 ```
 
-#### Number of Individuals Landscape and CWM
+### Number of Individuals Landscape and CWM
 
 Additional plot to show number of individuals in function of distance to trait that suffer from maximum competition and distance to optimal patch value.
 
 ```{r}
 all_landscape = lapply(names(multiple_traits), function(scenario) {
-    landscape_df(multiple_traits[[scenario]], trait_types[scenario,])
+    landscape_df(multiple_traits[[scenario]], trait_types[[scenario]])
 })
 names(all_landscape) = names(multiple_traits)
 
@@ -606,9 +575,9 @@ plot_individuals_trait_environment
 ```
 
 
-### Moderately correlated traits (3 traits)
+## Moderately correlated traits (3 traits, one both)
 
-#### Simulation Routine
+### Simulation Routine
 
 ```{r}
 devtools::load_all()
@@ -643,7 +612,17 @@ colnames(traits) <- paste0("trait", seq(n_traits))
 rownames(traits) <- paste0("species", seq(species))
 
 # Number of trait influencing growth or competition
-trait_types = c(trait1 = "R", trait2 = "RA", trait3 = "A")
+trait_types = list(
+    RA20 = data.frame(trait = paste0("trait", 1:3),
+                       growth_weight = c(0.8, 0.2, 0),
+                       compet_weight = c(0,   0.2, 0.8)),
+    RA50 = data.frame(trait = paste0("trait", 1:3),
+                       growth_weight = c(0.5, 0.5, 0),
+                       compet_weight = c(0,   0.5, 0.5)),
+    RA80 = data.frame(trait = paste0("trait", 1:3),
+                       growth_weight = c(0.2, 0.8, 0),
+                       compet_weight = c(0,   0.8, 0.2))
+)
 
 
 # Simulations ------------------------------------------------------------------
@@ -689,7 +668,7 @@ sp_rich_final <- rowSums(nb_ind_final > 2)
 #     ylab("Patch richness")
 ```
 
-#### Individuals Landscape and CWM
+### Individuals Landscape and CWM
 
 ```{r}
 all_land = landscape_df(three_traits, trait_types) %>%
