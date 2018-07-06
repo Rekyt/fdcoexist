@@ -50,28 +50,6 @@ bevHoltFct <- function(R, N, A, alpha){
     (R * N)/(1 + A * alpha)
 }
 
-#' Generate Traits data.frame
-#'
-#' Generates a random traits data.frame by default the traits are uniformly
-#' & independently distributed with specifiex minimum and maximum values
-#'
-#' @param n_species the number of species to generate
-#' @param min_val   minimum trait value (for all traits)
-#' @param max_val   maximum trait value (for all traits)
-#'
-#' @importFrom stats runif
-#' @export
-generate_traits <- function(n_species, min_val, max_val) {
-
-    traits_matrix <- mapply(seq, from = min_val, to = max_val,
-                            length.out = n_species)
-    row.names(traits_matrix) <- paste0("species", seq_len(n_species))
-    colnames(traits_matrix) <- paste0("trait", seq_along(min_val))
-
-    return(traits_matrix)
-
-}
-
 #' Species growth rate for a given trait and environment
 #'
 #' Using traits that affect growth rate and specified environments, this
@@ -104,7 +82,7 @@ generate_traits <- function(n_species, min_val, max_val) {
 env_curve <- function(trait_values, env_value, trait_weights, k = 2,
                       width = 0.5) {
 
-    if (length(width) != 1 & length(width) != length(envx)) {
+    if (length(width) != 1 & length(width) != length(env_value)) {
         stop("There are either too many or not enough values for width")
     }
 
@@ -114,16 +92,14 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
         fitness_traits <- subset(trait_weights, growth_weight != 0 &
                                   !is.na(growth_weight))
 
-        given_values <- trait_values[fitness_traits$traits]
+        given_values <- trait_values[fitness_traits$trait]
 
         # Each trait has similar impact
-        R <- k * exp(-((fitness_traits - env_value)^2)/(2*width^2))
+        R <- k * exp(-((given_values - env_value)^2)/(2*width^2))
+
+        # Weigh each trait function of contribution to growth
+        R <- weighted.mean(R, fitness_traits$growth_weight)
     }
-
-    # Weigh each trait function of contribution to growth
-    Rfinal <- weighted.mean(R, fitness_traits$growth_weight)
-
-    return(Rfinal)
 }
 
 
@@ -291,20 +267,19 @@ compute_compet_distance = function(trait_weights, traits) {
         compet_weights <- subset(trait_weights, !is.na(compet_weight) &
                                      compet_weight != 0)
 
-        # Get traits contributing to competition in a numeric vector
-        compet_traits <-  unlist(traits[, compet_traits$trait])
+        compet_traits <- traits[, compet_weights$trait, drop = FALSE]
+
 
         # Compute a "composite" trait considering relative weighting of traits
-        composite_trait <- weighted.mean(compet_traits,
-                                         rep(compet_weights$compet_weight,
-                                             each = nrow(traits)))
+        composite_traits <- apply(compet_traits, 1, function(x) {
+            mean(x * compet_weights$compet_weight)
+        })
+        composite_traits <- as.matrix(composite_traits)
 
         # Compute distance matrix
-        disttraits <- as.matrix(dist(composite_trait))
+        disttraits <- as.matrix(dist(composite_traits))
 
         # Scale trait distance to balance growth
         disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
     }
-
-    disttraits
 }
