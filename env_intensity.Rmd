@@ -749,6 +749,8 @@ plot_individuals_trait_environment = all_land %>%
 plot_individuals_trait_environment
 ```
 
+### Compute growth rate
+
 
 ```{r}
 sp_growth_all_patch = apply(traits, 1, function(x) {
@@ -801,5 +803,93 @@ plot_env_trait3_rate = ggplot(sp_growth_df, aes(patch_optim, trait3, z = growth_
     theme(legend.position = "top")
 
 plot_grid(plot_env_trait1_rate, plot_env_trait2_rate, plot_env_trait3_rate, ncol = 3)
+```
+
+```{r}
+compute_realized_growth_rate = function(given_compo, given_patch) {
+    compo_patch = given_compo[given_patch, , ] 
+    
+    # Keep only species present at last timestep
+    compo_patch[compo_patch[, 150] != 0,] %>%
+        t() %>%
+        as.data.frame() %>%
+        rownames_to_column("time") %>%  # Add time
+        # Compute actual growth rate
+        mutate_at(vars(contains("species")), function(x) x/lag(x)) %>%
+        tail(1) %>%
+        select(-time) %>%
+        # Rearrange dataset to be tidy
+        gather("species", "real_growth_rate") %>%
+        mutate(patch = given_patch)
+}
+
+real_growth_rate_df = lapply(paste0("patches", 1:patches), function(given_patch) {
+    compute_realized_growth_rate(three_traits$RA20$compo, given_patch)
+}) %>%
+    bind_rows()
+
+full_growth_df = sp_growth_df %>%
+    left_join(real_growth_rate_df, by = c("species", "patch"))
+
+ggplot(full_growth_df %>%
+           filter(!is.na(real_growth_rate)), aes(growth_rate, real_growth_rate)) +
+    geom_point() +
+    labs(x = "Theoretical Growth Rate (only growth)",
+         y = "Realized Growth Rate") +
+    theme_bw()
+```
+
+The following chunk computes all growth rates over all scenarios:
+```{r}
+# For all scenarios compute theoretical growth for all species in all patches
+scenar_growth = lapply(trait_types, function(scenario) {
+    # For all species compute the theoretical growth rate
+    apply(traits, 1, function(x) {
+        # Loop over patches
+        lapply(env, function(y) {
+            env_curve(x, y, trait_weights = scenario, k = k, width = 10)
+        })
+    }) %>%
+        # Rearrange lists into tidy data.frame
+        lapply(function(given_list) {
+            data.frame(patch = rep(names(given_list), sapply(given_list, length)),
+                       theo_growth_rate = unlist(given_list))
+        }) %>%
+        bind_rows(.id = "species")
+}) %>%
+    bind_rows(.id = "scenario") %>%
+    mutate(patch_optim = as.numeric(gsub("patches", "", patch))) %>%
+    # Add species trait values
+    inner_join(traits %>%
+                   as.data.frame() %>%
+                   rownames_to_column("species"),
+               by = "species")
+
+scenar_real_growth = lapply(three_traits, function(scenar_compo) {
+  scenar_compo = scenar_compo$compo
+  
+  lapply(paste0("patches", 1:patches), function(given_patch) {
+    compute_realized_growth_rate(scenar_compo, given_patch)
+}) %>%
+    bind_rows()
+}) %>%
+    bind_rows(.id = "scenario")
+
+full_growth = scenar_growth %>%
+    left_join(scenar_real_growth, by = c("scenario", "patch", "species"))
+```
+
+```{r plot_growth_theo_real}
+ggplot(full_growth %>%
+           filter(!is.na(real_growth_rate)), aes(theo_growth_rate, real_growth_rate)) +
+    geom_point() +
+    geom_smooth(method = "lm") +
+    ggpmisc::stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label..,
+                                            sep = "~~~")), formula = y ~ x,
+                          parse = TRUE) +
+    facet_grid(cols = vars(scenario)) +
+    labs(x = "Theoretical Growth Rate (only growth)",
+         y = "Realized Growth Rate") +
+    theme_bw()
 ```
 
