@@ -750,3 +750,56 @@ plot_individuals_trait_environment
 ```
 
 
+```{r}
+sp_growth_all_patch = apply(traits, 1, function(x) {
+    lapply(env, function(y) {
+        env_curve(x, y, trait_weights = trait_types$RA20, k = k, width = 10)
+    })
+})
+
+lapply(sp_growth_all_patch, function(given_list) {
+    data.frame(ID = rep(names(given_list), sapply(given_list, length)),
+               Obs = unlist(given_list))
+}) %>%
+    bind_rows(.id = "species") -> sp_growth_df
+
+sp_growth_df %>%
+    rename(patch = ID,
+           growth_rate = Obs) -> sp_growth_df
+
+sp_growth_df %>%
+    mutate(patch_optim = as.numeric(gsub("patches", "", patch))) -> sp_growth_df
+
+sp_growth_df %>%
+    inner_join(traits %>%
+                   as.data.frame() %>%
+                   rownames_to_column("species"),
+               by = "species") -> sp_growth_df
+
+plot_env_trait1_rate = ggplot(sp_growth_df, aes(patch_optim, trait1, z = growth_rate)) +
+    stat_summary_2d(geom = "raster", bins = 17, interpolate = TRUE) +
+    scale_fill_viridis_c() +
+    labs(x = "Environment", fill = "Growth Rate",
+         y = "Trait 1 (80% weight Growth Rate)") +
+    theme_bw() +
+    theme(legend.position = "top")
+
+plot_env_trait2_rate = ggplot(sp_growth_df, aes(patch_optim, trait2, z = growth_rate)) +
+    stat_summary_2d(geom = "raster", bins = 17, interpolate = TRUE) +
+    scale_fill_viridis_c() +
+    labs(x = "Environment", fill = "Growth Rate",
+         y = "Trait 2 (20% weight Growth Rate)") +
+    theme_bw() +
+    theme(legend.position = "top")
+
+plot_env_trait3_rate = ggplot(sp_growth_df, aes(patch_optim, trait3, z = growth_rate)) +
+    stat_summary_2d(geom = "raster", bins = 17, interpolate = TRUE) +
+    scale_fill_viridis_c() +
+    labs(x = "Environment", fill = "Growth Rate",
+         y = "Trait 3 (0% weight Growth Rate)") +
+    theme_bw() +
+    theme(legend.position = "top")
+
+plot_grid(plot_env_trait1_rate, plot_env_trait2_rate, plot_env_trait3_rate, ncol = 3)
+```
+
