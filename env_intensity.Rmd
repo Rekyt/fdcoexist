@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library("cowplot")
 library("tidyverse")
 library("FD")
+library("directlabels")
 
 # Functions --------------------------------------------------------------------
 compute_moments = function(simulation_routine, trait_df = traits) {
