@@ -82,8 +82,8 @@ generate_cor_traits = function(number_patches, number_species, number_other = 9,
                   min(x1)
           }))
 
-    colnames(trait_mat) <- paste0("trait", seq(n_traits))
-    rownames(trait_mat) <- paste0("species", seq(species))
+    colnames(trait_mat) <- paste0("trait", seq(number_other + 1))
+    rownames(trait_mat) <- paste0("species", seq(number_species))
 
     return(trait_mat)
 }
