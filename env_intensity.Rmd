@@ -1,7 +1,9 @@
 ---
 title: "Coexistence with varying environmental filtering intensity"
-author: "XX"
-date: "5 juin 2018"
+author:
+    - Pierre Denelle
+    - Matthias Grenié
+date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 editor_options: 
   chunk_output_type: console
@@ -224,7 +226,7 @@ plot_grid(plot_cwm,
 
 ## Moderately correlated traits (4 traits, single influence)
 
-```{r}
+```{r, eval = FALSE}
 devtools::load_all()
 # Initial parameters -----------------------------------------------------------
 patches  <- 25   # Number of patches
@@ -294,7 +296,7 @@ plot_patches_list <- lapply(names(multiple_traits),
                                                150) +
                                     labs(subtitle = x) 
                                 
-                                directlabels::direct.label(single_patch)
+                                direct.label(single_patch)
                             })
 
 
@@ -332,7 +334,7 @@ plot_grid(plot_prop_sp_rich, plot_prop_sp_rich_patch)
 
 ### FD patterns
 
-```{r FD_compute}
+```{r FD_compute, eval=FALSE}
 # Compute FD metrics -----------------------------------------------------------
 # Compute FD metrics (richness, dispersion, eveness)
 timestep = 150
@@ -405,7 +407,7 @@ plot_fd_patch <- ggplot(FD_melt, aes(patch, fd_value, color = prop)) +
 
 ### Compute Null Models
 
-```{r null_models}
+```{r null_models, eval=FALSE}
 # Null models ------------------------------------------------------------------
 # Null models: resample species within each patch (NM2)
 # FD null for each proportion case
@@ -496,7 +498,7 @@ plot_grid(plot_prop_frich_SES, plot_prop_fdis_SES, plot_prop_feve_SES, nrow = 1)
 
 Additional plot to show number of individuals in function of distance to trait that suffer from maximum competition and distance to optimal patch value.
 
-```{r}
+```{r, eval = FALSE}
 all_landscape = lapply(names(multiple_traits), function(scenario) {
     landscape_df(multiple_traits[[scenario]], trait_types[[scenario]])
 })
@@ -666,7 +668,7 @@ three_traits <- lapply(
 # Plot individual patches 
 plot_single_patch <- lapply(
     three_traits, function(x) {
-        directlabels::direct.label(plot_patch(x$compo, 1, 150))
+        direct.label.ggplot(plot_patch(x$compo, 1, 150))
     })
 
 plot_grid(plotlist = plot_single_patch, ncol = 3)
