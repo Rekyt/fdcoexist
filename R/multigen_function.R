@@ -165,6 +165,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         immigrants <- apply(migrate, 2, "sum")/patches
         # /!\ vector recycling when summing both matrices
         total <- t(t(stay) + immigrants)
+
+        # Final composition
         composition[,, m + 1] <- total
     }
     return(list(compo = composition,
