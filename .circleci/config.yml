@@ -2,6 +2,10 @@ version: 2
 jobs:
   build:
     working_directory: ~/main
+    branches:
+      only:
+        - master
+        - add_circle_ci
     docker:
       - image: appsilon/ci-base:1.0
     steps:
