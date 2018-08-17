@@ -4,8 +4,8 @@
 \alias{multigen}
 \title{Function to run the simulation}
 \usage{
-multigen(traits, trait_weights, env, time, species, patches, composition, A, d,
-  k, width)
+multigen(traits, trait_weights, env, time, species, patches, composition,
+  A, d, k, width)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
