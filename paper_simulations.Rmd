@@ -14,9 +14,11 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
-    library("cowplot")
-    library("tidyverse")
-    library("directlabels")
+    suppressWarnings({
+        library("cowplot")
+        library("tidyverse")
+        library("directlabels")
+    })
 })
 # Functions --------------------------------------------------------------------
 compute_moments = function(simulation_routine, trait_df = traits) {
@@ -63,10 +65,10 @@ landscape_df = function(multiple_traits_scenario, trait_df, trait_weights) {
     population_df %>%
         inner_join(growth_df, by = "species") %>%
         inner_join(compet_df, by = "species") %>%
-    # Add patch number as a new column and compute distance to optimal value
-    mutate(patch_optim = gsub("patches", "", patch) %>%
-               as.numeric(),
-           optim_dist = abs(growth_trait - patch_optim))
+        # Add patch number as a new column and compute distance to optimal value
+        mutate(patch_optim = gsub("patches", "", patch) %>%
+                   as.numeric(),
+               optim_dist = abs(growth_trait - patch_optim))
 }
 
 # This function tidy a list of simulation routine to a single data.frame
@@ -109,6 +111,7 @@ initpop    <- 50   # initial population size
 n_traits   <- 3    # number of traits
 k          <- 1.45 # Maximum growth rate
 env_width  <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
+var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
@@ -150,7 +153,7 @@ uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                    cor_coef = 0)
 set.seed(1)
 low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                   cor_coef = 0.3)
+                                     cor_coef = 0.3)
 
 set.seed(1)
 high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
@@ -174,37 +177,37 @@ facet_scenar = facet_wrap(vars(scenario),
 # different scenarios
 fig_abund_env = function(simul_df, simul_label) {
     ggplot(simul_df %>%
-           filter(N >= 2), aes(patch_optim, N)) +
-    geom_point(shape = ".") +
-    geom_smooth() +
-    facet_scenar +
-    labs(x = "Environmental value",
-         y = "Species Abundance (gen. = 150)",
-         subtitle = simul_label)
+               filter(N >= 2), aes(patch_optim, N)) +
+        geom_point(shape = ".") +
+        geom_smooth() +
+        facet_scenar +
+        labs(x = "Environmental value",
+             y = "Species Abundance (gen. = 150)",
+             subtitle = simul_label)
 }
 
 # Plot the relationship between the CWM of the different trait along the
 # environment for the different scenarios
 fig_cwm_env = function(simul_df, simul_label) {
     simul_df %>%
-    filter(N >= 2) %>%
-    group_by(scenario, patch) %>%
-    summarise_at(vars(contains("cwm")), sum, na.rm = TRUE) %>%
-    mutate(patch_optim = gsub("patches", "", patch) %>%
-               as.numeric()) %>%
-    gather("cwm_name", "cwm_value", contains("cwm")) %>%
-    ggplot(aes(patch_optim, cwm_value, color = cwm_name)) +
-    geom_point() +
-    geom_smooth() +
-    facet_scenar +
-    scale_color_discrete(labels = c(trait1_cwm = "Trait 1",
-                                    trait2_cwm = "Trait 2",
-                                    trait3_cwm = "Trait 3")) +
-    labs(x = "Environment",
-         y = "Community-Weighted Mean (CWM)",
-         color = NULL,
-         subtitle = simul_label) +
-    theme(legend.position = "top")
+        filter(N >= 2) %>%
+        group_by(scenario, patch) %>%
+        summarise_at(vars(contains("cwm")), sum, na.rm = TRUE) %>%
+        mutate(patch_optim = gsub("patches", "", patch) %>%
+                   as.numeric()) %>%
+        gather("cwm_name", "cwm_value", contains("cwm")) %>%
+        ggplot(aes(patch_optim, cwm_value, color = cwm_name)) +
+        geom_point() +
+        geom_smooth() +
+        facet_scenar +
+        scale_color_discrete(labels = c(trait1_cwm = "Trait 1",
+                                        trait2_cwm = "Trait 2",
+                                        trait3_cwm = "Trait 3")) +
+        labs(x = "Environment",
+             y = "Community-Weighted Mean (CWM)",
+             color = NULL,
+             subtitle = simul_label) +
+        theme(legend.position = "top")
 }
 
 # Plot the relationship between patch CWMs along the environment considering
@@ -212,47 +215,73 @@ fig_cwm_env = function(simul_df, simul_label) {
 fig_cwm_env_abund = function(simul_df, simul_label, n_bins = 24,
                              given_trans = "identity") {
     simul_df %>%
-    group_by(scenario, patch) %>%
-    summarise_at(vars(contains("cwm"), N), sum) %>%
-    mutate(patch_optim = gsub("patches", "", patch) %>%
-               as.numeric()) %>%
-    gather("cwm_name", "cwm_value", contains("cwm")) %>%
-    ungroup() %>%
-    ggplot(aes(patch_optim, cwm_value, z = N)) +
-    stat_summary_2d(bins = n_bins) +
-    facet_grid(vars(scenario), vars(cwm_name),
-               labeller = labeller(scenario = trait_scenar_names,
-                                   cwm_name = label_value)) +
-    scale_fill_viridis_c(trans = given_trans) +
-    labs(x = "Environment",
-         y = "Community-Weighted Mean (CWM)",
-         fill = "Total Abundance",
-         subtitle = simul_label) +
-    theme(legend.position = "top")
+        group_by(scenario, patch) %>%
+        summarise_at(vars(contains("cwm"), N), sum) %>%
+        mutate(patch_optim = gsub("patches", "", patch) %>%
+                   as.numeric()) %>%
+        gather("cwm_name", "cwm_value", contains("cwm")) %>%
+        ungroup() %>%
+        ggplot(aes(patch_optim, cwm_value, z = N)) +
+        stat_summary_2d(bins = n_bins) +
+        facet_grid(vars(scenario), vars(cwm_name),
+                   labeller = labeller(scenario = trait_scenar_names,
+                                       cwm_name = label_value)) +
+        scale_fill_viridis_c(trans = given_trans) +
+        labs(x = "Environment",
+             y = "Community-Weighted Mean (CWM)",
+             fill = "Total Abundance",
+             subtitle = simul_label) +
+        theme(legend.position = "top")
 }
 
 # Relationship betwee, species trait values along the enviroment showing their
 # local abundances for the different traits considered
 fig_ind_landscape = function(simul_df, simul_label, n_bins = 22,
                              given_trans = "identity") {
-    simul_df %>%
-    select(-contains("cwm")) %>%
-    gather("trait_name", "trait_value", contains("trait")) %>%
-    ggplot(aes(patch_optim, trait_value, z = N)) +
-    stat_summary_2d(geom = "raster", bins = n_bins, interpolate = TRUE) +
-    facet_grid(vars(scenario), vars(trait_name),
-               labeller = labeller(scenario = trait_scenar_names,
-                                   trait_name = function(x) gsub("_", " ", x))) +
-    scale_fill_viridis_c(trans = given_trans) +
-    labs(x = "Environment",
-         y = "Trait Value",
-         fill = "Species Abundance",
-         subtitle = simul_label) +
-    theme(legend.position = "top")
+    
+    simul_df <- simul_df %>%
+        select(-contains("cwm")) %>%
+        gather("trait_name", "trait_value", contains("trait"))
+    
+    simul_df_cwm <- simul_df %>%
+        group_by(scenario, patch, trait_name) %>%
+        summarise(cwm = weighted.mean(trait_value, N))
+    
+    simul_df2 <- left_join(simul_df, simul_df_cwm,
+                           by = c("scenario", "patch", "trait_name"))
+    
+    ggplot(simul_df2,
+           aes(patch_optim, trait_value, z = N)) +
+        stat_summary_2d(geom = "raster", bins = n_bins, interpolate = TRUE) +
+        geom_line(aes(patch_optim, cwm, color = "firebrick"), size = 1) +
+        facet_grid(vars(scenario), vars(trait_name),
+                   labeller = labeller(scenario = trait_scenar_names,
+                                       trait_name = function(x) gsub("_", " ", x))) +
+        scale_fill_viridis_c(trans = given_trans) +
+        scale_color_manual(name = "CWM", values = c(firebrick = "grey80"),
+                           labels = "") +
+        labs(x = "Environment",
+             y = "Trait Value",
+             fill = "Species Abundance",
+             subtitle = simul_label) +
+        guides(colour = guide_legend(override.aes = list(size = 1, color = "grey50"))) +
+        theme(legend.position = "top")
 }
 ```
 
+This document presents the relationships between functional traits of species and an environmental gradient.
 
+Our coexistence model is developed following this equation:
+
+$$N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha}$$
+
+with
+
+$$\alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})$$
+
+$$R_{i, x} = k \times \exp(- \frac{(trait_i - env_x)^2}{2\times {width}^2})$$
+
+# Constant environmental filtering strength
 
 ## Without Competition
 
@@ -287,20 +316,20 @@ no_compet_no_cor_label = paste0("No competition; ",
                                 " 3 uncorrelated traits")
 ```
 
-```{r no_compet_no_cor_abund_env}
+```{r no_compet_no_cor_abund_env, eval = FALSE}
 plot_no_compet_no_cor_abund_env = fig_abund_env(no_compet_no_cor_df,
                                                 no_compet_no_cor_label)
 
 plot_no_compet_no_cor_abund_env
 ```
 
-```{r no_compet_no_cor_cwm_env}
+```{r no_compet_no_cor_cwm_env, eval = FALSE}
 plot_no_compet_no_cor_cwm_env = fig_cwm_env(no_compet_no_cor_df,
                                             no_compet_no_cor_label)
 plot_no_compet_no_cor_cwm_env
 ```
 
-```{r no_compet_no_cor_cwm_env_abund}
+```{r no_compet_no_cor_cwm_env_abund, eval = FALSE}
 plot_no_compet_no_cor_cwm_env_abund = fig_cwm_env_abund(no_compet_no_cor_df,
                                                         no_compet_no_cor_label,
                                                         given_trans = "log10")
@@ -342,30 +371,8 @@ no_compet_low_cor_df = tidy_simulation_list(no_compet_low_cor,
                                             trait_scenarios)
 
 no_compet_low_cor_label = paste0("No competition; ",
-                                d * 100, "% dispersal;",
-                                " 3 low correlated (r = 0.3) traits")
-```
-
-```{r no_compet_low_cor_abund_env}
-plot_no_compet_low_cor_abund_env = fig_abund_env(no_compet_low_cor_df,
-                                                 no_compet_low_cor_label)
-
-plot_no_compet_low_cor_abund_env
-```
-
-```{r no_compet_low_cor_cwm_env}
-plot_no_compet_low_cor_cwm_env = fig_cwm_env(no_compet_low_cor_df,
-                                             no_compet_low_cor_label)
-
-plot_no_compet_low_cor_cwm_env
-```
-
-```{r no_compet_low_cor_cwm_env_abund}
-plot_no_compet_low_cor_cwm_env_abund = fig_cwm_env_abund(no_compet_low_cor_df,
-                                                         no_compet_low_cor_label,
-                                                         given_trans = "log10")
-
-plot_no_compet_low_cor_cwm_env_abund
+                                 d * 100, "% dispersal;",
+                                 " 3 low correlated (r = 0.3) traits")
 ```
 
 ```{r no_compet_low_cor_df_ind_landscape}
@@ -402,30 +409,8 @@ no_compet_high_cor_df = tidy_simulation_list(no_compet_high_cor,
                                              trait_scenarios)
 
 no_compet_high_cor_label = paste0("No competition; ",
-                                d * 100, "% dispersal;",
-                                " 3 high correlated (r = 0.7) traits")
-```
-
-```{r no_compet_high_cor_abund_env}
-plot_no_compet_high_cor_abund_env = fig_abund_env(no_compet_high_cor_df,
-                                                  no_compet_high_cor_label)
-
-plot_no_compet_high_cor_abund_env
-```
-
-```{r no_compet_high_cor_cwm_env}
-plot_no_compet_high_cor_cwm_env = fig_cwm_env(no_compet_high_cor_df,
-                                              no_compet_high_cor_label)
-plot_no_compet_high_cor_cwm_env
-```
-
-
-```{r no_compet_high_cor_cwm_env_abund}
-plot_no_compet_high_cor_cwm_env_abund = fig_cwm_env_abund(no_compet_high_cor_df,
-                                                          no_compet_high_cor_label,
-                                                          given_trans = "log10")
-
-plot_no_compet_high_cor_cwm_env_abund
+                                  d * 100, "% dispersal;",
+                                  " 3 high correlated (r = 0.7) traits")
 ```
 
 ```{r no_compet_high_cor_df_ind_landscape}
@@ -435,7 +420,6 @@ plot_no_compet_high_cor_df_ind_landscape = fig_ind_landscape(no_compet_high_cor_
 
 plot_no_compet_high_cor_df_ind_landscape
 ```
-
 
 
 ## With competition
@@ -468,27 +452,6 @@ compet_no_cor_label = paste0("Competition (A = ", A, "); ",
                              " 3 uncorrelated traits")
 ```
 
-```{r compet_no_cor_abund_env}
-plot_compet_no_cor_abund_env = fig_abund_env(compet_no_cor_df,
-                                             compet_no_cor_label)
-
-plot_compet_no_cor_abund_env
-```
-
-```{r compet_no_cor_cwm_env}
-plot_compet_no_cor_cwm_env = fig_cwm_env(compet_no_cor_df,
-                                         compet_no_cor_label)
-
-plot_compet_no_cor_cwm_env
-```
-
-```{r compet_no_cor_cwm_env_abund}
-plot_compet_no_cor_cwm_env_abund = fig_cwm_env_abund(compet_no_cor_df,
-                                                     compet_no_cor_label,
-                                                     given_trans = "identity")
-plot_compet_no_cor_cwm_env_abund
-```
-
 ```{r compet_no_cor_df_ind_landscape}
 plot_compet_no_cor_df_ind_landscape = fig_ind_landscape(compet_no_cor_df,
                                                         compet_no_cor_label,
@@ -518,35 +481,12 @@ compet_low_cor <- lapply(
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
 compet_low_cor_df = tidy_simulation_list(compet_low_cor,
-                                        set_of_traits = low_cor_traits,
-                                        trait_scenarios = trait_scenarios)
+                                         set_of_traits = low_cor_traits,
+                                         trait_scenarios = trait_scenarios)
 
 compet_low_cor_label = paste0("Competition (A = ", A, "); ",
                               d * 100, "% dispersal;",
                               " 3 correlated traits (r = 0.3)")
-```
-
-```{r compet_low_cor_abund_env}
-plot_compet_low_cor_abund_env = fig_abund_env(compet_low_cor_df,
-                                              compet_low_cor_label)
-
-plot_compet_low_cor_abund_env
-```
-
-```{r compet_low_cor_cwm_env}
-plot_compet_low_cor_cwm_env = fig_cwm_env(compet_low_cor_df,
-                                          compet_low_cor_label)
-
-plot_compet_low_cor_cwm_env
-```
-
-
-```{r compet_low_cor_cwm_env_abund}
-plot_compet_low_cor_cwm_env_abund = fig_cwm_env_abund(compet_low_cor_df,
-                                                      compet_low_cor_label,
-                                                      given_trans = "identity")
-
-plot_compet_low_cor_cwm_env_abund
 ```
 
 ```{r compet_low_cor_df_ind_landscape}
@@ -578,38 +518,244 @@ compet_high_cor <- lapply(
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
 compet_high_cor_df = tidy_simulation_list(compet_high_cor,
-                                        set_of_traits = high_cor_traits,
-                                        trait_scenarios = trait_scenarios)
+                                          set_of_traits = high_cor_traits,
+                                          trait_scenarios = trait_scenarios)
 
 compet_high_cor_label = paste0("Competition (A = ", A, "); ",
-                             d * 100, "% dispersal;",
-                             " 3 correlated traits (r = 0.7)")
-```
-
-```{r compet_high_cor_abund_env}
-plot_compet_high_cor_abund_env = fig_abund_env(compet_high_cor_df,
-                                               compet_high_cor_label)
-
-plot_compet_high_cor_abund_env
-```
-
-```{r compet_high_cor_cwm_env}
-plot_compet_high_cor_cwm_env = fig_cwm_env(compet_high_cor_df,
-                                           compet_high_cor_label)
-
-plot_compet_high_cor_cwm_env
-```
-
-
-```{r compet_high_cor_cwm_env_abund}
-plot_compet_high_cor_cwm_env_abund = fig_cwm_env_abund(compet_high_cor_df,
-                                                       compet_high_cor_label,
-                                                       given_trans = "identity")
-
-plot_compet_high_cor_cwm_env_abund
+                               d * 100, "% dispersal;",
+                               " 3 correlated traits (r = 0.7)")
 ```
 
 ```{r compet_high_cor_df_ind_landscape}
+plot_compet_high_cor_df_ind_landscape = fig_ind_landscape(compet_high_cor_df,
+                                                          compet_high_cor_label,
+                                                          n_bins = 17)
+plot_compet_high_cor_df_ind_landscape
+```
+
+# With varying environmental filtering strength
+
+In this section, the environmental filtering selects for a narrower trait range
+towards the end of the environmental gradient.
+
+### No correlations among traits
+
+```{r simul_no_compet_no_corr var_strength}
+
+no_compet_no_cor <- lapply(
+    trait_scenarios,
+    function(x){
+        multigen(traits = uncor_traits,
+                 trait_weights = x,
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = 0, d = d,
+                 k = k, width = var_width)
+    })
+
+# Takes simulation results and put them as an exploitable data.frame with only
+# gen = 150 abundances
+no_compet_no_cor_df = tidy_simulation_list(no_compet_no_cor,
+                                           set_of_traits = uncor_traits,
+                                           trait_scenarios = trait_scenarios)
+
+no_compet_no_cor_label = paste0("No competition; ",
+                                d * 100, "% dispersal;",
+                                " 3 uncorrelated traits")
+```
+
+```{r no_compet_no_cor_df_ind_landscape var_strength}
+plot_no_compet_no_cor_df_ind_landscape = fig_ind_landscape(no_compet_no_cor_df,
+                                                           no_compet_no_cor_label,
+                                                           n_bins = 22,
+                                                           given_trans = "identity")
+
+plot_no_compet_no_cor_df_ind_landscape
+```
+
+### Low correlations among traits
+
+```{r simul_no_compet_low_cor var_strength}
+no_compet_low_cor <- lapply(
+    trait_scenarios,
+    function(x){
+        multigen(traits = low_cor_traits,
+                 trait_weights = x,
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = 0, d = d,
+                 k = k, width = var_width)
+    })
+
+# Takes simulation results and put them as an exploitable data.frame with only
+# gen = 150 abundances
+no_compet_low_cor_df = tidy_simulation_list(no_compet_low_cor,
+                                            low_cor_traits,
+                                            trait_scenarios)
+
+no_compet_low_cor_label = paste0("No competition; ",
+                                 d * 100, "% dispersal;",
+                                 " 3 low correlated (r = 0.3) traits")
+```
+
+```{r no_compet_low_cor_df_ind_landscape var_strength}
+plot_no_compet_low_cor_df_ind_landscape = fig_ind_landscape(no_compet_low_cor_df,
+                                                            no_compet_low_cor_label,
+                                                            n_bins = 17,
+                                                            given_trans = "identity")
+
+plot_no_compet_low_cor_df_ind_landscape
+```
+
+
+### High correlations among traits
+
+```{r simul_no_compet_high_cor var_strength}
+no_compet_high_cor <- lapply(
+    trait_scenarios,
+    function(x){
+        multigen(traits = high_cor_traits,
+                 trait_weights = x,
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = 0, d = d,
+                 k = k, width = var_width)
+    })
+
+# Takes simulation results and put them as an exploitable data.frame with only
+# gen = 150 abundances
+no_compet_high_cor_df = tidy_simulation_list(no_compet_high_cor,
+                                             high_cor_traits,
+                                             trait_scenarios)
+
+no_compet_high_cor_label = paste0("No competition; ",
+                                  d * 100, "% dispersal;",
+                                  " 3 high correlated (r = 0.7) traits")
+```
+
+```{r no_compet_high_cor_df_ind_landscape var_strength}
+plot_no_compet_high_cor_df_ind_landscape = fig_ind_landscape(no_compet_high_cor_df,
+                                                             no_compet_high_cor_label,
+                                                             n_bins = 17)
+
+plot_no_compet_high_cor_df_ind_landscape
+```
+
+
+## With competition
+
+### No correlations among traits
+
+```{r simul_compet_no_corr var_strength}
+compet_no_cor <- lapply(
+    trait_scenarios,
+    function(x){
+        multigen(traits = uncor_traits,
+                 trait_weights = x,
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = A, d = d,
+                 k = k, width = var_width)
+    })
+
+# Takes simulation results and put them as an exploitable data.frame with only
+# gen = 150 abundances
+compet_no_cor_df = tidy_simulation_list(compet_no_cor,
+                                        set_of_traits = uncor_traits,
+                                        trait_scenarios = trait_scenarios)
+
+compet_no_cor_label = paste0("Competition (A = ", A, "); ",
+                             d * 100, "% dispersal;",
+                             " 3 uncorrelated traits")
+```
+
+```{r compet_no_cor_df_ind_landscape var_strength}
+plot_compet_no_cor_df_ind_landscape = fig_ind_landscape(compet_no_cor_df,
+                                                        compet_no_cor_label,
+                                                        n_bins = 22)
+
+plot_compet_no_cor_df_ind_landscape
+```
+
+
+### Low correlations among traits
+
+```{r simul_compet_low_corr var_strength}
+compet_low_cor <- lapply(
+    trait_scenarios,
+    function(x){
+        multigen(traits = uncor_traits,
+                 trait_weights = x,
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = A, d = d,
+                 k = k, width = var_width)
+    })
+
+# Takes simulation results and put them as an exploitable data.frame with only
+# gen = 150 abundances
+compet_low_cor_df = tidy_simulation_list(compet_low_cor,
+                                         set_of_traits = low_cor_traits,
+                                         trait_scenarios = trait_scenarios)
+
+compet_low_cor_label = paste0("Competition (A = ", A, "); ",
+                              d * 100, "% dispersal;",
+                              " 3 correlated traits (r = 0.3)")
+```
+
+```{r compet_low_cor_df_ind_landscape var_strength}
+plot_compet_low_cor_df_ind_landscape = fig_ind_landscape(compet_low_cor_df,
+                                                         compet_low_cor_label,
+                                                         n_bins = 17)
+
+plot_compet_low_cor_df_ind_landscape
+```
+
+
+### High correlations among traits
+
+```{r simul_compet_high_corr var_strength}
+compet_high_cor <- lapply(
+    trait_scenarios,
+    function(x){
+        multigen(traits = uncor_traits,
+                 trait_weights = x,
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = A, d = d,
+                 k = k, width = var_width)
+    })
+
+# Takes simulation results and put them as an exploitable data.frame with only
+# gen = 150 abundances
+compet_high_cor_df = tidy_simulation_list(compet_high_cor,
+                                          set_of_traits = high_cor_traits,
+                                          trait_scenarios = trait_scenarios)
+
+compet_high_cor_label = paste0("Competition (A = ", A, "); ",
+                               d * 100, "% dispersal;",
+                               " 3 correlated traits (r = 0.7)")
+```
+
+```{r compet_high_cor_df_ind_landscape var_strength}
 plot_compet_high_cor_df_ind_landscape = fig_ind_landscape(compet_high_cor_df,
                                                           compet_high_cor_label,
                                                           n_bins = 17)
