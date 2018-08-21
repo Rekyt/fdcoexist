@@ -535,6 +535,8 @@ plot_compet_high_cor_df_ind_landscape
 
 # With varying environmental filtering strength
 
+## Without Compettiion
+
 In this section, the environmental filtering selects for a narrower trait range
 towards the end of the environmental gradient.
 
@@ -798,10 +800,12 @@ all_df <- list(constant = list_df, varying = list_var_df) %>%
 
 # Compute linear models for CWM <-> environment relationship
 mod_df <- all_df %>%
-    group_by(env_width, compet_status, cor_level, scenario, patch) %>%
-    summarise(patch_optim = unique(patch_optim), trait2_cwm = sum(trait2_cwm)) %>%
+    gather("cwm_name", "cwm_value", contains("cwm")) %>%
+    group_by(env_width, compet_status, cor_level, scenario, patch, cwm_name) %>%
+    summarise(patch_optim = unique(patch_optim), cwm_value = sum(cwm_value)) %>%
+    group_by(env_width, compet_status, cor_level, scenario, cwm_name) %>%
     nest() %>%
-    mutate(mod_cwm_env = map(data, ~lm(trait2_cwm ~ patch_optim, data = .x)),
+    mutate(mod_cwm_env = map(data, ~lm(cwm_value ~ patch_optim, data = .x)),
            mod_glance = map(mod_cwm_env, broom::glance)) %>%
     unnest(mod_glance)
 
@@ -810,12 +814,12 @@ plot_r2_cwm_env = ggplot(mod_df, aes(scenario, r.squared)) +
     geom_point(aes(fill = fct_rev(cor_level)),
                size = 4, position = position_dodge(width = 0.7),
                shape = 21) +
-    facet_grid(rows = vars(compet_status), cols = vars(env_width),
+    facet_grid(rows = vars(compet_status), cols = vars(env_width, cwm_name),
                labeller =
                    labeller(compet_status = c(compet = "Competition",
                                               no_compet = "No Competition"),
                             env_width     = c(constant = "Constant\nEnv. Filter Strength",
-                                               varying  = "Varying\nEnv. Filter Strength"))) +
+                                              varying  = "Varying\nEnv. Filter Strength"))) +
     ylim(0, NA) +
     scale_fill_viridis_d("Trait\nCorrelations",
                          labels = c(no_cor   = "r = 0",
