@@ -533,56 +533,6 @@ plot_compet_high_cor_df_ind_landscape = fig_ind_landscape(compet_high_cor_df,
 plot_compet_high_cor_df_ind_landscape
 ```
 
-## Synthetic plot
-
-```{r synthetic_plot}
-
-list_df <- list("no_compet_no_cor_df" = no_compet_no_cor_df,
-                "no_compet_low_cor_df" = no_compet_low_cor_df,
-                "no_compet_high_cor_df" = no_compet_high_cor_df,
-                "compet_no_cor_df" = compet_no_cor_df,
-                "compet_low_cor_df" = compet_low_cor_df,
-                "compet_high_cor_df" = compet_high_cor_df)
-list_df <- mapply(cbind, list_df, "df" = names(list_df), SIMPLIFY = FALSE)
-
-all_df <- as.data.frame(bind_rows(list_df))
-
-# List of weighted linear regressions
-trait2_w_lm = all_df %>%
-    group_by(df, scenario) %>%
-    do(model = lm(trait2 ~ patch_optim, data = ., weights = N))
-
-list_lm_df <- trait2_w_lm[[1]]
-list_lm_scenario <- trait2_w_lm[[2]]
-
-trait2_w_lm <- lapply(trait2_w_lm$model, summary)
-
-synth_plot <- data.frame(df = list_lm_df,
-                         scenario = list_lm_scenario,
-                         r2 = unlist(lapply(trait2_w_lm,
-                                            function(x) x$r.squared)))
-
-synth_plot$df <- as.factor(synth_plot$df)
-synth_plot$df <- factor(synth_plot$df,
-                        levels(synth_plot$df)[c(6:1)])
-
-print(ggplot(synth_plot, aes(as.factor(df), r2)) +
-          geom_point(aes(shape = as.factor(scenario), fill = as.factor(scenario)),
-                     color = "black", size = 4) +
-          scale_fill_manual("Scenario", values = c(RA100100 = viridis::viridis(4)[1],
-                                                   RA2575 = viridis::viridis(4)[2],
-                                                   RA5050 = viridis::viridis(4)[3],
-                                                   RA7525 = viridis::viridis(4)[4])) +
-          scale_shape_manual("Scenario", values = c(RA100100 = 21, RA2575 = 22,
-                                                    RA5050 = 23, RA7525 = 24)) +
-          labs(subtitle = "R2 for the weighted linear regression between trait2 and environment",
-               x = "Scenario",
-               y = expression("R"^2)) +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)))
-
-```
-
-
 # With varying environmental filtering strength
 
 In this section, the environmental filtering selects for a narrower trait range
@@ -592,7 +542,7 @@ towards the end of the environmental gradient.
 
 ```{r simul_no_compet_no_corr var_strength}
 
-no_compet_no_cor <- lapply(
+no_compet_no_cor_var <- lapply(
     trait_scenarios,
     function(x){
         multigen(traits = uncor_traits,
@@ -608,18 +558,18 @@ no_compet_no_cor <- lapply(
 
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
-no_compet_no_cor_df = tidy_simulation_list(no_compet_no_cor,
-                                           set_of_traits = uncor_traits,
-                                           trait_scenarios = trait_scenarios)
+no_compet_no_cor_var_df = tidy_simulation_list(no_compet_no_cor_var,
+                                               set_of_traits = uncor_traits,
+                                               trait_scenarios = trait_scenarios)
 
-no_compet_no_cor_label = paste0("No competition; ",
-                                d * 100, "% dispersal;",
-                                " 3 uncorrelated traits")
+no_compet_no_cor_var_label = paste0("No competition; ",
+                                    d * 100, "% dispersal;",
+                                    " 3 uncorrelated traits")
 ```
 
 ```{r no_compet_no_cor_df_ind_landscape var_strength}
-plot_no_compet_no_cor_df_ind_landscape = fig_ind_landscape(no_compet_no_cor_df,
-                                                           no_compet_no_cor_label,
+plot_no_compet_no_cor_df_ind_landscape = fig_ind_landscape(no_compet_no_cor_var_df,
+                                                           no_compet_no_cor_var_label,
                                                            n_bins = 22,
                                                            given_trans = "identity")
 
@@ -629,7 +579,7 @@ plot_no_compet_no_cor_df_ind_landscape
 ### Low correlations among traits
 
 ```{r simul_no_compet_low_cor var_strength}
-no_compet_low_cor <- lapply(
+no_compet_low_cor_var <- lapply(
     trait_scenarios,
     function(x){
         multigen(traits = low_cor_traits,
@@ -645,18 +595,18 @@ no_compet_low_cor <- lapply(
 
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
-no_compet_low_cor_df = tidy_simulation_list(no_compet_low_cor,
-                                            low_cor_traits,
-                                            trait_scenarios)
+no_compet_low_cor_var_df = tidy_simulation_list(no_compet_low_cor_var,
+                                                low_cor_traits,
+                                                trait_scenarios)
 
-no_compet_low_cor_label = paste0("No competition; ",
-                                 d * 100, "% dispersal;",
-                                 " 3 low correlated (r = 0.3) traits")
+no_compet_low_cor_var_label = paste0("No competition; ",
+                                     d * 100, "% dispersal;",
+                                     " 3 low correlated (r = 0.3) traits")
 ```
 
 ```{r no_compet_low_cor_df_ind_landscape var_strength}
-plot_no_compet_low_cor_df_ind_landscape = fig_ind_landscape(no_compet_low_cor_df,
-                                                            no_compet_low_cor_label,
+plot_no_compet_low_cor_df_ind_landscape = fig_ind_landscape(no_compet_low_cor_var_df,
+                                                            no_compet_low_cor_var_label,
                                                             n_bins = 17,
                                                             given_trans = "identity")
 
@@ -667,7 +617,7 @@ plot_no_compet_low_cor_df_ind_landscape
 ### High correlations among traits
 
 ```{r simul_no_compet_high_cor var_strength}
-no_compet_high_cor <- lapply(
+no_compet_high_cor_var <- lapply(
     trait_scenarios,
     function(x){
         multigen(traits = high_cor_traits,
@@ -683,18 +633,18 @@ no_compet_high_cor <- lapply(
 
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
-no_compet_high_cor_df = tidy_simulation_list(no_compet_high_cor,
-                                             high_cor_traits,
-                                             trait_scenarios)
+no_compet_high_cor_var_df = tidy_simulation_list(no_compet_high_cor_var,
+                                                 high_cor_traits,
+                                                 trait_scenarios)
 
-no_compet_high_cor_label = paste0("No competition; ",
-                                  d * 100, "% dispersal;",
-                                  " 3 high correlated (r = 0.7) traits")
+no_compet_high_cor_var_label = paste0("No competition; ",
+                                      d * 100, "% dispersal;",
+                                      " 3 high correlated (r = 0.7) traits")
 ```
 
 ```{r no_compet_high_cor_df_ind_landscape var_strength}
-plot_no_compet_high_cor_df_ind_landscape = fig_ind_landscape(no_compet_high_cor_df,
-                                                             no_compet_high_cor_label,
+plot_no_compet_high_cor_df_ind_landscape = fig_ind_landscape(no_compet_high_cor_var_df,
+                                                             no_compet_high_cor_var_label,
                                                              n_bins = 17)
 
 plot_no_compet_high_cor_df_ind_landscape
@@ -706,7 +656,7 @@ plot_no_compet_high_cor_df_ind_landscape
 ### No correlations among traits
 
 ```{r simul_compet_no_corr var_strength}
-compet_no_cor <- lapply(
+compet_no_cor_var <- lapply(
     trait_scenarios,
     function(x){
         multigen(traits = uncor_traits,
@@ -722,18 +672,18 @@ compet_no_cor <- lapply(
 
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
-compet_no_cor_df = tidy_simulation_list(compet_no_cor,
-                                        set_of_traits = uncor_traits,
-                                        trait_scenarios = trait_scenarios)
+compet_no_cor_var_df = tidy_simulation_list(compet_no_cor_var,
+                                            set_of_traits = uncor_traits,
+                                            trait_scenarios = trait_scenarios)
 
-compet_no_cor_label = paste0("Competition (A = ", A, "); ",
-                             d * 100, "% dispersal;",
-                             " 3 uncorrelated traits")
+compet_no_cor_var_label = paste0("Competition (A = ", A, "); ",
+                                 d * 100, "% dispersal;",
+                                 " 3 uncorrelated traits")
 ```
 
 ```{r compet_no_cor_df_ind_landscape var_strength}
-plot_compet_no_cor_df_ind_landscape = fig_ind_landscape(compet_no_cor_df,
-                                                        compet_no_cor_label,
+plot_compet_no_cor_df_ind_landscape = fig_ind_landscape(compet_no_cor_var_df,
+                                                        compet_no_cor_var_label,
                                                         n_bins = 22)
 
 plot_compet_no_cor_df_ind_landscape
@@ -743,7 +693,7 @@ plot_compet_no_cor_df_ind_landscape
 ### Low correlations among traits
 
 ```{r simul_compet_low_corr var_strength}
-compet_low_cor <- lapply(
+compet_low_cor_var <- lapply(
     trait_scenarios,
     function(x){
         multigen(traits = uncor_traits,
@@ -759,18 +709,18 @@ compet_low_cor <- lapply(
 
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
-compet_low_cor_df = tidy_simulation_list(compet_low_cor,
-                                         set_of_traits = low_cor_traits,
-                                         trait_scenarios = trait_scenarios)
+compet_low_cor_var_df = tidy_simulation_list(compet_low_cor_var,
+                                             set_of_traits = low_cor_traits,
+                                             trait_scenarios = trait_scenarios)
 
-compet_low_cor_label = paste0("Competition (A = ", A, "); ",
-                              d * 100, "% dispersal;",
-                              " 3 correlated traits (r = 0.3)")
+compet_low_cor_var_label = paste0("Competition (A = ", A, "); ",
+                                  d * 100, "% dispersal;",
+                                  " 3 correlated traits (r = 0.3)")
 ```
 
 ```{r compet_low_cor_df_ind_landscape var_strength}
-plot_compet_low_cor_df_ind_landscape = fig_ind_landscape(compet_low_cor_df,
-                                                         compet_low_cor_label,
+plot_compet_low_cor_df_ind_landscape = fig_ind_landscape(compet_low_cor_var_df,
+                                                         compet_low_cor_var_label,
                                                          n_bins = 17)
 
 plot_compet_low_cor_df_ind_landscape
@@ -780,7 +730,7 @@ plot_compet_low_cor_df_ind_landscape
 ### High correlations among traits
 
 ```{r simul_compet_high_corr var_strength}
-compet_high_cor <- lapply(
+compet_high_cor_var <- lapply(
     trait_scenarios,
     function(x){
         multigen(traits = uncor_traits,
@@ -796,25 +746,25 @@ compet_high_cor <- lapply(
 
 # Takes simulation results and put them as an exploitable data.frame with only
 # gen = 150 abundances
-compet_high_cor_df = tidy_simulation_list(compet_high_cor,
-                                          set_of_traits = high_cor_traits,
-                                          trait_scenarios = trait_scenarios)
+compet_high_cor_var_df = tidy_simulation_list(compet_high_cor_var,
+                                              set_of_traits = high_cor_traits,
+                                              trait_scenarios = trait_scenarios)
 
-compet_high_cor_label = paste0("Competition (A = ", A, "); ",
-                               d * 100, "% dispersal;",
-                               " 3 correlated traits (r = 0.7)")
+compet_high_cor_var_label = paste0("Competition (A = ", A, "); ",
+                                   d * 100, "% dispersal;",
+                                   " 3 correlated traits (r = 0.7)")
 ```
 
 ```{r compet_high_cor_df_ind_landscape var_strength}
-plot_compet_high_cor_df_ind_landscape = fig_ind_landscape(compet_high_cor_df,
-                                                          compet_high_cor_label,
+plot_compet_high_cor_df_ind_landscape = fig_ind_landscape(compet_high_cor_var_df,
+                                                          compet_high_cor_var_label,
                                                           n_bins = 17)
 plot_compet_high_cor_df_ind_landscape
 ```
 
-## Synthetic plot
+# Synthetic plot
 
-```{r synthetic_plot var_strength}
+```{r synthetic_plot}
 
 list_df <- list("no_compet_no_cor_df" = no_compet_no_cor_df,
                 "no_compet_low_cor_df" = no_compet_low_cor_df,
@@ -822,13 +772,27 @@ list_df <- list("no_compet_no_cor_df" = no_compet_no_cor_df,
                 "compet_no_cor_df" = compet_no_cor_df,
                 "compet_low_cor_df" = compet_low_cor_df,
                 "compet_high_cor_df" = compet_high_cor_df)
-list_df <- mapply(cbind, list_df, "df" = names(list_df), SIMPLIFY = FALSE)
+list_df <- mapply(cbind, list_df, "var_df" = names(list_df),
+                  SIMPLIFY = FALSE)
+list_df <- lapply(list_df, function(x) data.frame(x, type = "constant"))
 
-all_df <- as.data.frame(bind_rows(list_df))
+list_var_df <- list("no_compet_no_cor_var_df" = no_compet_no_cor_var_df,
+                    "no_compet_low_cor_var_df" = no_compet_low_cor_var_df,
+                    "no_compet_high_cor_var_df" = no_compet_high_cor_var_df,
+                    "compet_no_cor_var_df" = compet_no_cor_var_df,
+                    "compet_low_cor_var_df" = compet_low_cor_var_df,
+                    "compet_high_cor_var_df" = compet_high_cor_var_df)
+list_var_df <- mapply(cbind, list_var_df, "var_df" = names(list_var_df),
+                      SIMPLIFY = FALSE)
+list_var_df <- lapply(list_var_df, function(x) data.frame(x, type = "varying"))
+
+all_list <- c(list_df, list_var_df)
+
+all_df <- as.data.frame(bind_rows(all_list))
 
 # List of weighted linear regressions
 trait2_w_lm = all_df %>%
-    group_by(df, scenario) %>%
+    group_by(var_df, scenario) %>%
     do(model = lm(trait2 ~ patch_optim, data = ., weights = N))
 
 list_lm_df <- trait2_w_lm[[1]]
@@ -844,20 +808,26 @@ synth_plot <- data.frame(df = list_lm_df,
 synth_plot$df <- as.factor(synth_plot$df)
 synth_plot$df <- factor(synth_plot$df,
                         levels(synth_plot$df)[c(6:1)])
+synth_plot$compet <- ifelse(grepl("no_compet", synth_plot$df), "No", "Competition")
+synth_plot$type <- ifelse(grepl("_var_", synth_plot$df), "Varying", "Constant")
 
 print(ggplot(synth_plot, aes(as.factor(df), r2)) +
-          geom_point(aes(shape = as.factor(scenario), fill = as.factor(scenario)),
+          geom_point(aes(shape = as.factor(scenario),
+                         fill = as.factor(compet)),
                      color = "black", size = 4) +
-          scale_fill_manual("Scenario", values = c(RA100100 = viridis::viridis(4)[1],
-                                                   RA2575 = viridis::viridis(4)[2],
-                                                   RA5050 = viridis::viridis(4)[3],
-                                                   RA7525 = viridis::viridis(4)[4])) +
+          scale_fill_manual("Competition", values = c(No = "#a50026",
+                                                      Competition = "#313695")) +
           scale_shape_manual("Scenario", values = c(RA100100 = 21, RA2575 = 22,
                                                     RA5050 = 23, RA7525 = 24)) +
+          facet_wrap(~ type) +
           labs(subtitle = "R2 for the weighted linear regression between trait2 and environment",
                x = "Scenario",
                y = expression("R"^2)) +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          guides(color = FALSE,
+                 fill = guide_legend(override.aes = list(shape = 21,
+                                                         size = 4))))
+
 
 ```
 
