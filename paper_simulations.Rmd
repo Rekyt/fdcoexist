@@ -109,7 +109,7 @@ n_species  <- 100  # Number of species
 n_gen      <- 150  # Length of model run (generations)
 initpop    <- 50   # initial population size
 n_traits   <- 3    # number of traits
-k          <- 1.45 # Maximum growth rate
+k          <- 1.15 # Maximum growth rate
 env_width  <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
@@ -767,12 +767,12 @@ plot_compet_high_cor_df_ind_landscape
 # Synthetic plot
 
 ```{r synthetic_plot}
-list_df <- list("no_compet_no_cor_df" = no_compet_no_cor_df,
-                "no_compet_low_cor_df" = no_compet_low_cor_df,
-                "no_compet_high_cor_df" = no_compet_high_cor_df,
-                "compet_no_cor_df" = compet_no_cor_df,
-                "compet_low_cor_df" = compet_low_cor_df,
-                "compet_high_cor_df" = compet_high_cor_df) %>%
+constant_df <- list(no_compet_no_cor_df = no_compet_no_cor_df,
+                    no_compet_low_cor_df = no_compet_low_cor_df,
+                    no_compet_high_cor_df = no_compet_high_cor_df,
+                    compet_no_cor_df = compet_no_cor_df,
+                    compet_low_cor_df = compet_low_cor_df,
+                    compet_high_cor_df = compet_high_cor_df) %>%
     # Merge as a single data.frame
     bind_rows(.id = "original_name") %>%
     # Extract comptetition and correlation status
@@ -780,12 +780,12 @@ list_df <- list("no_compet_no_cor_df" = no_compet_no_cor_df,
     extract(original_name, c("compet_status", "cor_level"),
             "([:alpha:]*_?compet)_(.*)")
 
-list_var_df <- list("no_compet_no_cor_var_df" = no_compet_no_cor_var_df,
-                    "no_compet_low_cor_var_df" = no_compet_low_cor_var_df,
-                    "no_compet_high_cor_var_df" = no_compet_high_cor_var_df,
-                    "compet_no_cor_var_df" = compet_no_cor_var_df,
-                    "compet_low_cor_var_df" = compet_low_cor_var_df,
-                    "compet_high_cor_var_df" = compet_high_cor_var_df) %>%
+var_df <- list(no_compet_no_cor_var_df = no_compet_no_cor_var_df,
+               no_compet_low_cor_var_df = no_compet_low_cor_var_df,
+               no_compet_high_cor_var_df = no_compet_high_cor_var_df,
+               compet_no_cor_var_df = compet_no_cor_var_df,
+               compet_low_cor_var_df = compet_low_cor_var_df,
+               compet_high_cor_var_df = compet_high_cor_var_df) %>%
     # Merge as a single data.frame
     bind_rows(.id = "original_name") %>%
     # Extract comptetition and correlation status
@@ -795,7 +795,8 @@ list_var_df <- list("no_compet_no_cor_var_df" = no_compet_no_cor_var_df,
 
 
 # Combine data.frame from different environment length
-all_df <- list(constant = list_df, varying = list_var_df) %>%
+all_df <- list(constant = constant_df,
+               varying  = var_df) %>%
     bind_rows(.id = "env_width")
 
 # Compute linear models for CWM <-> environment relationship
@@ -804,13 +805,15 @@ mod_df <- all_df %>%
     group_by(env_width, compet_status, cor_level, scenario, patch, cwm_name) %>%
     summarise(patch_optim = unique(patch_optim), cwm_value = sum(cwm_value)) %>%
     group_by(env_width, compet_status, cor_level, scenario, cwm_name) %>%
-    nest() %>%
-    mutate(mod_cwm_env = map(data, ~lm(cwm_value ~ patch_optim, data = .x)),
-           mod_glance = map(mod_cwm_env, broom::glance)) %>%
+    do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+    ungroup() %>%
+    mutate(mod_glance = lapply(mod_cwm_env, broom::glance)) %>%
     unnest(mod_glance)
 
 # R2 plot
-plot_r2_cwm_env = ggplot(mod_df, aes(scenario, r.squared)) +
+plot_r2_cwm_env = ggplot(mod_df %>%
+                             filter(!grepl("growth", cwm_name)),
+                         aes(scenario, r.squared)) +
     geom_point(aes(fill = fct_rev(cor_level)),
                size = 4, position = position_dodge(width = 0.7),
                shape = 21) +
