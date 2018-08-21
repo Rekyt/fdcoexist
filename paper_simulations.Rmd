@@ -765,69 +765,71 @@ plot_compet_high_cor_df_ind_landscape
 # Synthetic plot
 
 ```{r synthetic_plot}
-
 list_df <- list("no_compet_no_cor_df" = no_compet_no_cor_df,
                 "no_compet_low_cor_df" = no_compet_low_cor_df,
                 "no_compet_high_cor_df" = no_compet_high_cor_df,
                 "compet_no_cor_df" = compet_no_cor_df,
                 "compet_low_cor_df" = compet_low_cor_df,
-                "compet_high_cor_df" = compet_high_cor_df)
-list_df <- mapply(cbind, list_df, "var_df" = names(list_df),
-                  SIMPLIFY = FALSE)
-list_df <- lapply(list_df, function(x) data.frame(x, type = "constant"))
+                "compet_high_cor_df" = compet_high_cor_df) %>%
+    # Merge as a single data.frame
+    bind_rows(.id = "original_name") %>%
+    # Extract comptetition and correlation status
+    mutate(original_name = gsub("_df", "", original_name)) %>%
+    extract(original_name, c("compet_status", "cor_level"),
+            "([:alpha:]*_?compet)_(.*)")
 
 list_var_df <- list("no_compet_no_cor_var_df" = no_compet_no_cor_var_df,
                     "no_compet_low_cor_var_df" = no_compet_low_cor_var_df,
                     "no_compet_high_cor_var_df" = no_compet_high_cor_var_df,
                     "compet_no_cor_var_df" = compet_no_cor_var_df,
                     "compet_low_cor_var_df" = compet_low_cor_var_df,
-                    "compet_high_cor_var_df" = compet_high_cor_var_df)
-list_var_df <- mapply(cbind, list_var_df, "var_df" = names(list_var_df),
-                      SIMPLIFY = FALSE)
-list_var_df <- lapply(list_var_df, function(x) data.frame(x, type = "varying"))
-
-all_list <- c(list_df, list_var_df)
-
-all_df <- as.data.frame(bind_rows(all_list))
-
-# List of weighted linear regressions
-trait2_w_lm = all_df %>%
-    group_by(var_df, scenario) %>%
-    do(model = lm(trait2 ~ patch_optim, data = ., weights = N))
-
-list_lm_df <- trait2_w_lm[[1]]
-list_lm_scenario <- trait2_w_lm[[2]]
-
-trait2_w_lm <- lapply(trait2_w_lm$model, summary)
-
-synth_plot <- data.frame(df = list_lm_df,
-                         scenario = list_lm_scenario,
-                         r2 = unlist(lapply(trait2_w_lm,
-                                            function(x) x$r.squared)))
-
-synth_plot$df <- as.factor(synth_plot$df)
-synth_plot$df <- factor(synth_plot$df,
-                        levels(synth_plot$df)[c(6:1)])
-synth_plot$compet <- ifelse(grepl("no_compet", synth_plot$df), "No", "Competition")
-synth_plot$type <- ifelse(grepl("_var_", synth_plot$df), "Varying", "Constant")
-
-print(ggplot(synth_plot, aes(as.factor(df), r2)) +
-          geom_point(aes(shape = as.factor(scenario),
-                         fill = as.factor(compet)),
-                     color = "black", size = 4) +
-          scale_fill_manual("Competition", values = c(No = "#a50026",
-                                                      Competition = "#313695")) +
-          scale_shape_manual("Scenario", values = c(RA100100 = 21, RA2575 = 22,
-                                                    RA5050 = 23, RA7525 = 24)) +
-          facet_wrap(~ type) +
-          labs(subtitle = "R2 for the weighted linear regression between trait2 and environment",
-               x = "Scenario",
-               y = expression("R"^2)) +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-          guides(color = FALSE,
-                 fill = guide_legend(override.aes = list(shape = 21,
-                                                         size = 4))))
+                    "compet_high_cor_var_df" = compet_high_cor_var_df) %>%
+    # Merge as a single data.frame
+    bind_rows(.id = "original_name") %>%
+    # Extract comptetition and correlation status
+    mutate(original_name = gsub("_var_df", "", original_name)) %>%
+    extract(original_name, c("compet_status", "cor_level"),
+            "([:alpha:]*_?compet)_(.*)")
 
 
+# Combine data.frame from different environment length
+all_df <- list(constant = list_df, varying = list_var_df) %>%
+    bind_rows(.id = "env_width")
+
+# Compute linear models for CWM <-> environment relationship
+mod_df <- all_df %>%
+    group_by(env_width, compet_status, cor_level, scenario, patch) %>%
+    summarise(patch_optim = unique(patch_optim), trait2_cwm = sum(trait2_cwm)) %>%
+    nest() %>%
+    mutate(mod_cwm_env = map(data, ~lm(trait2_cwm ~ patch_optim, data = .x)),
+           mod_glance = map(mod_cwm_env, broom::glance)) %>%
+    unnest(mod_glance)
+
+# R2 plot
+plot_r2_cwm_env = ggplot(mod_df, aes(scenario, r.squared)) +
+    geom_point(aes(fill = fct_rev(cor_level)),
+               size = 4, position = position_dodge(width = 0.7),
+               shape = 21) +
+    facet_grid(rows = vars(compet_status), cols = vars(env_width),
+               labeller =
+                   labeller(compet_status = c(compet = "Competition",
+                                              no_compet = "No Competition"),
+                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
+                                               varying  = "Varying\nEnv. Filter Strength"))) +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations",
+                         labels = c(no_cor   = "r = 0",
+                                    low_cor  = "r = 0.3",
+                                    high_cor = "r = 0.7")) +
+    guides(color = FALSE,
+           fill = guide_legend(override.aes = list(shape = 21,
+                                                   size = 4))) +
+    labs(subtitle = "R2 of trait2 CWM ~ environment",
+         x = "Scenario",
+         y = expression("R"^2)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+    
+plot_r2_cwm_env
 ```
 
