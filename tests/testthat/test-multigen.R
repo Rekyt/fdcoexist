@@ -71,3 +71,36 @@ test_that("compute_compet_distance() works", {
                                          sp_traits),
                  multi_trait_dist)
 })
+
+
+test_that("env_curve() works as expected", {
+    # Single trait growth
+    expect_equal(env_curve(sp_traits[1,, drop = FALSE], 1, trait_weights,
+                           1.15, 5),
+                 1.15)
+    expect_equal(env_curve(sp_traits[1,, drop = FALSE], 1, trait_weights,
+                           1.25, 5),
+                 1.25)
+    expect_equal(env_curve(sp_traits[1,, drop = FALSE], 1, trait_weights,
+                           1.25, 10),
+                 1.25)
+    expect_equal(env_curve(sp_traits[2,, drop = FALSE], 1, trait_weights,
+                           1.25, 10),
+                 1.25 * exp(-1/200))
+
+    # Single trait growth without any traits defined
+    expect_equal(env_curve(sp_traits[2,, drop = FALSE], 1,
+                           data.frame(trait = paste0("trait", 1:2),
+                                      growth_weight = c(0, 0),
+                                      compet_weight = c(1, 1)),
+                           1.25, 10),
+                 1.25)
+
+    # Multiple trait growth
+    expect_equal(env_curve(sp_traits[3,, drop = FALSE], 1,
+                           data.frame(trait = paste0("trait", 1:2),
+                                      growth_weight = c(0.5, 0.5),
+                                      compet_weight = c(1, 1)),
+                           1.25, 10),
+                 mean(c(1.25 * exp(-1/200), 1.25)))
+})
