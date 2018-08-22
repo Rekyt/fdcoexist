@@ -168,6 +168,10 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
 
         # Final composition
         composition[,, m + 1] <- total
+
+        # threshold number of individuals
+        composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
+                                        composition[,, m + 1])
     }
     return(list(compo = composition,
                 alpha = alphalist))
