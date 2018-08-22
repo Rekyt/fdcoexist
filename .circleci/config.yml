@@ -18,6 +18,7 @@ jobs:
       - run:
           command: |
             R -e 'devtools::install_deps(dependencies = TRUE)'
+            R -e "devtools::install_github('MangoTheCat/goodpractice')"
       - save_cache:
           key: deps1-{{ .Branch }}-{{ checksum "DESCRIPTION" }}
           paths:
@@ -25,6 +26,7 @@ jobs:
       - run:
           command: |
             R -e 'devtools::check()'
+            R -e 'covr::codecov()'
       - store_artifacts:
           path: man/
           destination: man

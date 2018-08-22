@@ -1,5 +1,5 @@
 # `fdcoexist`
 
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip) [![CircleCI](https://circleci.com/gh/Rekyt/fdcoexist.svg?style=svg&circle-token=fbf1bc61e0b42230c72d8e000cc728ec3843ebcf)](https://circleci.com/gh/Rekyt/fdcoexist) 
+[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip) [![CircleCI](https://circleci.com/gh/Rekyt/fdcoexist.svg?style=svg&circle-token=fbf1bc61e0b42230c72d8e000cc728ec3843ebcf)](https://circleci.com/gh/Rekyt/fdcoexist) [![codecov](https://codecov.io/gh/Rekyt/fdcoexist/branch/master/graph/badge.svg?token=8IIrOJuF0u)](https://codecov.io/gh/Rekyt/fdcoexist)
 
 The goal of `fdcoexist` is to have code necessary to make simulations about the relation between Functional Diversity indices and niche vs. fitness differences.
