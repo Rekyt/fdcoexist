@@ -238,7 +238,7 @@ check_trait_weights = function(trait_weights, traits) {
         absent_traits = setdiff(trait_weights$trait, colnames(traits))
 
         stop("Trait(s) ", paste(absent_traits, collapse = ", "),
-             " (is/are) not in trait_weights")
+             " (is/are) not in provided traits data.frame")
     }
 }
 
@@ -272,16 +272,17 @@ compute_compet_distance = function(trait_weights, traits) {
         compet_traits <- traits[, compet_weights$trait, drop = FALSE]
 
 
-        # Compute a "composite" trait considering relative weighting of traits
-        composite_traits <- apply(compet_traits, 1, function(x) {
-            mean(x * compet_weights$compet_weight)
-        })
-        composite_traits <- as.matrix(composite_traits)
+        # Transform columns prior computing distance
+        scaled_compet_traits <- sweep(compet_traits, 2,
+                                      compet_weights$compet_weight,
+                                      function(x,y) x * sqrt(y))
 
         # Compute distance matrix
-        disttraits <- as.matrix(dist(composite_traits))
+        disttraits <- as.matrix(dist(scaled_compet_traits))
 
         # Scale trait distance to balance growth
         disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
     }
+
+    return(disttraits)
 }

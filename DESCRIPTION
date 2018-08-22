@@ -14,3 +14,5 @@ Imports:
     directlabels,
     FD,
     cowplot
+Suggests: 
+    testthat
