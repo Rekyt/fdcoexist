@@ -43,13 +43,14 @@ compute_moments = function(simulation_routine, trait_df = traits) {
 
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
-landscape_df = function(multiple_traits_scenario, trait_df, trait_weights) {
+landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
+                        time = 150) {
     
     growth_traits = subset(trait_weights, growth_weight != 0)$trait
     compet_traits = subset(trait_weights, compet_weight != 0)$trait
     
     
-    population_df = multiple_traits_scenario$compo[,,150] %>%
+    population_df = multiple_traits_scenario$compo[,,time] %>%
         as.data.frame() %>%
         rownames_to_column("patch") %>%  # Add patch names as column
         # Transform to tidy data.frame (define name of columns and column name
@@ -73,14 +74,16 @@ landscape_df = function(multiple_traits_scenario, trait_df, trait_weights) {
 
 # This function tidy a list of simulation routine to a single data.frame
 # suitable to make figures.
-tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios) {
+tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
+                                time = 150) {
     simulation_list %>%
         names() %>%
         # Tidy single simulations
         lapply(tidy_simulation,
                given_simul = simulation_list,
                given_traits = set_of_traits,
-               given_trait_scenar = trait_scenarios) %>%
+               given_trait_scenar = trait_scenarios,
+               time = time) %>%
         # Re-add names
         set_names(nm = names(simulation_list)) %>%
         # Join into single data.frame
@@ -90,9 +93,9 @@ tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios)
 }
 
 tidy_simulation = function(scenario, given_simul, given_traits,
-                           given_trait_scenar) {
+                           given_trait_scenar, time = 150) {
     landscape_df(given_simul[[scenario]], given_traits,
-                 trait_scenarios[[scenario]]) %>%
+                 trait_scenarios[[scenario]], time = time) %>%
         inner_join(given_traits %>%
                        as.data.frame() %>%
                        rownames_to_column("species"),
@@ -115,7 +118,7 @@ var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
-d = 0.05 # Dispersal percentage
+d = 0.00 # Dispersal percentage
 
 # Generate environment
 env <- seq(n_patches)
