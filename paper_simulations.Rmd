@@ -296,11 +296,14 @@ $$R_{i, x} = k \times \exp\left(- \frac{(trait_i - env_x)^2}{2\times {width}^2}\
 If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
 
 $$
-    N_{t+1, i, x} = \frac{
-        k \times \exp\left(- \displaystyle\frac{(trait_i - env_x)^2}{2\times {width}^2}\right) \times N_{t, i, x}}{
-        1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})
-    }
+N_{t+1, i, x} = \frac{
+k \times \exp\left(- \displaystyle\frac{(trait_i - env_x)^2}{2\times {width}^2}\right) \times N_{t, i, x}}{
+1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})
+}
 $$
+
+NB: When $i$ = $j$, the species faces intra-specific competition leading to:
+$$\delta_{ii} = \frac{K}{(K - N{t,i,x})}$$
 
 # Constant environmental filtering strength
 
@@ -599,9 +602,9 @@ no_compet_no_cor_var_label = paste0("No competition; ",
 
 ```{r no_compet_no_cor_df_ind_landscape var_strength}
 plot_no_compet_no_cor_df_ind_var_landscape = fig_ind_landscape(no_compet_no_cor_var_df,
-                                                           no_compet_no_cor_var_label,
-                                                           n_bins = 22,
-                                                           given_trans = "identity")
+                                                               no_compet_no_cor_var_label,
+                                                               n_bins = 22,
+                                                               given_trans = "identity")
 
 plot_no_compet_no_cor_df_ind_var_landscape
 ```
@@ -637,9 +640,9 @@ no_compet_low_cor_var_label = paste0("No competition; ",
 
 ```{r no_compet_low_cor_df_ind_landscape var_strength}
 plot_no_compet_low_cor_df_ind_var_landscape = fig_ind_landscape(no_compet_low_cor_var_df,
-                                                            no_compet_low_cor_var_label,
-                                                            n_bins = 17,
-                                                            given_trans = "identity")
+                                                                no_compet_low_cor_var_label,
+                                                                n_bins = 17,
+                                                                given_trans = "identity")
 
 plot_no_compet_low_cor_df_ind_var_landscape
 ```
@@ -676,8 +679,8 @@ no_compet_high_cor_var_label = paste0("No competition; ",
 
 ```{r no_compet_high_cor_df_ind_landscape var_strength}
 plot_no_compet_high_cor_df_ind_var_landscape = fig_ind_landscape(no_compet_high_cor_var_df,
-                                                             no_compet_high_cor_var_label,
-                                                             n_bins = 17)
+                                                                 no_compet_high_cor_var_label,
+                                                                 n_bins = 17)
 
 plot_no_compet_high_cor_df_ind_var_landscape
 ```
@@ -716,8 +719,8 @@ compet_no_cor_var_label = paste0("Competition (A = ", A, "); ",
 
 ```{r compet_no_cor_df_ind_landscape var_strength}
 plot_compet_no_cor_df_ind_var_landscape = fig_ind_landscape(compet_no_cor_var_df,
-                                                        compet_no_cor_var_label,
-                                                        n_bins = 22)
+                                                            compet_no_cor_var_label,
+                                                            n_bins = 22)
 
 plot_compet_no_cor_df_ind_var_landscape
 ```
@@ -753,8 +756,8 @@ compet_low_cor_var_label = paste0("Competition (A = ", A, "); ",
 
 ```{r compet_low_cor_df_ind_landscape var_strength}
 plot_compet_low_cor_df_ind_var_landscape = fig_ind_landscape(compet_low_cor_var_df,
-                                                         compet_low_cor_var_label,
-                                                         n_bins = 17)
+                                                             compet_low_cor_var_label,
+                                                             n_bins = 17)
 
 plot_compet_low_cor_df_ind_var_landscape
 ```
@@ -790,8 +793,8 @@ compet_high_cor_var_label = paste0("Competition (A = ", A, "); ",
 
 ```{r compet_high_cor_df_ind_landscape var_strength}
 plot_compet_high_cor_df_ind_var_landscape = fig_ind_landscape(compet_high_cor_var_df,
-                                                          compet_high_cor_var_label,
-                                                          n_bins = 17)
+                                                              compet_high_cor_var_label,
+                                                              n_bins = 17)
 plot_compet_high_cor_df_ind_var_landscape
 ```
 
@@ -865,7 +868,7 @@ plot_r2_cwm_env = ggplot(mod_df %>%
          y = expression("R"^2)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "top")
-    
+
 plot_r2_cwm_env
 ```
 
@@ -887,8 +890,8 @@ plot_trait_var_env_constant = ggplot(all_trait_var %>%
     facet_grid(vars(cor_level), vars(scenario), scales = "free_y",
                labeller = labeller(scenario = label_value,
                                    cor_level = c(no_cor   = "r = 0",
-                                    low_cor  = "r = 0.3",
-                                    high_cor = "r = 0.7"))) +
+                                                 low_cor  = "r = 0.3",
+                                                 high_cor = "r = 0.7"))) +
     scale_color_discrete(name = "Trait",
                          labels = c(trait1_var = "Trait 1",
                                     trait2_var = "Trait 2",
@@ -903,17 +906,19 @@ plot_trait_var_env_constant = ggplot(all_trait_var %>%
 
 plot_trait_var_env_constant
 
+cat('\r\n\r\n')
+
 plot_trait_var_env_varying = ggplot(all_trait_var %>%
-                                         filter(env_width == "varying"),
-                                     aes(patch_optim, trait_value,
-                                         color = trait_name,
-                                         linetype = compet_status)) +
+                                        filter(env_width == "varying"),
+                                    aes(patch_optim, trait_value,
+                                        color = trait_name,
+                                        linetype = compet_status)) +
     geom_line() +
     facet_grid(vars(cor_level), vars(scenario), scales = "free_y",
                labeller = labeller(scenario = label_value,
                                    cor_level = c(no_cor   = "r = 0",
-                                    low_cor  = "r = 0.3",
-                                    high_cor = "r = 0.7"))) +
+                                                 low_cor  = "r = 0.3",
+                                                 high_cor = "r = 0.7"))) +
     scale_color_discrete(name = "Trait",
                          labels = c(trait1_var = "Trait 1",
                                     trait2_var = "Trait 2",
@@ -927,5 +932,72 @@ plot_trait_var_env_varying = ggplot(all_trait_var %>%
     theme(legend.position = "top")
 
 plot_trait_var_env_varying
+
+cat('\r\n\r\n')
+
 ```
+
+# CWV against environment
+
+```{r cwv_envt}
+
+var_df %>%
+    select(-contains("cwm")) %>%
+    filter(compet_status == "no_compet") %>%
+    gather("trait_name", "trait_value", contains("trait")) %>%
+    group_by(compet_status, cor_level, scenario, patch, trait_name) %>%
+    summarise(trait_cwv = Weighted.Desc.Stat::w.var(trait_value, mu = N)) %>%
+    mutate(patch_optim = gsub("patches", "", patch) %>%
+               as.numeric()) %>%
+    ggplot(aes(patch_optim, trait_cwv, color = trait_name)) +
+    geom_point() +
+    geom_smooth(se = FALSE) +
+    facet_grid(vars(cor_level), vars(scenario), scales = "free_y",
+               labeller = labeller(scenario = label_value,
+                                   cor_level = c(no_cor   = "r = 0",
+                                                 low_cor  = "r = 0.3",
+                                                 high_cor = "r = 0.7"))) +
+    scale_color_discrete(labels = c(trait1_cwm = "Trait 1",
+                                    trait2_cwm = "Trait 2",
+                                    trait3_cwm = "Trait 3")) +
+    labs(x = "Environment",
+         y = "Community-Weighted Variance (CWV)",
+         color = NULL,
+         subtitle = paste0("Varying environment; ",
+                           d * 100, "% dispersal;",
+                           " No competition")) +
+    theme(legend.position = "top")
+
+cat('\r\n\r\n')
+
+var_df %>%
+    select(-contains("cwm")) %>%
+    filter(compet_status == "compet") %>%
+    gather("trait_name", "trait_value", contains("trait")) %>%
+    group_by(compet_status, cor_level, scenario, patch, trait_name) %>%
+    summarise(trait_cwv = Weighted.Desc.Stat::w.var(trait_value, mu = N)) %>%
+    mutate(patch_optim = gsub("patches", "", patch) %>%
+               as.numeric()) %>%
+    ggplot(aes(patch_optim, trait_cwv, color = trait_name)) +
+    geom_point() +
+    geom_smooth(se = FALSE) +
+    facet_grid(vars(cor_level), vars(scenario), scales = "free_y",
+               labeller = labeller(scenario = label_value,
+                                   cor_level = c(no_cor   = "r = 0",
+                                                 low_cor  = "r = 0.3",
+                                                 high_cor = "r = 0.7"))) +
+    scale_color_discrete(labels = c(trait1_cwm = "Trait 1",
+                                    trait2_cwm = "Trait 2",
+                                    trait3_cwm = "Trait 3")) +
+    labs(x = "Environment",
+         y = "Community-Weighted Variance (CWV)",
+         color = NULL,
+         subtitle = paste0("Varying environment; ",
+                           d * 100, "% dispersal;",
+                           " Competition")) +
+    theme(legend.position = "top")
+
+```
+
+
 
