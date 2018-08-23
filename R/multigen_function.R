@@ -23,9 +23,10 @@
 #'
 #' @param distance competiton matrix of species
 #' @param Nts      vector of abundances of species at time t
+#' @param K        the carying capacity
 #' @export
-alphaterm <- function(distance, Nts) {
-    Nts %*% (1 - distance)
+alphaterm <- function(distance, Nts, K) {
+    Nts %*% (1 - distance) + (K/(K - Nts))
 }
 
 #' Beverton-Holt function
@@ -120,10 +121,11 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param k           a scalar giving the maximum growth rate in optimal
 #'                    environment
 #' @param width       a numeric giving niche breadth of all species
+#' @param K           a numeric giving the carrying capacity of all patches
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A, d, k, width) {
+                     composition, A, d, k, width, K) {
 
     # Check assumptions on trait_weights data.frame
     check_trait_weights(trait_weights, traits)
@@ -144,8 +146,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
 
     for (m in seq(1, time - 1)) {
 
-        # Calculate niche term (alpha)
-        alpha <- alphaterm(disttraits, composition[,,m])
+        # Calculate niche term (alpha) including carrying capacity
+        alpha <- alphaterm(disttraits, composition[,,m], K = K)
 
         alphalist[[m]] = alpha
 

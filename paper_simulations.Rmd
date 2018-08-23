@@ -108,13 +108,14 @@ tidy_simulation = function(scenario, given_simul, given_traits,
 # Initial parameters -----------------------------------------------------------
 suppressMessages(devtools::load_all())
 
-n_patches  <- 25   # Number of patches
-n_species  <- 100  # Number of species
-n_gen      <- 150  # Length of model run (generations)
-initpop    <- 50   # initial population size
-n_traits   <- 3    # number of traits
-k          <- 1.15 # Maximum growth rate
-env_width  <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
+n_patches <- 25   # Number of patches
+n_species <- 100  # Number of species
+n_gen     <- 150  # Length of model run (generations)
+initpop   <- 50   # initial population size
+n_traits  <- 3    # number of traits
+k         <- 1.15 # Maximum growth rate
+K         <- 150  # Carrying capacity
+env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
@@ -322,7 +323,8 @@ no_compet_no_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, d = d,
-                 k = k, width = env_width)
+                 k = k, width = env_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -381,7 +383,8 @@ no_compet_low_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, d = d,
-                 k = k, width = env_width)
+                 k = k, width = env_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -419,7 +422,8 @@ no_compet_high_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, d = d,
-                 k = k, width = env_width)
+                 k = k, width = env_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -458,7 +462,8 @@ compet_no_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = A, d = d,
-                 k = k, width = env_width)
+                 k = k, width = env_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -495,7 +500,8 @@ compet_low_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = A, d = d,
-                 k = k, width = env_width)
+                 k = k, width = env_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -532,7 +538,8 @@ compet_high_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = A, d = d,
-                 k = k, width = env_width)
+                 k = k, width = env_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -575,7 +582,8 @@ no_compet_no_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, d = d,
-                 k = k, width = var_width)
+                 k = k, width = var_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -612,7 +620,8 @@ no_compet_low_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, d = d,
-                 k = k, width = var_width)
+                 k = k, width = var_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -650,7 +659,8 @@ no_compet_high_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, d = d,
-                 k = k, width = var_width)
+                 k = k, width = var_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -689,7 +699,8 @@ compet_no_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = A, d = d,
-                 k = k, width = var_width)
+                 k = k, width = var_width,
+                 K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -726,7 +737,7 @@ compet_low_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = A, d = d,
-                 k = k, width = var_width)
+                 k = k, width = var_width, K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -763,7 +774,7 @@ compet_high_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = A, d = d,
-                 k = k, width = var_width)
+                 k = k, width = var_width, K = K)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
