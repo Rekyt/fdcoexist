@@ -234,7 +234,7 @@ fig_cwm_env_abund = function(simul_df, simul_label, n_bins = 24,
         facet_grid(vars(scenario), vars(cwm_name),
                    labeller = labeller(scenario = trait_scenar_names,
                                        cwm_name = label_value)) +
-        scale_fill_viridis_c(trans = given_trans) +
+        scale_fill_viridis_c(trans = given_trans, option = "E") +
         labs(x = "Environment",
              y = "Community-Weighted Mean (CWM)",
              fill = "Total Abundance",
@@ -258,21 +258,24 @@ fig_ind_landscape = function(simul_df, simul_label, n_bins = 22,
     simul_df2 <- left_join(simul_df, simul_df_cwm,
                            by = c("scenario", "patch", "trait_name"))
     
-    ggplot(simul_df2,
+    ggplot(simul_df2 %>%
+               filter(N > 0),
            aes(patch_optim, trait_value, z = N)) +
         stat_summary_2d(geom = "raster", bins = n_bins, interpolate = TRUE) +
         geom_line(aes(patch_optim, cwm, color = "firebrick"), size = 1) +
         facet_grid(vars(scenario), vars(trait_name),
                    labeller = labeller(scenario = trait_scenar_names,
-                                       trait_name = function(x) gsub("_", " ", x))) +
-        scale_fill_viridis_c(trans = given_trans) +
+                                       trait_name = function(x) gsub("_", " ",
+                                                                     x))) +
+        scale_fill_viridis_c(trans = given_trans, option = "E") +
         scale_color_manual(name = "CWM", values = c(firebrick = "grey80"),
                            labels = "") +
         labs(x = "Environment",
              y = "Trait Value",
              fill = "Species Abundance",
              subtitle = simul_label) +
-        guides(colour = guide_legend(override.aes = list(size = 1, color = "grey50"))) +
+        guides(colour = guide_legend(override.aes = list(size = 1,
+                                                         color = "grey50"))) +
         theme(legend.position = "top")
 }
 ```
@@ -836,9 +839,7 @@ plot_r2_cwm_env = ggplot(mod_df %>%
                          labels = c(no_cor   = "r = 0",
                                     low_cor  = "r = 0.3",
                                     high_cor = "r = 0.7")) +
-    guides(color = FALSE,
-           fill = guide_legend(override.aes = list(shape = 21,
-                                                   size = 4))) +
+    guides(fill = guide_legend(override.aes = list(size = 4))) +
     labs(subtitle = "R2 of trait2 CWM ~ environment",
          x = "Scenario",
          y = expression("R"^2)) +
