@@ -75,7 +75,7 @@ landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
 # This function tidy a list of simulation routine to a single data.frame
 # suitable to make figures.
 tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
-                                time = 150) {
+                                time = 150, scenar_names = names(trait_scenarios)) {
     simulation_list %>%
         names() %>%
         # Tidy single simulations
@@ -89,7 +89,8 @@ tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
         # Join into single data.frame
         bind_rows(.id = "scenario") %>%
         # Compute pre-CWMs
-        mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .))
+        mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
+        mutate(scenario = fct_relevel(scenario, scenar_names))
 }
 
 tidy_simulation = function(scenario, given_simul, given_traits,
@@ -135,6 +136,9 @@ composition[,, "time1"] <- initpop
 # Define scenarios -------------------------------------------------------------
 # Scenarios on traits affecting growth and competition
 trait_scenarios = list(
+    RA1090   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.90, 0.10, 0),
+                          compet_weight = c(0,    0.90, 0.10)),
     RA2575   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.75, 0.25, 0),
                           compet_weight = c(0,    0.75, 0.25)),
@@ -166,6 +170,7 @@ high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
 theme_set(theme_bw(12))
 
 trait_scenar_names = c(
+    RA1090 = "Growth = 10%\nCompet. = 90%",
     RA2575 = "Growth = 25%\nCompet. = 75%",
     RA5050 = "Growth = 50%\nCompet. = 50%",
     RA7525 = "Growth = 75%\nCompet. = 25%",
@@ -573,12 +578,12 @@ no_compet_no_cor_var_label = paste0("No competition; ",
 ```
 
 ```{r no_compet_no_cor_df_ind_landscape var_strength}
-plot_no_compet_no_cor_df_ind_landscape = fig_ind_landscape(no_compet_no_cor_var_df,
+plot_no_compet_no_cor_df_ind_var_landscape = fig_ind_landscape(no_compet_no_cor_var_df,
                                                            no_compet_no_cor_var_label,
                                                            n_bins = 22,
                                                            given_trans = "identity")
 
-plot_no_compet_no_cor_df_ind_landscape
+plot_no_compet_no_cor_df_ind_var_landscape
 ```
 
 ### Low correlations among traits
@@ -610,12 +615,12 @@ no_compet_low_cor_var_label = paste0("No competition; ",
 ```
 
 ```{r no_compet_low_cor_df_ind_landscape var_strength}
-plot_no_compet_low_cor_df_ind_landscape = fig_ind_landscape(no_compet_low_cor_var_df,
+plot_no_compet_low_cor_df_ind_var_landscape = fig_ind_landscape(no_compet_low_cor_var_df,
                                                             no_compet_low_cor_var_label,
                                                             n_bins = 17,
                                                             given_trans = "identity")
 
-plot_no_compet_low_cor_df_ind_landscape
+plot_no_compet_low_cor_df_ind_var_landscape
 ```
 
 
@@ -648,11 +653,11 @@ no_compet_high_cor_var_label = paste0("No competition; ",
 ```
 
 ```{r no_compet_high_cor_df_ind_landscape var_strength}
-plot_no_compet_high_cor_df_ind_landscape = fig_ind_landscape(no_compet_high_cor_var_df,
+plot_no_compet_high_cor_df_ind_var_landscape = fig_ind_landscape(no_compet_high_cor_var_df,
                                                              no_compet_high_cor_var_label,
                                                              n_bins = 17)
 
-plot_no_compet_high_cor_df_ind_landscape
+plot_no_compet_high_cor_df_ind_var_landscape
 ```
 
 
@@ -687,11 +692,11 @@ compet_no_cor_var_label = paste0("Competition (A = ", A, "); ",
 ```
 
 ```{r compet_no_cor_df_ind_landscape var_strength}
-plot_compet_no_cor_df_ind_landscape = fig_ind_landscape(compet_no_cor_var_df,
+plot_compet_no_cor_df_ind_var_landscape = fig_ind_landscape(compet_no_cor_var_df,
                                                         compet_no_cor_var_label,
                                                         n_bins = 22)
 
-plot_compet_no_cor_df_ind_landscape
+plot_compet_no_cor_df_ind_var_landscape
 ```
 
 
@@ -724,11 +729,11 @@ compet_low_cor_var_label = paste0("Competition (A = ", A, "); ",
 ```
 
 ```{r compet_low_cor_df_ind_landscape var_strength}
-plot_compet_low_cor_df_ind_landscape = fig_ind_landscape(compet_low_cor_var_df,
+plot_compet_low_cor_df_ind_var_landscape = fig_ind_landscape(compet_low_cor_var_df,
                                                          compet_low_cor_var_label,
                                                          n_bins = 17)
 
-plot_compet_low_cor_df_ind_landscape
+plot_compet_low_cor_df_ind_var_landscape
 ```
 
 
@@ -761,10 +766,10 @@ compet_high_cor_var_label = paste0("Competition (A = ", A, "); ",
 ```
 
 ```{r compet_high_cor_df_ind_landscape var_strength}
-plot_compet_high_cor_df_ind_landscape = fig_ind_landscape(compet_high_cor_var_df,
+plot_compet_high_cor_df_ind_var_landscape = fig_ind_landscape(compet_high_cor_var_df,
                                                           compet_high_cor_var_label,
                                                           n_bins = 17)
-plot_compet_high_cor_df_ind_landscape
+plot_compet_high_cor_df_ind_var_landscape
 ```
 
 # Synthetic plot
