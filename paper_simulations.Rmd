@@ -775,7 +775,7 @@ plot_compet_high_cor_df_ind_var_landscape = fig_ind_landscape(compet_high_cor_va
 plot_compet_high_cor_df_ind_var_landscape
 ```
 
-# Synthetic plot
+# Synthetic plots
 
 ```{r synthetic_plot}
 constant_df <- list(no_compet_no_cor_df = no_compet_no_cor_df,
@@ -847,5 +847,65 @@ plot_r2_cwm_env = ggplot(mod_df %>%
           legend.position = "top")
     
 plot_r2_cwm_env
+```
+
+```{r plot_trait_var_env}
+all_trait_var = all_df %>%
+    filter(N > 0) %>%
+    group_by(env_width, compet_status, cor_level, scenario, patch) %>%
+    summarise_at(vars(matches("trait[123]$")), funs(var = var(.))) %>%
+    ungroup() %>%
+    mutate(patch_optim = as.numeric(gsub("patches", "", patch))) %>%
+    gather("trait_name", "trait_value", contains("trait"))
+
+plot_trait_var_env_constant = ggplot(all_trait_var %>%
+                                         filter(env_width == "constant"),
+                                     aes(patch_optim, trait_value,
+                                         color = trait_name,
+                                         linetype = compet_status)) +
+    geom_line() +
+    facet_grid(vars(cor_level), vars(scenario), scales = "free_y",
+               labeller = labeller(scenario = label_value,
+                                   cor_level = c(no_cor   = "r = 0",
+                                    low_cor  = "r = 0.3",
+                                    high_cor = "r = 0.7"))) +
+    scale_color_discrete(name = "Trait",
+                         labels = c(trait1_var = "Trait 1",
+                                    trait2_var = "Trait 2",
+                                    trait3_var = "Trait 3")) +
+    scale_linetype_discrete(name = NULL,
+                            labels = c(compet    = "Competition",
+                                       no_compet = "No Competition")) +
+    labs(x = "Environment",
+         y = "Trait Variance",
+         subtitle = "Constant Environment") +
+    theme(legend.position = "top")
+
+plot_trait_var_env_constant
+
+plot_trait_var_env_varying = ggplot(all_trait_var %>%
+                                         filter(env_width == "varying"),
+                                     aes(patch_optim, trait_value,
+                                         color = trait_name,
+                                         linetype = compet_status)) +
+    geom_line() +
+    facet_grid(vars(cor_level), vars(scenario), scales = "free_y",
+               labeller = labeller(scenario = label_value,
+                                   cor_level = c(no_cor   = "r = 0",
+                                    low_cor  = "r = 0.3",
+                                    high_cor = "r = 0.7"))) +
+    scale_color_discrete(name = "Trait",
+                         labels = c(trait1_var = "Trait 1",
+                                    trait2_var = "Trait 2",
+                                    trait3_var = "Trait 3")) +
+    scale_linetype_discrete(name = NULL,
+                            labels = c(compet    = "Competition",
+                                       no_compet = "No Competition")) +
+    labs(x = "Environment",
+         y = "Trait Variance",
+         subtitle = "Varying Environment") +
+    theme(legend.position = "top")
+
+plot_trait_var_env_varying
 ```
 
