@@ -10,7 +10,7 @@ editor_options:
 
 ```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 8, fig.height = 8)
+                      fig.width = 8, fig.height = 9.5)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -120,7 +120,7 @@ var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
 A =  0.0005	# Alpha scalar 
-d = 0.00 # Dispersal percentage
+d = 0.08 # Dispersal percentage
 
 # Generate environment
 env <- seq(n_patches)
@@ -137,6 +137,9 @@ composition[,, "time1"] <- initpop
 # Define scenarios -------------------------------------------------------------
 # Scenarios on traits affecting growth and competition
 trait_scenarios = list(
+    RA00     = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(1, 0, 0),
+                          compet_weight = c(0, 0, 1)),
     RA1090   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.90, 0.10, 0),
                           compet_weight = c(0,    0.90, 0.10)),
@@ -149,6 +152,9 @@ trait_scenarios = list(
     RA7525   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.25, 0.75, 0),
                           compet_weight = c(0,    0.25, 0.75)),
+    RA9010   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.10, 0.90, 0),
+                          compet_weight = c(0,    0.10, 0.90)),
     RA100100 = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0, 1, 0),
                           compet_weight = c(0, 1, 0))
@@ -171,10 +177,12 @@ high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
 theme_set(theme_bw(12))
 
 trait_scenar_names = c(
+    RA00   = "Growth = 0%\nCompet. = 0%",
     RA1090 = "Growth = 10%\nCompet. = 90%",
     RA2575 = "Growth = 25%\nCompet. = 75%",
     RA5050 = "Growth = 50%\nCompet. = 50%",
     RA7525 = "Growth = 75%\nCompet. = 25%",
+    RA9010 = "Growth = 90%\nCompet. = 10%",
     RA100100 = "Growth = 100%\nCompet. = 100%"
 )
 
