@@ -304,31 +304,36 @@ with
 
 $$\alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})$$
 
-$$R_{i, x} = k \times \exp\left(- \frac{(trait_i - env_x)^2}{2\times {width}^2}\right)$$
+$$R_{i, x} = k \times \exp\left(- \frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right)$$
 
 If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
 
 $$
 N_{t+1, i, x} = \frac{
-k \times \exp\left(- \displaystyle\frac{(trait_i - env_x)^2}{2\times {width}^2}\right) \times N_{t, i, x}}{
+k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
 1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})
 }
 $$
 
-NB: When $i$ = $j$, the species faces intra-specific competition leading to:
-$$\delta_{ii} = \frac{K}{(K - N_{t,i,x})}$$
+The equation above only considers inter-specific competition when $j \neq i$ in the sum. We can however add intra-specific competition when $j = i$. Each site has a species-specific carrying capacity $K$ as the number of individuals approaches this carrying capacity the intra-specific competition increases:
+$$\alpha_{ii} = \frac{K}{K - N_{t,i,x}}$$
 
 Thus the equation becomes:
 
 $$
 N_{t+1, i, x} = \frac{
-    k \times \exp\left(- \displaystyle\frac{(trait_i - env_x)^2}{2\times {width}^2}\right) \times N_{t, i, x}}{
+    k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
     1 + A \times \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
         B \times \displaystyle\sum_{j = 1,~j = i}^{S}\frac{K}{K - N_{t, j, x}}
 }
 $$
 
 with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. Depending on the scenario we can suppose that $B = A$
+
+Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
+$$R_{i, x} = \sum_{g = 1}^T w_g \times k \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2}\right)$$
+
+with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^T w_g = 1$), $\text{trait}_{g, i}$ the trait number $g$ of species $i$.
 
 # Constant environmental filtering strength
 
