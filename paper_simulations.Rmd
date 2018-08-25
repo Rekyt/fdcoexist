@@ -10,7 +10,7 @@ editor_options:
 
 ```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 8, fig.height = 9.5)
+                      fig.width = 8, fig.height = 10.5)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -311,11 +311,23 @@ k \times \exp\left(- \displaystyle\frac{(trait_i - env_x)^2}{2\times {width}^2}\
 $$
 
 NB: When $i$ = $j$, the species faces intra-specific competition leading to:
-$$\delta_{ii} = \frac{K}{(K - N{t,i,x})}$$
+$$\delta_{ii} = \frac{K}{(K - N_{t,i,x})}$$
+
+Thus the equation becomes:
+
+$$
+N_{t+1, i, x} = \frac{
+    k \times \exp\left(- \displaystyle\frac{(trait_i - env_x)^2}{2\times {width}^2}\right) \times N_{t, i, x}}{
+    1 + A \times \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
+        B \times \displaystyle\sum_{j = 1,~j = i}^{S}\frac{K}{K - N_{t, j, x}}
+}
+$$
+
+with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. Depending on the scenario we can suppose that $B = A$
 
 # Constant environmental filtering strength
 
-## Without Competition
+## Without Competition (only intra-specific competition)
 
 We can run the simulations without any competition `A = 0` to see if we see the theoretical patterns.
 
@@ -333,7 +345,7 @@ no_compet_no_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, d = d,
+                 A = 0, B = A, d = d,
                  k = k, width = env_width,
                  K = K)
     })
@@ -344,7 +356,7 @@ no_compet_no_cor_df = tidy_simulation_list(no_compet_no_cor,
                                            set_of_traits = uncor_traits,
                                            trait_scenarios = trait_scenarios)
 
-no_compet_no_cor_label = paste0("No competition; ",
+no_compet_no_cor_label = paste0("Only intra comp.; ",
                                 d * 100, "% dispersal;",
                                 " 3 uncorrelated traits")
 ```
@@ -393,7 +405,7 @@ no_compet_low_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, d = d,
+                 A = 0, B = A, d = d,
                  k = k, width = env_width,
                  K = K)
     })
@@ -404,7 +416,7 @@ no_compet_low_cor_df = tidy_simulation_list(no_compet_low_cor,
                                             low_cor_traits,
                                             trait_scenarios)
 
-no_compet_low_cor_label = paste0("No competition; ",
+no_compet_low_cor_label = paste0("Only intra comp.; ",
                                  d * 100, "% dispersal;",
                                  " 3 low correlated (r = 0.3) traits")
 ```
@@ -432,7 +444,7 @@ no_compet_high_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, d = d,
+                 A = 0, B = A, d = d,
                  k = k, width = env_width,
                  K = K)
     })
@@ -443,7 +455,7 @@ no_compet_high_cor_df = tidy_simulation_list(no_compet_high_cor,
                                              high_cor_traits,
                                              trait_scenarios)
 
-no_compet_high_cor_label = paste0("No competition; ",
+no_compet_high_cor_label = paste0("Only intra comp.; ",
                                   d * 100, "% dispersal;",
                                   " 3 high correlated (r = 0.7) traits")
 ```
@@ -573,7 +585,7 @@ plot_compet_high_cor_df_ind_landscape
 
 # With varying environmental filtering strength
 
-## Without Compettiion
+## Without Competition (only intra-specific competition)
 
 In this section, the environmental filtering selects for a narrower trait range
 towards the end of the environmental gradient.
@@ -592,7 +604,7 @@ no_compet_no_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, d = d,
+                 A = 0, B = A, d = d,
                  k = k, width = var_width,
                  K = K)
     })
@@ -603,7 +615,7 @@ no_compet_no_cor_var_df = tidy_simulation_list(no_compet_no_cor_var,
                                                set_of_traits = uncor_traits,
                                                trait_scenarios = trait_scenarios)
 
-no_compet_no_cor_var_label = paste0("No competition; ",
+no_compet_no_cor_var_label = paste0("Only intra compet; ",
                                     d * 100, "% dispersal;",
                                     " 3 uncorrelated traits")
 ```
@@ -630,7 +642,7 @@ no_compet_low_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, d = d,
+                 A = 0, B = A, d = d,
                  k = k, width = var_width,
                  K = K)
     })
@@ -641,7 +653,7 @@ no_compet_low_cor_var_df = tidy_simulation_list(no_compet_low_cor_var,
                                                 low_cor_traits,
                                                 trait_scenarios)
 
-no_compet_low_cor_var_label = paste0("No competition; ",
+no_compet_low_cor_var_label = paste0("Only intra compet; ",
                                      d * 100, "% dispersal;",
                                      " 3 low correlated (r = 0.3) traits")
 ```
@@ -669,7 +681,7 @@ no_compet_high_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, d = d,
+                 A = 0, B = A, d = d,
                  k = k, width = var_width,
                  K = K)
     })
@@ -680,7 +692,7 @@ no_compet_high_cor_var_df = tidy_simulation_list(no_compet_high_cor_var,
                                                  high_cor_traits,
                                                  trait_scenarios)
 
-no_compet_high_cor_var_label = paste0("No competition; ",
+no_compet_high_cor_var_label = paste0("Only intra compet; ",
                                       d * 100, "% dispersal;",
                                       " 3 high correlated (r = 0.7) traits")
 ```
@@ -862,7 +874,7 @@ plot_r2_cwm_env = ggplot(mod_df %>%
     facet_grid(rows = vars(compet_status), cols = vars(env_width, cwm_name),
                labeller =
                    labeller(compet_status = c(compet = "Competition",
-                                              no_compet = "No Competition"),
+                                              no_compet = "Only intra comp."),
                             env_width     = c(constant = "Constant\nEnv. Filter Strength",
                                               varying  = "Varying\nEnv. Filter Strength"))) +
     ylim(0, NA) +
@@ -906,7 +918,7 @@ plot_trait_var_env_constant = ggplot(all_trait_var %>%
                                     trait3_var = "Trait 3")) +
     scale_linetype_discrete(name = NULL,
                             labels = c(compet    = "Competition",
-                                       no_compet = "No Competition")) +
+                                       no_compet = "Only intra comp.")) +
     labs(x = "Environment",
          y = "Trait Variance",
          subtitle = "Constant Environment") +
@@ -933,7 +945,7 @@ plot_trait_var_env_varying = ggplot(all_trait_var %>%
                                     trait3_var = "Trait 3")) +
     scale_linetype_discrete(name = NULL,
                             labels = c(compet    = "Competition",
-                                       no_compet = "No Competition")) +
+                                       no_compet = "Only intra comp.")) +
     labs(x = "Environment",
          y = "Trait Variance",
          subtitle = "Varying Environment") +
@@ -973,7 +985,7 @@ var_df %>%
          color = NULL,
          subtitle = paste0("Varying environment; ",
                            d * 100, "% dispersal;",
-                           " No competition")) +
+                           " Only intra comp.")) +
     theme(legend.position = "top")
 
 cat('\r\n\r\n')

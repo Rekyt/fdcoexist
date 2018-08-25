@@ -24,9 +24,11 @@
 #' @param distance competiton matrix of species
 #' @param Nts      vector of abundances of species at time t
 #' @param K        the carying capacity
+#' @param A        scalar for the inter-specific competition
+#' @param B        scalar for the intra-specific competition
 #' @export
-alphaterm <- function(distance, Nts, K) {
-    Nts %*% (1 - distance) + (K/(K - Nts))
+alphaterm <- function(distance, Nts, K, A, B) {
+   A * (Nts %*% (1 - distance)) + B * (K/(K - Nts))
 }
 
 #' Beverton-Holt function
@@ -42,13 +44,12 @@ alphaterm <- function(distance, Nts, K) {
 #'
 #' @param R     a numeric vector of species growth rates
 #' @param N     a numeric vector of species population sizes
-#' @param A     a scalar for competition coefficient
 #' @param alpha the competition coefficient see [alphaterm()] for its
 #'              computation
 #'
 #' @export
-bevHoltFct <- function(R, N, A, alpha){
-    (R * N)/(1 + A * alpha)
+bevHoltFct <- function(R, N, alpha){
+    (R * N)/(1 + alpha)
 }
 
 #' Species growth rate for a given trait and environment
@@ -115,7 +116,10 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param patches     an integer giving the total number of patches to simulate
 #' @param composition the actual array containing species abundances per site
 #'                    over time, giving the initial populations of each species
-#' @param A           the scalar of competition coefficent (see [bevHoltFct()])
+#' @param A           the scalar of inter-specific competition coefficent
+#'                    (see [bevHoltFct()])
+#' @param B           the scalar for intra-specific competition coefficient
+#'                    by default B = A
 #' @param d           a numeric value between 0 and 1 giving the percentage of
 #'                    dispersal occurring across all patches
 #' @param k           a scalar giving the maximum growth rate in optimal
@@ -125,7 +129,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A, d, k, width, K) {
+                     composition, A, B = A, d, k, width, K) {
 
     # Check assumptions on trait_weights data.frame
     check_trait_weights(trait_weights, traits)
@@ -147,11 +151,11 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     for (m in seq(1, time - 1)) {
 
         # Calculate niche term (alpha) including carrying capacity
-        alpha <- alphaterm(disttraits, composition[,,m], K = K)
+        alpha <- alphaterm(disttraits, composition[,,m], K = K, A = A, B = B)
 
         alphalist[[m]] = alpha
 
-        composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], A, alpha)
+        composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], alpha)
 
         # threshold number of individuals
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
