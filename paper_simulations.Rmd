@@ -969,6 +969,11 @@ cat('\r\n\r\n')
 
 ```{r link_r2_cwm_trait_var}
 
+
+mod_df$contrib2 <- as.numeric(gsub(".*R|A.*", "",
+                                          mod_df$scenario))
+mod_df$contrib1 <- 100 - mod_df$contrib2
+
 all_trait_var$contrib2 <- as.numeric(gsub(".*R|A.*", "",
                                           all_trait_var$scenario))
 all_trait_var$contrib1 <- 100 - all_trait_var$contrib2
@@ -998,6 +1003,8 @@ plot_grid(
         labs(x = "Contribution of trait2 to growth (in %)",
              y = "Variance of trait2 within the patch"),
     nrow = 2)
+
+cat('\r\n\r\n')
 
 ```
 
