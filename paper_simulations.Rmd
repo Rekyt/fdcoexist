@@ -967,6 +967,40 @@ cat('\r\n\r\n')
 
 ```
 
+```{r link_r2_cwm_trait_var}
+
+all_trait_var$contrib2 <- as.numeric(gsub(".*R|A.*", "",
+                                          all_trait_var$scenario))
+all_trait_var$contrib1 <- 100 - all_trait_var$contrib2
+
+# Plot
+plot_grid(
+    ggplot(mod_df[which(mod_df$env_width == "constant" &
+                            mod_df$compet_status == "compet" &
+                            mod_df$cwm_name == "trait2_cwm"), ],
+           aes(as.factor(contrib2), adj.r.squared)) +
+        geom_boxplot(aes(fill = cor_level)) +
+        scale_fill_viridis_d("Trait\nCorrelations",
+                             labels = c(no_cor   = "r = 0",
+                                        low_cor  = "r = 0.3",
+                                        high_cor = "r = 0.7")) +
+        labs(x = "Contribution of trait2 to growth (in %)",
+             y = "R² of the relationship between\nCWM and environment"),
+    ggplot(all_trait_var[which(all_trait_var$compet_status == "compet" &
+                                   all_trait_var$env_width == "constant" &
+                                   all_trait_var$trait_name == "trait2_var"), ],
+           aes(as.factor(contrib2), trait_value)) +
+        geom_boxplot(aes(fill = cor_level)) +
+        scale_fill_viridis_d("Trait\nCorrelations",
+                             labels = c(no_cor   = "r = 0",
+                                        low_cor  = "r = 0.3",
+                                        high_cor = "r = 0.7")) +
+        labs(x = "Contribution of trait2 to growth (in %)",
+             y = "Variance of trait2 within the patch"),
+    nrow = 2)
+
+```
+
 # CWV against environment
 
 ```{r cwv_envt}
