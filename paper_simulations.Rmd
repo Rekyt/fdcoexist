@@ -119,7 +119,8 @@ env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
-A =  0.0005	# Alpha scalar 
+A =  0.0005	# Alpha scalar
+B = 0.005 # Scalar for intraspecific competition
 d = 0.08 # Dispersal percentage
 
 # Generate environment
@@ -328,7 +329,7 @@ N_{t+1, i, x} = \frac{
 }
 $$
 
-with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. Depending on the scenario we can suppose that $B = A$
+with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. Depending on the scenario we can suppose that $B < A$
 
 Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
 $$R_{i, x} = \sum_{g = 1}^T w_g \times k \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2}\right)$$
@@ -355,7 +356,7 @@ no_compet_no_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, B = A, d = d,
+                 A = 0, B = B, d = d,
                  k = k, width = env_width,
                  K = K)
     })
@@ -415,7 +416,7 @@ no_compet_low_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, B = A, d = d,
+                 A = 0, B = B, d = d,
                  k = k, width = env_width,
                  K = K)
     })
@@ -454,7 +455,7 @@ no_compet_high_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, B = A, d = d,
+                 A = 0, B = B, d = d,
                  k = k, width = env_width,
                  K = K)
     })
@@ -614,7 +615,7 @@ no_compet_no_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, B = A, d = d,
+                 A = 0, B = B, d = d,
                  k = k, width = var_width,
                  K = K)
     })
@@ -652,7 +653,7 @@ no_compet_low_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, B = A, d = d,
+                 A = 0, B = B, d = d,
                  k = k, width = var_width,
                  K = K)
     })
@@ -691,7 +692,7 @@ no_compet_high_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = 0, B = A, d = d,
+                 A = 0, B = B, d = d,
                  k = k, width = var_width,
                  K = K)
     })
