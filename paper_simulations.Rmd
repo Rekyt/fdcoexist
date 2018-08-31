@@ -320,7 +320,7 @@ k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\tim
 
 The equation above only considers inter-specific competition when $j \neq i$ in the sum. We can however add intra-specific competition when $j = i$. Each site has a species-specific carrying capacity $K$ as the number of individuals approaches this carrying capacity the intra-specific competition increases:
 \begin{equation}
-\alpha_{ii} = B \times \N_{t,i,x}
+\alpha_{ii} = B \times N_{t,i,x}
 \end{equation}
 
 Thus the equation becomes:
@@ -329,7 +329,7 @@ Thus the equation becomes:
 N_{t+1, i, x} = \frac{
 k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
 1 + A \times \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
-B \times \N_{t,i,x}
+B \times N_{t,i,x}
 }
 \end{equation}
 
