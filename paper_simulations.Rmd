@@ -114,14 +114,13 @@ n_gen     <- 150  # Length of model run (generations)
 initpop   <- 50   # initial population size
 n_traits  <- 3    # number of traits
 k         <- 1.15 # Maximum growth rate
-K         <- 150  # Carrying capacity
 env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
-A =  0.0005	# Alpha scalar
-B = 0.005 # Scalar for intraspecific competition
-d = 0.08 # Dispersal percentage
+B = 1/500 # Scalar for intraspecific competition
+A =  B/n_species	# Alpha scalar
+d = 0.05 # Dispersal percentage
 
 # Generate environment
 env <- seq(n_patches)
@@ -321,7 +320,7 @@ k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\tim
 
 The equation above only considers inter-specific competition when $j \neq i$ in the sum. We can however add intra-specific competition when $j = i$. Each site has a species-specific carrying capacity $K$ as the number of individuals approaches this carrying capacity the intra-specific competition increases:
 \begin{equation}
-\alpha_{ii} = \frac{K}{K - N_{t,i,x}}
+\alpha_{ii} = B \times \N_{t,i,x}
 \end{equation}
 
 Thus the equation becomes:
@@ -330,11 +329,11 @@ Thus the equation becomes:
 N_{t+1, i, x} = \frac{
 k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
 1 + A \times \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
-B \times \frac{K}{K - N_{t, i, x}}
+B \times \N_{t,i,x}
 }
 \end{equation}
 
-with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. Depending on the scenario we can suppose that $B < A$
+with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. 
 
 Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
 \begin{equation}
@@ -364,8 +363,7 @@ no_compet_no_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, B = B, d = d,
-                 k = k, width = env_width,
-                 K = K)
+                 k = k, width = env_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -424,8 +422,7 @@ no_compet_low_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, B = B, d = d,
-                 k = k, width = env_width,
-                 K = K)
+                 k = k, width = env_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -463,8 +460,7 @@ no_compet_high_cor <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, B = B, d = d,
-                 k = k, width = env_width,
-                 K = K)
+                 k = k, width = env_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -502,9 +498,8 @@ compet_no_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = A, d = d,
-                 k = k, width = env_width,
-                 K = K)
+                 A = A, B = B, d = d,
+                 k = k, width = env_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -540,9 +535,8 @@ compet_low_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = A, d = d,
-                 k = k, width = env_width,
-                 K = K)
+                 A = A, B = B, d = d,
+                 k = k, width = env_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -578,9 +572,8 @@ compet_high_cor <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = A, d = d,
-                 k = k, width = env_width,
-                 K = K)
+                 A = A, B = B, d = d,
+                 k = k, width = env_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -623,8 +616,7 @@ no_compet_no_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, B = B, d = d,
-                 k = k, width = var_width,
-                 K = K)
+                 k = k, width = var_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -661,8 +653,7 @@ no_compet_low_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, B = B, d = d,
-                 k = k, width = var_width,
-                 K = K)
+                 k = k, width = var_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -700,8 +691,7 @@ no_compet_high_cor_var <- lapply(
                  patches = n_patches,
                  composition = composition,
                  A = 0, B = B, d = d,
-                 k = k, width = var_width,
-                 K = K)
+                 k = k, width = var_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -739,9 +729,8 @@ compet_no_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = A, d = d,
-                 k = k, width = var_width,
-                 K = K)
+                 A = A, B=B, d = d,
+                 k = k, width = var_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -777,8 +766,8 @@ compet_low_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = A, d = d,
-                 k = k, width = var_width, K = K)
+                 A = A, B=B, d = d,
+                 k = k, width = var_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
@@ -814,8 +803,8 @@ compet_high_cor_var <- lapply(
                  species = n_species,
                  patches = n_patches,
                  composition = composition,
-                 A = A, d = d,
-                 k = k, width = var_width, K = K)
+                 A = A, B = B, d = d,
+                 k = k, width = var_width)
     })
 
 # Takes simulation results and put them as an exploitable data.frame with only
