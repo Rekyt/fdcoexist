@@ -825,7 +825,10 @@ plot_compet_high_cor_df_ind_var_landscape = fig_ind_landscape(compet_high_cor_va
 plot_compet_high_cor_df_ind_var_landscape
 ```
 
+
 # Synthetic plots
+
+## R² CWM against environment
 
 ```{r synthetic_plot, fig.width=9}
 constant_df <- list(no_compet_no_cor_df = no_compet_no_cor_df,
@@ -898,6 +901,9 @@ plot_r2_cwm_env = ggplot(mod_df %>%
 
 plot_r2_cwm_env
 ```
+
+
+## Trait variance against environment
 
 ```{r plot_trait_var_env}
 all_trait_var = all_df %>%
@@ -1005,7 +1011,7 @@ cat('\r\n\r\n')
 
 ```
 
-# CWV against environment
+## CWV against environment
 
 ```{r cwv_envt}
 
