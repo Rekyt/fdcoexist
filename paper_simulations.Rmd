@@ -167,15 +167,16 @@ trait_scenarios = list(
 )
 
 # Generate traits --------------------------------------------------------------
+trait_seed = 5
 # Make traits with different correlations
-set.seed(1)
+set.seed(trait_seed)
 uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                    cor_coef = 0)
-set.seed(1)
+set.seed(trait_seed)
 low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                      cor_coef = 0.3)
 
-set.seed(1)
+set.seed(trait_seed)
 high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                       cor_coef = 0.7)
 
@@ -1006,6 +1007,22 @@ plot_grid(
         labs(x = "Contribution of trait2 to growth (in %)",
              y = "Variance of trait2 within the patch"),
     nrow = 2)
+
+ggplot(all_trait_var, aes(scenario, trait_value, fill = fct_rev(cor_level))) +
+    geom_boxplot() +
+    facet_grid(rows = vars(env_width, compet_status),
+               cols = vars(trait_name),
+               labeller =
+                   labeller(compet_status = c(compet = "Competition",
+                                              no_compet = "Only intra comp."),
+                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
+                                              varying  = "Varying\nEnv. Filter Strength")),
+               scales = "free_y") +
+        scale_fill_viridis_d("Trait\nCorrelations",
+                             labels = c(no_cor   = "r = 0",
+                                        low_cor  = "r = 0.3",
+                                        high_cor = "r = 0.7")) +
+        labs(y = "Variance of trait across all patches")
 
 cat('\r\n\r\n')
 
