@@ -378,19 +378,74 @@ library("furrr")
 plan(multiprocess)
 tictoc::tic()
 
-first_simuls = future_map(1:60, function(x) {
+total_runs = 60
+
+first_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
     
-    meta_simul(x) %>%
+    meta_simul(x)
+})
+tictoc::toc()
+
+first_simuls_r2 = first_simuls %>%
+    map(~.x %>%
         gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
         group_by(cwm_name, add = TRUE) %>%
         do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
         ungroup() %>%
         mutate(mod_glance = lapply(mod_cwm_env, broom::glance)) %>%
-        unnest(mod_glance)
-}) %>%
+        unnest(mod_glance)) %>%
     bind_rows()
 
-tictoc::toc()
+first_simuls_var = first_simuls %>%
+    map(~.x %>%
+            select(-ends_with("cwm"))) %>%
+    bind_rows() %>%
+    gather("var_name", "var_value", ends_with("var"))
+```
+
+```{r}
+ggplot(first_simuls_r2, aes(scenario, r.squared)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(compet_status), cols = vars(env_width, cwm_name),
+               labeller =
+                   labeller(compet_status = c(compet = "Competition",
+                                              no_compet = "Only intra comp."),
+                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
+                                              varying  = "Varying\nEnv. Filter Strength"))) +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations",
+                         labels = c(uncor   = "r = 0",
+                                    low_cor  = "r = 0.3",
+                                    high_cor = "r = 0.7")) +
+    labs(subtitle = paste0("R2 of trait2 CWM ~ environment; N = ", total_runs),
+         x = "Scenario",
+         y = expression("R"^2)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+```
+
+```{r}
+ggplot(first_simuls_var, aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width, compet_status), cols = vars(var_name),
+               labeller =
+                   labeller(compet_status = c(compet = "Competition",
+                                              no_compet = "Only intra comp."),
+                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
+                                              varying  = "Varying\nEnv. Filter Strength")),
+               scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations",
+                         labels = c(uncor    = "r = 0",
+                                    low_cor  = "r = 0.3",
+                                    high_cor = "r = 0.7")) +
+    labs(subtitle = paste0("Trait Variance across Patches; N = ", total_runs),
+         x = "Scenario",
+         y = expression("R"^2)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
 ```
 
