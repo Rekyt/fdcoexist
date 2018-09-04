@@ -44,7 +44,7 @@ compute_moments = function(simulation_routine, trait_df = traits) {
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
 landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
-                        time = 150) {
+                        time = n_gen) {
     
     growth_traits = subset(trait_weights, growth_weight != 0)$trait
     compet_traits = subset(trait_weights, compet_weight != 0)$trait
@@ -75,7 +75,7 @@ landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
 # This function tidy a list of simulation routine to a single data.frame
 # suitable to make figures.
 tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
-                                time = 150, scenar_names = names(trait_scenarios)) {
+                                time = n_gen, scenar_names = names(trait_scenarios)) {
     simulation_list %>%
         names() %>%
         # Tidy single simulations
@@ -94,7 +94,7 @@ tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
 }
 
 tidy_simulation = function(scenario, given_simul, given_traits,
-                           given_trait_scenar, time = 150) {
+                           given_trait_scenar, time = n_gen) {
     landscape_df(given_simul[[scenario]], given_traits,
                  trait_scenarios[[scenario]], time = time) %>%
         inner_join(given_traits %>%
@@ -110,7 +110,7 @@ suppressMessages(devtools::load_all())
 
 n_patches <- 25   # Number of patches
 n_species <- 100  # Number of species
-n_gen     <- 150  # Length of model run (generations)
+n_gen     <- 500  # Length of model run (generations)
 initpop   <- 50   # initial population size
 n_traits  <- 3    # number of traits
 k         <- 1.15 # Maximum growth rate
