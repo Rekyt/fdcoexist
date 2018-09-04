@@ -118,8 +118,8 @@ env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
-B = 1/500 # Scalar for intraspecific competition
-A =  B/n_species	# Alpha scalar
+B = 2e-4 # Scalar for intraspecific competition
+A = B	 # Alpha scalar
 d = 0.05 # Dispersal percentage
 
 # Generate environment

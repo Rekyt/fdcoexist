@@ -118,8 +118,8 @@ env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
-B = 1/500 # Scalar for intraspecific competition
-A =  B/n_species	# Alpha scalar
+B = 2e-4 # Scalar for intraspecific competition
+A = B	# Alpha scalar
 d = 0.05 # Dispersal percentage
 
 # Generate environment
@@ -181,7 +181,9 @@ high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                       cor_coef = 0.7)
 
 # Graphical parameters ---------------------------------------------------------
-theme_set(theme_bw(12))
+theme_set(theme_bw(12) +
+              theme(axis.text.x = element_text(angle = 45),
+                    legend.text = element_text(angle = 45)))
 
 # Graphical functions ----------------------------------------------------------
 label_scenar_facets = function(scenar_name) {
@@ -195,6 +197,11 @@ label_scenar_facets = function(scenar_name) {
 
 facet_scenar = facet_wrap(vars(scenario),
                           labeller = labeller(scenario = label_scenar_facets))
+
+label_compet_env = labeller(compet_status = c(compet = "Competition",
+                                              no_compet = "Only intra comp."),
+                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
+                                              varying  = "Varying\nEnv. Filter Strength"))
 
 # Plot the relationship between species abundances along the environment in the
 # different scenarios
@@ -882,12 +889,9 @@ plot_r2_cwm_env = ggplot(mod_df %>%
     geom_point(aes(fill = fct_rev(cor_level)),
                size = 4, position = position_dodge(width = 0.7),
                shape = 21) +
-    facet_grid(rows = vars(compet_status), cols = vars(env_width, cwm_name),
-               labeller =
-                   labeller(compet_status = c(compet = "Competition",
-                                              no_compet = "Only intra comp."),
-                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
-                                              varying  = "Varying\nEnv. Filter Strength"))) +
+    facet_grid(rows = vars(env_width, compet_status),
+               cols = vars(cwm_name),
+               labeller = label_compet_env) +
     ylim(0, NA) +
     scale_fill_viridis_d("Trait\nCorrelations",
                          labels = c(no_cor   = "r = 0",
@@ -906,7 +910,7 @@ plot_r2_cwm_env
 
 ## Trait variance against environment
 
-```{r plot_trait_var_env}
+```{r link_r2_cwm_trait_var}
 all_trait_var = all_df %>%
     filter(N > 0) %>%
     group_by(env_width, compet_status, cor_level, scenario, patch) %>%
@@ -915,6 +919,20 @@ all_trait_var = all_df %>%
     mutate(patch_optim = as.numeric(gsub("patches", "", patch))) %>%
     gather("trait_name", "trait_value", contains("trait"))
 
+ggplot(all_trait_var, aes(scenario, trait_value, fill = fct_rev(cor_level))) +
+    geom_boxplot() +
+    facet_grid(rows = vars(env_width, compet_status),
+               cols = vars(trait_name),
+               labeller = label_compet_env,
+               scales = "free_y") +
+        scale_fill_viridis_d("Trait\nCorrelations",
+                             labels = c(no_cor   = "r = 0",
+                                        low_cor  = "r = 0.3",
+                                        high_cor = "r = 0.7")) +
+        labs(y = "Variance of trait across all patches")
+```
+
+```{r plot_trait_var_env}
 plot_trait_var_env_constant = ggplot(all_trait_var %>%
                                          filter(env_width == "constant"),
                                      aes(patch_optim, trait_value,
@@ -966,72 +984,11 @@ plot_trait_var_env_varying = ggplot(all_trait_var %>%
     theme(legend.position = "top")
 
 plot_trait_var_env_varying
-
-cat('\r\n\r\n')
-
-```
-
-```{r link_r2_cwm_trait_var}
-
-
-mod_df$contrib2 <- as.numeric(gsub(".*R|A.*", "",
-                                   mod_df$scenario))
-mod_df$contrib1 <- 100 - mod_df$contrib2
-
-all_trait_var$contrib2 <- as.numeric(gsub(".*R|A.*", "",
-                                          all_trait_var$scenario))
-all_trait_var$contrib1 <- 100 - all_trait_var$contrib2
-
-# Plot
-plot_grid(
-    ggplot(mod_df[which(mod_df$env_width == "constant" &
-                            mod_df$compet_status == "compet" &
-                            mod_df$cwm_name == "trait2_cwm"), ],
-           aes(as.factor(contrib2), adj.r.squared)) +
-        geom_boxplot(aes(fill = cor_level)) +
-        scale_fill_viridis_d("Trait\nCorrelations",
-                             labels = c(no_cor   = "r = 0",
-                                        low_cor  = "r = 0.3",
-                                        high_cor = "r = 0.7")) +
-        labs(x = "Contribution of trait2 to growth (in %)",
-             y = "R² of the relationship between\nCWM and environment"),
-    ggplot(all_trait_var[which(all_trait_var$compet_status == "compet" &
-                                   all_trait_var$env_width == "constant" &
-                                   all_trait_var$trait_name == "trait2_var"), ],
-           aes(as.factor(contrib2), trait_value)) +
-        geom_boxplot(aes(fill = cor_level)) +
-        scale_fill_viridis_d("Trait\nCorrelations",
-                             labels = c(no_cor   = "r = 0",
-                                        low_cor  = "r = 0.3",
-                                        high_cor = "r = 0.7")) +
-        labs(x = "Contribution of trait2 to growth (in %)",
-             y = "Variance of trait2 within the patch"),
-    nrow = 2)
-
-ggplot(all_trait_var, aes(scenario, trait_value, fill = fct_rev(cor_level))) +
-    geom_boxplot() +
-    facet_grid(rows = vars(env_width, compet_status),
-               cols = vars(trait_name),
-               labeller =
-                   labeller(compet_status = c(compet = "Competition",
-                                              no_compet = "Only intra comp."),
-                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
-                                              varying  = "Varying\nEnv. Filter Strength")),
-               scales = "free_y") +
-        scale_fill_viridis_d("Trait\nCorrelations",
-                             labels = c(no_cor   = "r = 0",
-                                        low_cor  = "r = 0.3",
-                                        high_cor = "r = 0.7")) +
-        labs(y = "Variance of trait across all patches")
-
-cat('\r\n\r\n')
-
 ```
 
 ## CWV against environment
 
 ```{r cwv_envt}
-
 var_df %>%
     select(-contains("cwm")) %>%
     filter(compet_status == "no_compet") %>%
@@ -1058,8 +1015,6 @@ var_df %>%
                            d * 100, "% dispersal;",
                            " Only intra comp.")) +
     theme(legend.position = "top")
-
-cat('\r\n\r\n')
 
 var_df %>%
     select(-contains("cwm")) %>%
