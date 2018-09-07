@@ -1,0 +1,49 @@
+---
+title: "Solving Equation to get A value"
+author: "Matthias Grenié"
+date: "7 septembre 2018"
+header-includes:
+    - \usepackage{cancel}
+    - \usepackage{mathtools}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We start from this equation
+$$
+N_{t+1, i, x} = \frac{
+k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
+1 + A \times \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
+B \times N_{t,i,x}
+}
+$$
+to get realistic value for $A$ and $B$.
+We solve $N_{t+1, i, x} = N_{t, i, x}$ with $A = B$ and $1 - \delta_{ij} = 1$ for all $i$ and $j$ and for $\text{trait}_i - \text{env}_x = 0$.
+We thus get:
+
+
+\begin{equation}
+    \begin{aligned}
+    N_{t+1, i, x} =& N_{t, i, x}\\
+    \Leftrightarrow N_{t, i, x} =& \frac{
+        k  \times N_{t, i, x}}{
+        1 + A \times \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} +
+        A \times N_{t,i,x}}\\
+    \Leftrightarrow  N_{t, i, x} =& \frac{
+        k  \times N_{t, i, x}}{
+        1 + A \times \displaystyle\sum_{j = 1}^{S} N_{t, j, x}}\\
+    \Leftrightarrow  \bcancel{N_{t, i, x}} =& \frac{
+        k  \times \bcancel{N_{t, i, x}}}{
+        1 + A \times \displaystyle\sum_{j = 1}^{S} N_{t, j, x}}\\
+    \Leftrightarrow  1 =& \frac{k}{
+        1 + A \times \displaystyle\sum_{j = 1}^{S} N_{t, j, x}}\\
+    \Leftrightarrow  1 + A \times \displaystyle\sum_{j = 1}^{S} N_{t, j, x} &= k\\
+    \Leftrightarrow  \Aboxed{A =& \frac{k - 1}{
+        \displaystyle\sum_{j = 1}^{S} N_{t, j, x}}}
+    \end{aligned}
+\end{equation}
+
+We can find a value for A heuristically computing it at the last generation for a number of sites
