@@ -116,6 +116,7 @@ n_traits  <- 3    # number of traits
 k         <- 1.15 # Maximum growth rate
 env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
+total_runs = 200  # Number of set of traits to test
 
 # Competition + Dispersion coefficients
 B = 2e-4 # Scalar for intraspecific competition
@@ -273,103 +274,17 @@ label_scenar_facets = function(scenar_name) {
 facet_scenar = facet_wrap(vars(scenario),
                           labeller = labeller(scenario = label_scenar_facets))
 
-# Plot the relationship between species abundances along the environment in the
-# different scenarios
-fig_abund_env = function(simul_df, simul_label) {
-    ggplot(simul_df %>%
-               filter(N >= 2), aes(patch_optim, N)) +
-        geom_point(shape = ".") +
-        geom_smooth() +
-        facet_scenar +
-        labs(x = "Environmental value",
-             y = "Species Abundance (gen. = 150)",
-             subtitle = simul_label)
-}
+lab_compet_env = labeller(
+    compet_status = c(compet    = "Intra + Inter competition",
+                      no_compet = "Intra Only"),
+    env_width     = c(constant  = "Same Filter Strength\nAlong Gradient",
+                      varying   = "Increasing Filter Strength\nAlong Gradient"))
 
-# Plot the relationship between the CWM of the different trait along the
-# environment for the different scenarios
-fig_cwm_env = function(simul_df, simul_label) {
-    simul_df %>%
-        filter(N >= 2) %>%
-        group_by(scenario, patch) %>%
-        summarise_at(vars(contains("cwm")), sum, na.rm = TRUE) %>%
-        mutate(patch_optim = gsub("patches", "", patch) %>%
-                   as.numeric()) %>%
-        gather("cwm_name", "cwm_value", contains("cwm")) %>%
-        ggplot(aes(patch_optim, cwm_value, color = cwm_name)) +
-        geom_point() +
-        geom_smooth() +
-        facet_scenar +
-        scale_color_discrete(labels = c(trait1_cwm = "Trait 1",
-                                        trait2_cwm = "Trait 2",
-                                        trait3_cwm = "Trait 3")) +
-        labs(x = "Environment",
-             y = "Community-Weighted Mean (CWM)",
-             color = NULL,
-             subtitle = simul_label) +
-        theme(legend.position = "top")
-}
+lab_cor = c(uncor    = "r = 0",
+            low_cor  = "r = 0.3",
+            high_cor = "r = 0.7")
 
-# Plot the relationship between patch CWMs along the environment considering
-# total abundance
-fig_cwm_env_abund = function(simul_df, simul_label, n_bins = 24,
-                             given_trans = "identity") {
-    simul_df %>%
-        group_by(scenario, patch) %>%
-        summarise_at(vars(contains("cwm"), N), sum) %>%
-        mutate(patch_optim = gsub("patches", "", patch) %>%
-                   as.numeric()) %>%
-        gather("cwm_name", "cwm_value", contains("cwm")) %>%
-        ungroup() %>%
-        ggplot(aes(patch_optim, cwm_value, z = N)) +
-        stat_summary_2d(bins = n_bins) +
-        facet_grid(vars(scenario), vars(cwm_name),
-                   labeller = labeller(scenario = label_scenar_facets,
-                                       cwm_name = label_value)) +
-        scale_fill_viridis_c(trans = given_trans, option = "E") +
-        labs(x = "Environment",
-             y = "Community-Weighted Mean (CWM)",
-             fill = "Total Abundance",
-             subtitle = simul_label) +
-        theme(legend.position = "top")
-}
-
-# Relationship betwee, species trait values along the enviroment showing their
-# local abundances for the different traits considered
-fig_ind_landscape = function(simul_df, simul_label, n_bins = 22,
-                             given_trans = "identity") {
-    
-    simul_df <- simul_df %>%
-        select(-contains("cwm")) %>%
-        gather("trait_name", "trait_value", contains("trait"))
-    
-    simul_df_cwm <- simul_df %>%
-        group_by(scenario, patch, trait_name) %>%
-        summarise(cwm = weighted.mean(trait_value, N))
-    
-    simul_df2 <- left_join(simul_df, simul_df_cwm,
-                           by = c("scenario", "patch", "trait_name"))
-    
-    ggplot(simul_df2 %>%
-               filter(N > 0),
-           aes(patch_optim, trait_value, z = N)) +
-        stat_summary_2d(geom = "raster", bins = n_bins, interpolate = TRUE) +
-        geom_line(aes(patch_optim, cwm, color = "firebrick"), size = 1) +
-        facet_grid(vars(scenario), vars(trait_name),
-                   labeller = labeller(scenario = label_scenar_facets,
-                                       trait_name = function(x) gsub("_", " ",
-                                                                     x))) +
-        scale_fill_viridis_c(trans = given_trans, option = "E") +
-        scale_color_manual(name = "CWM", values = c(firebrick = "grey80"),
-                           labels = "") +
-        labs(x = "Environment",
-             y = "Trait Value",
-             fill = "Species Abundance",
-             subtitle = simul_label) +
-        guides(colour = guide_legend(override.aes = list(size = 1,
-                                                         color = "grey50"))) +
-        theme(legend.position = "top")
-}
+run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B)
 ```
 
 ```{r}
@@ -378,13 +293,11 @@ library("furrr")
 plan(multiprocess)
 tictoc::tic()
 
-total_runs = 60
-
 first_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
     
     meta_simul(x)
-})
+}, .progress = TRUE)
 tictoc::toc()
 
 first_simuls_r2 = first_simuls %>%
@@ -408,18 +321,11 @@ first_simuls_var = first_simuls %>%
 ggplot(first_simuls_r2, aes(scenario, r.squared)) +
     geom_boxplot(aes(fill = fct_rev(cor_level)),
                  position = position_dodge(width = 0.9)) +
-    facet_grid(rows = vars(compet_status), cols = vars(env_width, cwm_name),
-               labeller =
-                   labeller(compet_status = c(compet = "Competition",
-                                              no_compet = "Only intra comp."),
-                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
-                                              varying  = "Varying\nEnv. Filter Strength"))) +
+    facet_grid(rows = vars(env_width, compet_status), cols = vars(cwm_name),
+               labeller = lab_compet_env) +
     ylim(0, NA) +
-    scale_fill_viridis_d("Trait\nCorrelations",
-                         labels = c(uncor   = "r = 0",
-                                    low_cor  = "r = 0.3",
-                                    high_cor = "r = 0.7")) +
-    labs(subtitle = paste0("R2 of trait2 CWM ~ environment; N = ", total_runs),
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("R2 of trait2 CWM ~ environment; ", run_char),
          x = "Scenario",
          y = expression("R"^2)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
@@ -431,20 +337,12 @@ ggplot(first_simuls_var, aes(scenario, var_value)) +
     geom_boxplot(aes(fill = fct_rev(cor_level)),
                  position = position_dodge(width = 0.9)) +
     facet_grid(rows = vars(env_width, compet_status), cols = vars(var_name),
-               labeller =
-                   labeller(compet_status = c(compet = "Competition",
-                                              no_compet = "Only intra comp."),
-                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
-                                              varying  = "Varying\nEnv. Filter Strength")),
-               scales = "free_y") +
+               labeller = lab_compet_env, scales = "free_y") +
     ylim(0, NA) +
-    scale_fill_viridis_d("Trait\nCorrelations",
-                         labels = c(uncor    = "r = 0",
-                                    low_cor  = "r = 0.3",
-                                    high_cor = "r = 0.7")) +
-    labs(subtitle = paste0("Trait Variance across Patches; N = ", total_runs),
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches; ", run_char),
          x = "Scenario",
-         y = expression("R"^2)) +
+         y = "Trait Variance among patches") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "top")
 ```
