@@ -102,7 +102,7 @@ tidy_simulation = function(scenario, given_simul, given_traits,
 suppressMessages(devtools::load_all())
 
 n_patches <- 25   # Number of patches
-n_species <- 100  # Number of species
+n_species <- 100   # Number of species
 n_gen     <- 500  # Length of model run (generations)
 initpop   <- 50   # initial population size
 n_traits  <- 1    # number of traits
@@ -141,122 +141,6 @@ rownames(trait_df) = paste0("species", seq(n_species))
 theme_set(theme_bw(12) +
               theme(axis.text.x = element_text(angle = 45),
                     legend.text = element_text(angle = 45)))
-
-# Graphical functions ----------------------------------------------------------
-label_scenar_facets = function(scenar_name) {
-    scenar_name %>%
-        as.character() %>%
-        str_remove("R") %>%
-        str_split("A") %>%
-        map_chr(~paste0("Growth = ",  .x[1], "%\n",
-                        "Compet. = ", .x[2], "%"))
-}
-
-facet_scenar = facet_wrap(vars(scenario),
-                          labeller = labeller(scenario = label_scenar_facets))
-
-label_compet_env = labeller(compet_status = c(compet = "Competition",
-                                              no_compet = "Only intra comp."),
-                            env_width     = c(constant = "Constant\nEnv. Filter Strength",
-                                              varying  = "Varying\nEnv. Filter Strength"))
-
-# Plot the relationship between species abundances along the environment in the
-# different scenarios
-fig_abund_env = function(simul_df, simul_label) {
-    ggplot(simul_df %>%
-               filter(N >= 2), aes(patch_optim, N)) +
-        geom_point(shape = ".") +
-        geom_smooth() +
-        facet_scenar +
-        labs(x = "Environmental value",
-             y = "Species Abundance (gen. = 150)",
-             subtitle = simul_label)
-}
-
-# Plot the relationship between the CWM of the different trait along the
-# environment for the different scenarios
-fig_cwm_env = function(simul_df, simul_label) {
-    simul_df %>%
-        filter(N >= 2) %>%
-        group_by(scenario, patch) %>%
-        summarise_at(vars(contains("cwm")), sum, na.rm = TRUE) %>%
-        mutate(patch_optim = gsub("patches", "", patch) %>%
-                   as.numeric()) %>%
-        gather("cwm_name", "cwm_value", contains("cwm")) %>%
-        ggplot(aes(patch_optim, cwm_value, color = cwm_name)) +
-        geom_point() +
-        geom_smooth() +
-        facet_scenar +
-        scale_color_discrete(labels = c(trait1_cwm = "Trait 1",
-                                        trait2_cwm = "Trait 2",
-                                        trait3_cwm = "Trait 3")) +
-        labs(x = "Environment",
-             y = "Community-Weighted Mean (CWM)",
-             color = NULL,
-             subtitle = simul_label) +
-        theme(legend.position = "top")
-}
-
-# Plot the relationship between patch CWMs along the environment considering
-# total abundance
-fig_cwm_env_abund = function(simul_df, simul_label, n_bins = 24,
-                             given_trans = "identity") {
-    simul_df %>%
-        group_by(scenario, patch) %>%
-        summarise_at(vars(contains("cwm"), N), sum) %>%
-        mutate(patch_optim = gsub("patches", "", patch) %>%
-                   as.numeric()) %>%
-        gather("cwm_name", "cwm_value", contains("cwm")) %>%
-        ungroup() %>%
-        ggplot(aes(patch_optim, cwm_value, z = N)) +
-        stat_summary_2d(bins = n_bins) +
-        facet_grid(vars(scenario), vars(cwm_name),
-                   labeller = labeller(scenario = label_scenar_facets,
-                                       cwm_name = label_value)) +
-        scale_fill_viridis_c(trans = given_trans, option = "E") +
-        labs(x = "Environment",
-             y = "Community-Weighted Mean (CWM)",
-             fill = "Total Abundance",
-             subtitle = simul_label) +
-        theme(legend.position = "top")
-}
-
-# Relationship betwee, species trait values along the enviroment showing their
-# local abundances for the different traits considered
-fig_ind_landscape = function(simul_df, simul_label, n_bins = 22,
-                             given_trans = "identity") {
-    
-    simul_df <- simul_df %>%
-        select(-contains("cwm")) %>%
-        gather("trait_name", "trait_value", contains("trait"))
-    
-    simul_df_cwm <- simul_df %>%
-        group_by(scenario, patch, trait_name) %>%
-        summarise(cwm = weighted.mean(trait_value, N))
-    
-    simul_df2 <- left_join(simul_df, simul_df_cwm,
-                           by = c("scenario", "patch", "trait_name"))
-    
-    ggplot(simul_df2 %>%
-               filter(N > 0),
-           aes(patch_optim, trait_value, z = N)) +
-        stat_summary_2d(geom = "raster", bins = n_bins, interpolate = TRUE) +
-        geom_line(aes(patch_optim, cwm, color = "firebrick"), size = 1) +
-        facet_grid(vars(scenario), vars(trait_name),
-                   labeller = labeller(scenario = label_scenar_facets,
-                                       trait_name = function(x) gsub("_", " ",
-                                                                     x))) +
-        scale_fill_viridis_c(trans = given_trans, option = "E") +
-        scale_color_manual(name = "CWM", values = c(firebrick = "grey80"),
-                           labels = "") +
-        labs(x = "Environment",
-             y = "Trait Value",
-             fill = "Species Abundance",
-             subtitle = simul_label) +
-        guides(colour = guide_legend(override.aes = list(size = 1,
-                                                         color = "grey50"))) +
-        theme(legend.position = "top")
-}
 ```
 
 # Analytical derivation of A value
