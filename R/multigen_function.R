@@ -288,8 +288,16 @@ compute_compet_distance = function(trait_weights, traits) {
         # Compute distance matrix
         disttraits <- as.matrix(dist(scaled_compet_traits))
 
+
         # Scale trait distance to balance growth
-        disttraits <- (disttraits - min(disttraits)) / diff(range(disttraits))
+
+        denom_standard = 1
+
+        if (diff(range(disttraits)) != 0) {
+            denom_standard = diff(range(disttraits))
+        }
+
+        disttraits <- (disttraits - min(disttraits)) / denom_standard
     }
 
     return(disttraits)
