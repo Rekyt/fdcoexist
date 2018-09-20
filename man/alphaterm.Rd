@@ -5,12 +5,16 @@
 \title{Function definition for deterministic model run with global dispersal
 Compute alpha term in Beverton-Holt function}
 \usage{
-alphaterm(distance, Nts)
+alphaterm(distance, Nts, A, B)
 }
 \arguments{
 \item{distance}{competiton matrix of species}
 
 \item{Nts}{vector of abundances of species at time t}
+
+\item{A}{scalar for the inter-specific competition}
+
+\item{B}{scalar for the intra-specific competition}
 }
 \description{
 From a competition matrix (for the moment the distance between species

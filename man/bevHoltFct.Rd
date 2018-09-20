@@ -4,14 +4,12 @@
 \alias{bevHoltFct}
 \title{Beverton-Holt function}
 \usage{
-bevHoltFct(R, N, A, alpha)
+bevHoltFct(R, N, alpha)
 }
 \arguments{
 \item{R}{a numeric vector of species growth rates}
 
 \item{N}{a numeric vector of species population sizes}
-
-\item{A}{a scalar for competition coefficient}
 
 \item{alpha}{the competition coefficient see \code{\link[=alphaterm]{alphaterm()}} for its
 computation}

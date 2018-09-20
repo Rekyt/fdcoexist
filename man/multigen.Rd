@@ -5,7 +5,7 @@
 \title{Function to run the simulation}
 \usage{
 multigen(traits, trait_weights, env, time, species, patches, composition,
-  A, d, k, width)
+  A = A, B = B, d, k, width)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
@@ -29,7 +29,11 @@ trait in competition.}
 \item{composition}{the actual array containing species abundances per site
 over time, giving the initial populations of each species}
 
-\item{A}{the scalar of competition coefficent (see \code{\link[=bevHoltFct]{bevHoltFct()}})}
+\item{A}{the scalar of inter-specific competition coefficent
+(see \code{\link[=bevHoltFct]{bevHoltFct()}})}
+
+\item{B}{the scalar for intra-specific competition coefficient
+by default B = A}
 
 \item{d}{a numeric value between 0 and 1 giving the percentage of
 dispersal occurring across all patches}
