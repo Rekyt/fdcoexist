@@ -1,25 +1,3 @@
-#' Generate Traits data.frame
-#'
-#' Generates a random traits data.frame by default the traits are uniformly
-#' & independently distributed with specifiex minimum and maximum values
-#'
-#' @param n_species the number of species to generate
-#' @param min_val   minimum trait value (for all traits)
-#' @param max_val   maximum trait value (for all traits)
-#'
-#' @importFrom stats runif
-#' @export
-generate_traits <- function(n_species, min_val, max_val) {
-
-    traits_matrix <- mapply(seq, from = min_val, to = max_val,
-                            length.out = n_species)
-    row.names(traits_matrix) <- paste0("species", seq_len(n_species))
-    colnames(traits_matrix) <- paste0("trait", seq_along(min_val))
-
-    return(traits_matrix)
-
-}
-
 #' Generate correlated traits
 #'
 #' This function generates a matrix of traits based on the given number of
