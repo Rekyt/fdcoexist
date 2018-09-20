@@ -102,7 +102,7 @@ tidy_simulation = function(scenario, given_simul, given_traits,
 suppressMessages(devtools::load_all())
 
 n_patches <- 25   # Number of patches
-n_species <- 100   # Number of species
+n_species <- 50   # Number of species
 n_gen     <- 500  # Length of model run (generations)
 initpop   <- 50   # initial population size
 n_traits  <- 1    # number of traits
