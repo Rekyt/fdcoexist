@@ -18,6 +18,7 @@ suppressPackageStartupMessages({
         library("cowplot")
         library("tidyverse")
         library("directlabels")
+        library("furrr")
     })
 })
 # Functions --------------------------------------------------------------------
@@ -167,8 +168,9 @@ meta_simul = function(seed_number, given_k = k, given_A = A) {
     
     all_env = list(constant          = env_width,
                    constant_strong   = env_width/2,
-                   constant_stronger = env_width/3,
-                   varying           = var_width)
+                   constant_stronger = env_width/5
+                # varying           = var_width
+                   )
     
     all_compet = list(no_compet = list(A = 0, B = B),
                       compet    = list(A = given_A, B = B))
@@ -406,50 +408,69 @@ lab_cor = c(uncor    = "r = 0",
 ```
 
 ```{r low_k}
-library("furrr")
-
+# Simulation parameters --------------------------------------------------------
 low_k = 1.15
 low_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
                         low_k)
+
+# Actual simulation -----------------------------------------------------------
 plan(multiprocess)
 tictoc::tic()
-
 low_k_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
     
-    meta_simul2(x, given_k = low_k)
+    meta_simul(x, given_k = low_k)
 }, .progress = TRUE)
 tictoc::toc()
 
-low_k_simuls_r2 = low_k_simuls %>%
+# Compute summaries ------------------------------------------------------------
+# Show shape of CWM <-> across situations
+low_k_simuls %>%
+    bind_rows() %>%
+    ggplot(aes(patch_optim, trait2_cwm, color = cor_level,
+               group = interaction(cor_level, seed_number))) +
+    geom_line(aes(group = interaction(cor_level, seed_number)), alpha = 1/25) +
+    geom_smooth(aes(group = cor_level)) +
+    facet_grid(rows = vars(compet_status, env_width), cols = vars(scenario)) +
+    scale_color_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(x = "Environment",
+         y = "Trait 2 CWM",
+         subtitle = "CWM <-> Env. Relationship across all simulations")
+
+# Compute slope of CWM <-> Environment relationship
+low_k_simuls_slope = low_k_simuls %>%
     map(~.x %>%
         gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
         group_by(cwm_name, add = TRUE) %>%
         do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
         ungroup() %>%
-        mutate(mod_glance = lapply(mod_cwm_env, broom::glance)) %>%
-        unnest(mod_glance)) %>%
+        mutate(mod_glance = lapply(mod_cwm_env, broom::tidy)) %>%
+        unnest(mod_glance) %>%
+            filter(term == "patch_optim")) %>%
     bind_rows()
 
+# Gather the variance of traits along environment
 low_k_simuls_var = low_k_simuls %>%
     map(~.x %>%
             select(-ends_with("cwm"))) %>%
     bind_rows() %>%
     gather("var_name", "var_value", ends_with("var"))
 
-plot_low_k_r2 = ggplot(low_k_simuls_r2, aes(scenario, r.squared)) +
+# Figures ----------------------------------------------------------------------
+plot_low_k_slope = ggplot(low_k_simuls_slope, aes(scenario, estimate)) +
     geom_boxplot(aes(fill = fct_rev(cor_level)),
                  position = position_dodge(width = 0.9)) +
     facet_grid(rows = vars(env_width, compet_status), cols = vars(cwm_name),
                labeller = lab_compet_env) +
-    ylim(0, NA) +
+    ylim(0, 1) +
     scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
-    labs(subtitle = paste0("R2 of trait2 CWM ~ environment; ", low_k_run_char),
+    labs(subtitle = paste0("Slope of trait2 CWM ~ environment; ",
+                           low_k_run_char),
          x = "Scenario",
-         y = expression("R"^2)) +
+         y = "Slope") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "top")
-plot_low_k_r2
+plot_low_k_slope
 
 plot_low_k_var = ggplot(low_k_simuls_var, aes(scenario, var_value)) +
     geom_boxplot(aes(fill = fct_rev(cor_level)),
@@ -467,7 +488,7 @@ plot_low_k_var = ggplot(low_k_simuls_var, aes(scenario, var_value)) +
 plot_low_k_var
 ```
 
-```{r}
+```{r, eval = FALSE}
 high_k = 1.57
 high_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
                         high_k)
@@ -529,7 +550,7 @@ plot_high_k_var = ggplot(high_k_simuls_var, aes(scenario, var_value)) +
 plot_high_k_var
 ```
 
-```{r varying_A_and_k}
+```{r varying_A_and_k, eval = FALSE}
 list_A = 2*10^-(seq(4, 6))
 list_k = 1 + c(0.05, 0.15, 0.25)
 
@@ -569,7 +590,7 @@ var_k_var_a_var = var_k_var_a %>%
     select(k, A, seed_number, everything())
 ```
 
-```{r looking_at_slopes}
+```{r looking_at_slopes, eval = FALSE}
 list_A = 2*10^-(seq(4, 6))
 list_k = 1 + c(0.05, 0.15, 0.25)
 
@@ -610,7 +631,7 @@ var_k_var_a_cwm = var_k_var_a %>%
 ```
 
 We want to follow the dynamics through time to understand the variation in Rsquare
-```{r}
+```{r, eval = FALSE}
 patch_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
                         k)
 
