@@ -168,9 +168,8 @@ meta_simul = function(seed_number, given_k = k, given_A = A) {
     
     all_env = list(constant          = env_width,
                    constant_strong   = env_width/2,
-                   constant_stronger = env_width/5
-                # varying           = var_width
-                   )
+                   constant_stronger = env_width/5,
+                   varying           = var_width)
     
     all_compet = list(no_compet = list(A = 0, B = B),
                       compet    = list(A = given_A, B = B))
@@ -422,21 +421,10 @@ low_k_simuls = future_map(seq(total_runs), function(x) {
     meta_simul(x, given_k = low_k)
 }, .progress = TRUE)
 tictoc::toc()
+```
 
+```{r low_k_summaries}
 # Compute summaries ------------------------------------------------------------
-# Show shape of CWM <-> across situations
-low_k_simuls %>%
-    bind_rows() %>%
-    ggplot(aes(patch_optim, trait2_cwm, color = cor_level,
-               group = interaction(cor_level, seed_number))) +
-    geom_line(aes(group = interaction(cor_level, seed_number)), alpha = 1/25) +
-    geom_smooth(aes(group = cor_level)) +
-    facet_grid(rows = vars(compet_status, env_width), cols = vars(scenario)) +
-    scale_color_viridis_d("Trait\nCorrelations", labels = lab_cor) +
-    labs(x = "Environment",
-         y = "Trait 2 CWM",
-         subtitle = "CWM <-> Env. Relationship across all simulations")
-
 # Compute slope of CWM <-> Environment relationship
 low_k_simuls_slope = low_k_simuls %>%
     map(~.x %>%
@@ -454,9 +442,112 @@ low_k_simuls_var = low_k_simuls %>%
     map(~.x %>%
             select(-ends_with("cwm"))) %>%
     bind_rows() %>%
-    gather("var_name", "var_value", ends_with("var"))
+    gather("var_name", "var_value", ends_with("var")) %>%
+    ungroup()
+```
 
-# Figures ----------------------------------------------------------------------
+```{r low_k_paper_figures}
+# Simpler Figures ----------------------------------------------------------------------
+# Show shape of CWM <-> across situations
+plot_low_k_cwm_env = low_k_simuls %>%
+    bind_rows() %>%
+    filter(!(scenario %in% c("R75A25", "R25A75")),
+           compet_status %in% "compet") %>%
+    ggplot(aes(patch_optim, trait2_cwm, color = fct_rev(cor_level),
+               group = interaction(cor_level, seed_number))) +
+    geom_line(aes(group = interaction(cor_level, seed_number)), alpha = 1/20) +
+    geom_smooth(aes(group = cor_level), se = FALSE) +
+    facet_grid(rows = vars(env_width), cols = vars(scenario),
+               labeller = lab_compet_env) +
+    scale_color_viridis_d("Correlation", labels = lab_cor) +
+    labs(x = "Environment",
+         y = "Trait 2 CWM",
+         title = paste0("CWM <-> Env. Relationship across N = ", total_runs,
+                           " sets of traits"),
+         subtitle = paste0("opaque line = smoothed average\n",
+                           "background lines = individual simulations")) +
+    theme(panel.grid = element_blank(),
+          legend.position = "top")
+plot_low_k_cwm_env
+
+plot_low_k_slope_constant_env = low_k_simuls_slope %>%
+    filter(env_width != "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, estimate)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width), cols = vars(cwm_name),
+               labeller = lab_compet_env) +
+    ylim(0, 1) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment ",
+                           "with Constant Env. Filter\n",
+                           low_k_run_char),
+         x = "Scenario",
+         y = "Slope") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_low_k_var_constant_env = low_k_simuls_var %>%
+    filter(env_width != "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width), cols = vars(var_name),
+               labeller = lab_compet_env, scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches ",
+                           "with Constant Env. Filter\n", low_k_run_char),
+         x = "Scenario",
+         y = "Trait Variance among patches") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_low_k_slope_constant_env
+plot_low_k_var_constant_env
+
+plot_low_k_slope_var_env = low_k_simuls_slope %>%
+    filter(env_width == "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, estimate)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(cols = vars(cwm_name),
+               labeller = lab_compet_env) +
+    ylim(0, 1) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment ",
+                           "with Constant Env. Filter\n",
+                           low_k_run_char),
+         x = "Scenario",
+         y = "Slope") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_low_k_var_var_env = low_k_simuls_var %>%
+    filter(env_width == "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(cols = vars(var_name),
+               labeller = lab_compet_env, scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches ",
+                           "with Constant Env. Filter\n", low_k_run_char),
+         x = "Scenario",
+         y = "Trait Variance among patches") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_grid(plot_low_k_slope_var_env,
+          plot_low_k_var_var_env, nrow = 2, align = "hv")
+```
+
+```{r low_k_complex_figures, eval=FALSE}
 plot_low_k_slope = ggplot(low_k_simuls_slope, aes(scenario, estimate)) +
     geom_boxplot(aes(fill = fct_rev(cor_level)),
                  position = position_dodge(width = 0.9)) +
@@ -464,7 +555,7 @@ plot_low_k_slope = ggplot(low_k_simuls_slope, aes(scenario, estimate)) +
                labeller = lab_compet_env) +
     ylim(0, 1) +
     scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
-    labs(subtitle = paste0("Slope of trait2 CWM ~ environment; ",
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment; ",
                            low_k_run_char),
          x = "Scenario",
          y = "Slope") +
@@ -487,6 +578,7 @@ plot_low_k_var = ggplot(low_k_simuls_var, aes(scenario, var_value)) +
 
 plot_low_k_var
 ```
+
 
 ```{r, eval = FALSE}
 high_k = 1.57
