@@ -407,13 +407,14 @@ lab_cor = c(uncor    = "r = 0",
 ```
 
 ```{r normal_k}
+# Competition == Environmental Filtering
 # Simulation parameters --------------------------------------------------------
 normal_k = 1.15
-normal_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
-                        normal_k)
+normal_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ",
+                           B, "; k = ", normal_k)
 
 # Actual simulation -----------------------------------------------------------
-plan(multiprocess)
+plan(multiprocess, workers = availableCores() - 2)
 tictoc::tic()
 normal_k_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
@@ -424,13 +425,13 @@ tictoc::toc()
 ```
 
 ```{r low_k_same_A}
+# Competition >> Environmental filtering
 # Simulation parameters --------------------------------------------------------
 low_k = 1.05
-low_k_same_A_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
-                        normal_k)
+low_k_same_A_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ",
+                               B, "; k = ", low_k)
 
 # Actual simulation -----------------------------------------------------------
-plan(multiprocess)
 tictoc::tic()
 low_k_same_A_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
@@ -440,21 +441,20 @@ low_k_same_A_simuls = future_map(seq(total_runs), function(x) {
 tictoc::toc()
 ```
 
-```{r normal_k_same_A}
+```{r high_k_same_A}
+# Competition << Environmental Filtering
 # Simulation parameters --------------------------------------------------------
-normal_k = 1.05
-high_A = 2e-2
-normal_k_same_A_run_char = paste0("N = ", total_runs, "; A = ", high_A,
+high_k = 1.4
+high_k_same_A_run_char = paste0("N = ", total_runs, "; A = ", A,
                                   "; B = ", B, "; k = ",
-                                  normal_k)
+                                  high_k)
 
 # Actual simulation -----------------------------------------------------------
-plan(multiprocess)
 tictoc::tic()
-normal_k_high_A_simuls = future_map(seq(total_runs), function(x) {
+high_k_same_A_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
     
-    meta_simul(x, given_k = normal_k, given_A = high_A)
+    meta_simul(x, given_k = high_k, given_A = A)
 }, .progress = FALSE)
 tictoc::toc()
 ```
@@ -482,18 +482,22 @@ normal_k_simuls_var = normal_k_simuls %>%
     ungroup()
 ```
 
-```{r normal_k_paper_figures}
-# Simpler Figures ----------------------------------------------------------------------
-# Show shape of CWM <-> across situations
-plot_normal_k_cwm_env = normal_k_simuls %>%
-    bind_rows() %>%
+```{r paper_figures}
+# Show shape of CWM <-> across situations --------------------------------------
+all_simuls = list(normal_k_normal_A = normal_k_simuls,
+                  high_k_normal_A   = high_k_same_A_simuls,
+                  low_k_normal_A    = low_k_same_A_simuls) %>%
+    purrr::map_df(bind_rows, .id = "simul_param")
+
+plot_all_k_cwm_env = all_simuls %>%
     filter(!(scenario %in% c("R75A25", "R25A75")),
-           compet_status %in% "compet") %>%
+           compet_status == "compet",
+           env_width == "constant") %>%
     ggplot(aes(patch_optim, trait2_cwm, color = fct_rev(cor_level),
                group = interaction(cor_level, seed_number))) +
     geom_line(aes(group = interaction(cor_level, seed_number)), alpha = 1/20) +
     geom_smooth(aes(group = cor_level), se = FALSE) +
-    facet_grid(rows = vars(env_width), cols = vars(scenario),
+    facet_grid(rows = vars(simul), cols = vars(scenario),
                labeller = lab_compet_env) +
     scale_color_viridis_d("Correlation", labels = lab_cor) +
     labs(x = "Environment",
@@ -506,6 +510,7 @@ plot_normal_k_cwm_env = normal_k_simuls %>%
           legend.position = "top")
 plot_normal_k_cwm_env
 
+# Slope in function of scenario & competition status ---------------------------
 plot_normal_k_slope_constant_env = normal_k_simuls_slope %>%
     filter(env_width != "varying", compet_status == "compet",
            !(scenario %in% c("R75A25", "R25A75"))) %>%
