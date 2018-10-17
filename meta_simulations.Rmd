@@ -21,6 +21,8 @@ suppressPackageStartupMessages({
         library("furrr")
     })
 })
+
+plan(multiprocess, workers = availableCores())
 # Functions --------------------------------------------------------------------
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
@@ -414,7 +416,6 @@ normal_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ",
                            B, "; k = ", normal_k)
 
 # Actual simulation -----------------------------------------------------------
-plan(multiprocess, workers = availableCores())
 tictoc::tic()
 normal_k_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
