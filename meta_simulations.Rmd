@@ -414,7 +414,7 @@ normal_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ",
                            B, "; k = ", normal_k)
 
 # Actual simulation -----------------------------------------------------------
-plan(multiprocess, workers = availableCores() - 2)
+plan(multiprocess, workers = availableCores())
 tictoc::tic()
 normal_k_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
@@ -459,6 +459,40 @@ high_k_same_A_simuls = future_map(seq(total_runs), function(x) {
 tictoc::toc()
 ```
 
+```{r normal_k_low_A}
+# Competition >> Environmental filtering
+# Simulation parameters --------------------------------------------------------
+low_A = 2e-5
+normal_k_low_A_run_char = paste0("N = ", total_runs, "; A = ", low_A, "; B = ",
+                               B, "; k = ", k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+normal_k_low_A_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = k, given_A = low_A)
+}, .progress = FALSE)
+tictoc::toc()
+```
+
+```{r normal_k_high_A}
+# Competition << Environmental Filtering
+# Simulation parameters --------------------------------------------------------
+high_A = 2e-3
+normal_k_high_A_run_char = paste0("N = ", total_runs, "; A = ", high_A,
+                                  "; B = ", B, "; k = ", k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+normal_k_high_A_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = k, given_A = high_A)
+}, .progress = FALSE)
+tictoc::toc()
+```
+
 ```{r normal_k_summaries}
 # Compute summaries ------------------------------------------------------------
 # Compute slope of CWM <-> Environment relationship
@@ -493,11 +527,14 @@ plot_all_k_cwm_env = all_simuls %>%
     filter(!(scenario %in% c("R75A25", "R25A75")),
            compet_status == "compet",
            env_width == "constant") %>%
+    mutate(simul_param = factor(simul_param, levels = c("high_k_normal_A",
+                                                        "normal_k_normal_A",
+                                                        "low_k_normal_A"))) %>%
     ggplot(aes(patch_optim, trait2_cwm, color = fct_rev(cor_level),
                group = interaction(cor_level, seed_number))) +
     geom_line(aes(group = interaction(cor_level, seed_number)), alpha = 1/20) +
     geom_smooth(aes(group = cor_level), se = FALSE) +
-    facet_grid(rows = vars(simul), cols = vars(scenario),
+    facet_grid(rows = vars(simul_param), cols = vars(scenario),
                labeller = lab_compet_env) +
     scale_color_viridis_d("Correlation", labels = lab_cor) +
     labs(x = "Environment",
@@ -687,7 +724,7 @@ plot_high_k_var
 list_A = 2*10^-(seq(4, 6))
 list_k = 1 + c(0.05, 0.15, 0.25)
 
-plan(multiprocess(workers = availableCores() - 1))
+plan(multiprocess(workers = availableCores()))
 tictoc::tic()
 
 var_k_var_a = cross(list(run_n = seq(total_runs), A = list_A, k = list_k)) %>%
