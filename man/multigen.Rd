@@ -5,7 +5,7 @@
 \title{Function to run the simulation}
 \usage{
 multigen(traits, trait_weights, env, time, species, patches, composition,
-  A = A, B = B, d, k, width)
+  A = A, B = B, d, k, width, dist_power = dist_power)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
@@ -42,6 +42,9 @@ dispersal occurring across all patches}
 environment}
 
 \item{width}{a numeric giving niche breadth of all species}
+
+\item{dist_power}{power used when weighting distance exponentially
+(\code{NULL} by default = euclidean distance)}
 }
 \description{
 Using specified parameters this function run the simulation

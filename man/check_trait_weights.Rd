@@ -23,7 +23,7 @@ nothing if data.frame passess the checks, stops early otherwise.
 \description{
 This is an internal help function to check the trait weights data.frame
 (used in \code{\link[=multigen]{multigen()}}). The structure of the given trait weights is fixed:
-one column should be named \code{trait`` with the names of the traits in it. The two other columns}growth_weight\code{and}compet_weight\code{contains respectively the relative weight of the trait in growth and competition. The function also additionnally check that the traits in the}trait\code{column are in the}traits` data.frame.
+one column should be named \code{trait`` with the names of the traits in it. The two other columns }growth_weight\code{and}compet_weight\code{contains respectively the relative weight of the trait in growth and competition. The function also additionnally check that the traits in the}trait\code{column are in the}traits` data.frame.
 }
 \examples{
 # Working trait weights data.frame

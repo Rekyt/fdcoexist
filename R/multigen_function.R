@@ -27,7 +27,7 @@
 #' @param B        scalar for the intra-specific competition
 #' @export
 alphaterm <- function(distance, Nts, A, B) {
-   A * (Nts %*% (1 - distance)) + B * (Nts)
+   A * ((Nts %*% (1 - distance)) + B/A * (Nts))
 }
 
 #' Beverton-Holt function
@@ -108,7 +108,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #'
 #' Using specified parameters this function run the simulation
 #'
-#' @inheritParams check_trait_weights
+#' @inheritParams compute_compet_distance
 #' @param env         a vector of environmental values
 #' @param time        an integer giving the total number of generations
 #' @param species     an integer giving the total number of species to simulate
@@ -125,15 +125,18 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #'                    environment
 #' @param width       a numeric giving niche breadth of all species
 #'
+#'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A = A, B = B, d, k, width) {
+                     composition, A = A, B = B, d, k, width,
+                     dist_power = dist_power) {
 
     # Check assumptions on trait_weights data.frame
     check_trait_weights(trait_weights, traits)
 
     # Calculate dist trait
-    disttraits <- compute_compet_distance(trait_weights, traits)
+    disttraits <- compute_compet_distance(trait_weights, traits,
+                                          dist_power = dist_power)
 
     # Calculate fitness term (R = growth)
     env_param <- cbind(env, k, width)
@@ -258,13 +261,15 @@ check_trait_weights = function(trait_weights, traits) {
 #' compute euclidea trait distance between species.
 #'
 #' @inheritParams check_trait_weights
+#' @param dist_power power used when weighting distance exponentially
+#'                   (`NULL` by default = euclidean distance)
 #'
 #' @return an euclidean distance matrix (of type matrix)
 #' @importFrom stats dist weighted.mean
 #' @export
 #'
 #' @examples
-compute_compet_distance = function(trait_weights, traits) {
+compute_compet_distance = function(trait_weights, traits, dist_power = NULL) {
 
     # If there is no defined competition trait, there is no competition
     if (sum(trait_weights$compet_weight, na.rm = TRUE) == 0) {
@@ -288,17 +293,30 @@ compute_compet_distance = function(trait_weights, traits) {
         # Compute distance matrix
         disttraits <- as.matrix(dist(scaled_compet_traits))
 
-
         # Scale trait distance to balance growth
+        disttraits <- scale_distance(disttraits)
 
-        denom_standard = 1
+        # If required weight distance exponentially
+        if (!is.null(dist_power)) {
+        disttraits <- exp(disttraits^dist_power)
 
-        if (diff(range(disttraits)) != 0) {
-            denom_standard = diff(range(disttraits))
+        disttraits <- scale_distance(disttraits)
         }
-
-        disttraits <- (disttraits - min(disttraits)) / denom_standard
     }
 
     return(disttraits)
+}
+
+#' Scale distance or matrix between 0 and 1
+#'
+#' dist - min(dist) / (max(dist) - min(dist))
+#' @param dist_matrix a matrix or a dist object
+scale_distance = function(dist_matrix) {
+    denom_standard = 1
+
+    if (diff(range(dist_matrix)) != 0) {
+        denom_standard = diff(range(dist_matrix))
+    }
+
+    dist_matrix <- (dist_matrix - min(dist_matrix)) / denom_standard
 }

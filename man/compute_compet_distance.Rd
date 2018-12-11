@@ -4,7 +4,7 @@
 \alias{compute_compet_distance}
 \title{Compute trait distance between species}
 \usage{
-compute_compet_distance(trait_weights, traits)
+compute_compet_distance(trait_weights, traits, dist_power = NULL)
 }
 \arguments{
 \item{trait_weights}{data.frame with at least three columns equal to \code{trait}
@@ -16,6 +16,9 @@ trait in competition.}
 \item{traits}{a species-traits data.frame with species as rownames and
 traits as numeric columns with names matching
 \code{trait_weights} column \code{trait}}
+
+\item{dist_power}{power used when weighting distance exponentially
+(\code{NULL} by default = euclidean distance)}
 }
 \value{
 an euclidean distance matrix (of type matrix)
