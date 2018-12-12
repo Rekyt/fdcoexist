@@ -110,7 +110,7 @@ suppressMessages(devtools::load_all())
 
 n_patches <- 25   # Number of patches
 n_species <- 100  # Number of species
-n_gen     <- 500  # Length of model run (generations)
+n_gen     <- 150  # Length of model run (generations)
 initpop   <- 50   # initial population size
 n_traits  <- 3    # number of traits
 k         <- 1.15 # Maximum growth rate
@@ -119,7 +119,7 @@ var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
 B = 2e-4 # Scalar for intraspecific competition
-A = 1.6e-4 # Alpha scalar
+A = 2e-4 # Alpha scalar
 d = 0.0 # Dispersal percentage
 
 # Generate environment
