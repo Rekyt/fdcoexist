@@ -106,6 +106,10 @@ B = 2e-4 # Scalar for intraspecific competition
 A = 2e-4 # Alpha scalar
 d = 0.05 # Dispersal percentage
 
+# Hierarchical coefficients
+H = 1.01
+th_max = 25
+
 # Generate environment
 env <- seq(n_patches)
 
@@ -193,6 +197,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A) {
                  B = all_compet[[given_row[["compet_status"]]]][["B"]],
                  d = d,
                  k = given_k,
+                 H = H, th_max = th_max,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],
                          trait_scenarios[[given_row[["scenario"]]]],
@@ -262,6 +267,7 @@ meta_simul2 = function(seed_number, given_k = k, given_A = A) {
                  B = all_compet[[given_row[["compet_status"]]]][["B"]],
                  d = d,
                  k = given_k,
+                 H = H, th_max = th_max,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],
                          trait_scenarios[[given_row[["scenario"]]]],
@@ -364,6 +370,7 @@ meta_simul_A_B_and_k = function(seed_number, given_k = k, given_A = A,
                  B = all_compet[[given_row[["compet_status"]]]][["B"]],
                  d = d,
                  k = given_k,
+                 H = H, th_max = th_max,
                  dist_power = 2,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],

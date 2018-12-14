@@ -75,13 +75,17 @@ bevHoltFct <- function(R, N, alpha){
 #'                      (giving the name of the concerned traits in `traits`
 #'                      df), `growth_weight` the relative weight of the trait in
 #'                      growth and `compet_weight` the relative weight of the
-#'                      trait in competition.
+#'                      trait in competition, both hierarchical and based on
+#'                      limiting similarity.
 #' @param k      a scalar giving the maximum growth rate in optimal environment
 #' @param width  a numeric for niche breadth, constant in gaussian function
+#' @param H      a numeric for hierarchical competition such as H/k <= 1
+#' @param th_max a numeric for the hierarchical trait value maximizing
+#'               hierarchical competiton
 #'
 #' @export
 env_curve <- function(trait_values, env_value, trait_weights, k = 2,
-                      width = 0.5) {
+                      width = 0.5, H = 0, th_max = 25) {
 
     if (length(width) != 1 & length(width) != length(env_value)) {
         stop("There are either too many or not enough values for width")
@@ -100,6 +104,29 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         # Weigh each trait function of contribution to growth
         R <- weighted.mean(R, fitness_traits$growth_weight)
+
+        # Add to R effect of hierarchical traits
+        # (so far same traits as limiting similarity traits)
+        hierarchical_trait <- subset(trait_weights, compet_weight != 0 &
+                                         !is.na(compet_weight))
+
+        hierarchical_values <- trait_values[hierarchical_trait$trait]
+
+        if (sum(hierarchical_values > th_max) > 0){
+            stop("th_max must be superior to any hierarchical trait value in a
+                 directional filter perspective")
+        }
+
+        if (H > k){
+            stop("H must be inferior or equal to k")
+        }
+
+        R_h <- H * (hierarchical_values/(th_max))
+        # Weigh each trait function of contribution to competition
+        R_h <- weighted.mean(R_h, hierarchical_trait$compet_weight)
+
+        # Final sum
+        R <- R + R_h
     }
 }
 
@@ -128,7 +155,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A = A, B = B, d, k, width,
+                     composition, A = A, B = B, d, k, width, H, th_max,
                      dist_power = dist_power) {
 
     # Check assumptions on trait_weights data.frame
@@ -139,10 +166,11 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                                           dist_power = dist_power)
 
     # Calculate fitness term (R = growth)
-    env_param <- cbind(env, k, width)
+    env_param <- cbind(env, k, width, H, th_max)
     Rmatrix <- apply(traits, 1, function(x) { # Loop over the species
         apply(env_param, 1, function(y){ # Loop over env, k, width combinations
-            env_curve(x, y[1], trait_weights, k = y[2], width = y[3])
+            env_curve(x, y[1], trait_weights, k = y[2], width = y[3], H = y[4],
+                      th_max = y[5])
         })
     })
 
