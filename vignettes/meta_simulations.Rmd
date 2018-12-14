@@ -1,0 +1,1119 @@
+---
+title: "fdcoexist"
+author:
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle and Caroline M. Tucker
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      fig.width = 8, fig.height = 10.5, cache = TRUE)
+
+# Packages ---------------------------------------------------------------------
+suppressPackageStartupMessages({
+    suppressWarnings({
+        library("cowplot")
+        library("tidyverse")
+        library("directlabels")
+        library("furrr")
+    })
+})
+
+plan(multiprocess, workers = availableCores())
+# Functions --------------------------------------------------------------------
+# Compute a data.frame of number of individuals in function of optimal trait
+# for competition and growth
+landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
+                        time = 150) {
+    
+    growth_traits = subset(trait_weights, growth_weight != 0)$trait
+    compet_traits = subset(trait_weights, compet_weight != 0)$trait
+    
+    
+    population_df = multiple_traits_scenario$compo[,,time] %>%
+        as.data.frame() %>%
+        rownames_to_column("patch") %>%  # Add patch names as column
+        # Transform to tidy data.frame (define name of columns and column name
+        # for values)
+        gather("species", "N", -patch)
+    
+    growth_df = enframe(rowMeans(trait_df[, growth_traits, drop = FALSE]),
+                        "species", "growth_trait")
+    
+    compet_df = enframe(abs(rowMeans(trait_df[, compet_traits, drop = FALSE]) -
+                                12.5), "species", "compet_dist")
+    
+    population_df %>%
+        inner_join(growth_df, by = "species") %>%
+        inner_join(compet_df, by = "species") %>%
+        # Add patch number as a new column and compute distance to optimal value
+        mutate(patch_optim = gsub("patches", "", patch) %>%
+                   as.numeric(),
+               optim_dist = abs(growth_trait - patch_optim))
+}
+
+# This function tidy a list of simulation routine to a single data.frame
+# suitable to make figures.
+tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
+                                time = 150, scenar_names = names(trait_scenarios)) {
+    simulation_list %>%
+        names() %>%
+        # Tidy single simulations
+        lapply(tidy_simulation,
+               given_simul = simulation_list,
+               given_traits = set_of_traits,
+               given_trait_scenar = trait_scenarios,
+               time = time) %>%
+        # Re-add names
+        set_names(nm = names(simulation_list)) %>%
+        # Join into single data.frame
+        bind_rows(.id = "scenario") %>%
+        # Compute pre-CWMs
+        mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
+        mutate(scenario = fct_relevel(scenario, scenar_names))
+}
+
+tidy_simulation = function(scenario, given_simul, given_traits,
+                           given_trait_scenar, time = 150) {
+    landscape_df(given_simul[[scenario]], given_traits,
+                 trait_scenarios[[scenario]], time = time) %>%
+        inner_join(given_traits %>%
+                       as.data.frame() %>%
+                       rownames_to_column("species"),
+                   by = "species") %>%
+        group_by(patch) %>%
+        mutate(rel_abund = N/sum(N)) %>%
+        ungroup()
+}
+# Initial parameters -----------------------------------------------------------
+suppressMessages(devtools::load_all())
+
+n_patches <- 25   # Number of patches
+n_species <- 100  # Number of species
+n_gen     <- 150  # Length of model run (generations)
+initpop   <- 50   # initial population size
+n_traits  <- 3    # number of traits
+k         <- 1.15 # Maximum growth rate
+env_width <- rep(10, length.out = n_patches)  # Envtal filter strength
+var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
+total_runs = 20  # Number of set of traits to test
+
+# Competition + Dispersion coefficients
+B = 2e-4       # Scalar for intraspecific competition
+A = 2e-4       # Alpha scalar
+d = 0.05       # Dispersal percentage
+dist_power = 2 # Power of trait dissimilarity
+
+# Hierarchical coefficients
+H = 1.01
+th_max = 25
+
+# Generate environment
+env <- seq(n_patches)
+
+# Array for simulations
+composition <- array(NA, dim = c(n_patches, n_species, n_gen),
+                     dimnames = list(paste0("patches", seq(n_patches)),
+                                     paste0("species", seq(n_species)),
+                                     paste0("time", seq(n_gen))))
+names(env) <- dimnames(composition)[[1]]
+
+composition[,, "time1"] <- initpop
+
+# Define scenarios -------------------------------------------------------------
+# Scenarios on traits affecting growth and competition
+trait_scenarios = list(
+    R0A0 = data.frame(trait = paste0("trait", 1:3),
+                      growth_weight = c(1, 0, 0),
+                      compet_weight = c(0, 0, 1)),
+    R0A100 = data.frame(trait = paste0("trait", 1:3),
+                        growth_weight = c(1, 0, 0),
+                        compet_weight = c(0, 1, 0)),
+    R10A90   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.90, 0.10, 0),
+                          compet_weight = c(0,    0.90, 0.10)),
+    R25A75   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.75, 0.25, 0),
+                          compet_weight = c(0,    0.75, 0.25)),
+    R50A50   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.5, 0.5, 0),
+                          compet_weight = c(0,   0.5, 0.5)),
+    R75A25   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.25, 0.75, 0),
+                          compet_weight = c(0,    0.25, 0.75)),
+    R90A10   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.10, 0.90, 0),
+                          compet_weight = c(0,    0.10, 0.90)),
+    R100A0   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0, 1, 0),
+                          compet_weight = c(0, 0, 1)),
+    R100A100 = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0, 1, 0),
+                          compet_weight = c(0, 1, 0))
+)
+
+
+# Define meta-function to run all analyses with many trait levels --------------
+
+meta_simul = function(seed_number, given_k = k, given_A = A) {
+    set.seed(seed_number)
+    uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                       cor_coef = 0)
+    set.seed(seed_number)
+    low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                         cor_coef = 0.3)
+    
+    set.seed(seed_number)
+    high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                          cor_coef = 0.7)
+    all_cor = list(uncor    = uncor_traits,
+                   low_cor  = low_cor_traits,
+                   high_cor = high_cor_traits)
+    
+    all_env = list(constant          = env_width,
+                   constant_strong   = env_width/2,
+                   constant_stronger = env_width/5,
+                   varying           = var_width)
+    
+    all_compet = list(no_compet = list(A = 0, B = B),
+                      compet    = list(A = given_A, B = B))
+    
+    all_facets = expand.grid(compet_status = names(all_compet),
+                             env_width     = names(all_env),
+                             cor_level     = names(all_cor),
+                             scenario      = names(trait_scenarios))
+    
+    apply(all_facets, 1, function(given_row) {
+        multigen(traits = all_cor[[given_row[["cor_level"]]]],
+                 trait_weights = trait_scenarios[[given_row[["scenario"]]]],
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = all_compet[[given_row[["compet_status"]]]][["A"]],
+                 B = all_compet[[given_row[["compet_status"]]]][["B"]],
+                 d = d,
+                 k = given_k,
+                 dist_power = dist_power,
+                 H = H, th_max = th_max,
+                 width = all_env[[given_row[["env_width"]]]]) %>%
+            landscape_df(all_cor[[given_row[["cor_level"]]]],
+                         trait_scenarios[[given_row[["scenario"]]]],
+                         time = 150) %>%
+            inner_join(all_cor[[given_row[["cor_level"]]]] %>%
+                           as.data.frame() %>%
+                           rownames_to_column("species"),
+                       by = "species") %>%
+            group_by(patch) %>%
+            mutate(rel_abund = N/sum(N)) %>%
+            ungroup() %>%
+            mutate(compet_status = given_row[["compet_status"]],
+                   env_width     = given_row[["env_width"]],
+                   cor_level     = given_row[["cor_level"]],
+                   scenario      = given_row[["scenario"]],
+                   seed_number = seed_number) %>%
+            select(seed_number, compet_status, env_width, cor_level, scenario,
+                   everything())
+    }) %>%
+        bind_rows() %>%
+        filter(N != 0) %>%  # Take out absent species
+        mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
+        mutate(scenario = fct_relevel(scenario, names(trait_scenarios)),
+               patch_optim = as.numeric(gsub("patches", "", patch))) %>%
+        group_by(seed_number, compet_status, env_width, cor_level, scenario,
+                 patch) %>%
+        summarise(trait1_cwm  = sum(trait1_cwm),
+                  trait2_cwm  = sum(trait2_cwm),
+                  trait3_cwm  = sum(trait3_cwm),
+                  trait1_var  = var(trait1),
+                  trait2_var  = var(trait2),
+                  trait3_var  = var(trait3),
+                  patch_optim = unique(patch_optim))
+}
+
+meta_simul2 = function(seed_number, given_k = k, given_A = A) {
+    set.seed(seed_number)
+    uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                       cor_coef = 0)
+    set.seed(seed_number)
+    low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                         cor_coef = 0.3)
+    
+    set.seed(seed_number)
+    high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                          cor_coef = 0.7)
+    all_cor = list(low_cor  = low_cor_traits)
+    
+    all_env = list(constant = env_width)
+    
+    all_compet = list(compet = list(A = given_A, B = B))
+    
+    all_facets = expand.grid(compet_status = names(all_compet),
+                             env_width     = names(all_env),
+                             cor_level     = names(all_cor),
+                             scenario      = names(trait_scenarios))
+    
+    apply(all_facets, 1, function(given_row) {
+        multigen(traits = all_cor[[given_row[["cor_level"]]]],
+                 trait_weights = trait_scenarios[[given_row[["scenario"]]]],
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = all_compet[[given_row[["compet_status"]]]][["A"]],
+                 B = all_compet[[given_row[["compet_status"]]]][["B"]],
+                 d = d,
+                 k = given_k,
+                 dist_power = dist_power,
+                 H = H, th_max = th_max,
+                 width = all_env[[given_row[["env_width"]]]]) %>%
+            landscape_df(all_cor[[given_row[["cor_level"]]]],
+                         trait_scenarios[[given_row[["scenario"]]]],
+                         time = 150) %>%
+            inner_join(all_cor[[given_row[["cor_level"]]]] %>%
+                           as.data.frame() %>%
+                           rownames_to_column("species"),
+                       by = "species") %>%
+            group_by(patch) %>%
+            mutate(rel_abund = N/sum(N)) %>%
+            ungroup() %>%
+            mutate(compet_status = given_row[["compet_status"]],
+                   env_width     = given_row[["env_width"]],
+                   cor_level     = given_row[["cor_level"]],
+                   scenario      = given_row[["scenario"]],
+                   seed_number = seed_number) %>%
+            select(seed_number, compet_status, env_width, cor_level, scenario,
+                   everything())
+    }) %>%
+        bind_rows() %>%
+        filter(N != 0) %>%  # Take out absent species
+        mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
+        mutate(scenario = fct_relevel(scenario, names(trait_scenarios)),
+               patch_optim = as.numeric(gsub("patches", "", patch))) %>%
+        group_by(seed_number, compet_status, env_width, cor_level, scenario,
+                 patch) %>%
+        summarise(trait1_cwm  = sum(trait1_cwm),
+                  trait2_cwm  = sum(trait2_cwm),
+                  trait3_cwm  = sum(trait3_cwm),
+                  trait1_var  = var(trait1),
+                  trait2_var  = var(trait2),
+                  trait3_var  = var(trait3),
+                  patch_optim = unique(patch_optim))
+}
+
+meta_simul_patch = function(seed_number, given_k = k, given_A = A) {
+    set.seed(seed_number)
+    uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                       cor_coef = 0)
+    
+    all_cor = list(uncor    = uncor_traits)
+    
+    all_env = list(constant          = env_width)
+    
+    all_compet = list(compet    = list(A = given_A, B = B))
+    
+    all_facets = expand.grid(compet_status = names(all_compet),
+                             env_width     = names(all_env),
+                             cor_level     = names(all_cor),
+                             scenario      = names(trait_scenarios))
+    
+    all_simuls = apply(all_facets, 1, function(given_row) {
+        multigen(traits = all_cor[[given_row[["cor_level"]]]],
+                 trait_weights = trait_scenarios[[given_row[["scenario"]]]],
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = all_compet[[given_row[["compet_status"]]]][["A"]],
+                 B = all_compet[[given_row[["compet_status"]]]][["B"]],
+                 d = d,
+                 k = given_k,
+                 width = all_env[[given_row[["env_width"]]]])
+    })
+    
+    list(simul = all_simuls, trait = uncor_traits)
+}
+
+meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
+                                  given_B_over_A = B/A,
+                                  given_H_over_k = H/k) {
+    set.seed(seed_number)
+    uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                       cor_coef = 0)
+    all_cor = list(uncor = uncor_traits)
+    
+    all_env = list(constant = env_width)
+    
+    all_compet = list(compet = list(A = given_A, B = given_A * given_B_over_A,
+                                    H = given_k * given_H_over_k))
+    
+    our_scenars = list(
+    R50A50   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(0.5, 0.5, 0),
+                          compet_weight = c(0,   0.5, 0.5)))
+    
+    all_facets = expand.grid(compet_status = names(all_compet),
+                             env_width     = names(all_env),
+                             cor_level     = names(all_cor),
+                             scenario      = names(our_scenars))
+    
+    apply(all_facets, 1, function(given_row) {
+        multigen(traits = all_cor[[given_row[["cor_level"]]]],
+                 trait_weights = trait_scenarios[[given_row[["scenario"]]]],
+                 env = env,
+                 time = n_gen,
+                 species = n_species,
+                 patches = n_patches,
+                 composition = composition,
+                 A = all_compet[[given_row[["compet_status"]]]][["A"]],
+                 B = all_compet[[given_row[["compet_status"]]]][["B"]],
+                 d = d,
+                 k = given_k,
+                 dist_power = dist_power,
+                 H = all_compet[[given_row[["compet_status"]]]][["H"]],
+                 th_max = th_max,
+                 width = all_env[[given_row[["env_width"]]]]) %>%
+            landscape_df(all_cor[[given_row[["cor_level"]]]],
+                         trait_scenarios[[given_row[["scenario"]]]],
+                         time = 150) %>%
+            inner_join(all_cor[[given_row[["cor_level"]]]] %>%
+                           as.data.frame() %>%
+                           rownames_to_column("species"),
+                       by = "species") %>%
+            group_by(patch) %>%
+            mutate(rel_abund = N/sum(N)) %>%
+            ungroup() %>%
+            mutate(compet_status = given_row[["compet_status"]],
+                   env_width     = given_row[["env_width"]],
+                   cor_level     = given_row[["cor_level"]],
+                   scenario      = given_row[["scenario"]],
+                   seed_number = seed_number) %>%
+            select(seed_number, compet_status, env_width, cor_level, scenario,
+                   everything())
+    }) %>%
+        bind_rows() %>%
+        mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
+        mutate(scenario = fct_relevel(scenario, names(trait_scenarios)),
+               patch_optim = as.numeric(gsub("patches", "", patch))) %>%
+        group_by(seed_number, compet_status, env_width, cor_level, scenario,
+                 patch) %>%
+        summarise(species_rich = sum(N > 0),
+                  trait1_cwm   = sum(trait1_cwm),
+                  trait2_cwm   = sum(trait2_cwm),
+                  trait3_cwm   = sum(trait3_cwm),
+                  trait1_var   = var(trait1),
+                  trait2_var   = var(trait2),
+                  trait3_var   = var(trait3),
+                  patch_optim  = unique(patch_optim))
+}
+# Generate traits --------------------------------------------------------------
+trait_seed = 5
+# Make traits with different correlations
+set.seed(trait_seed)
+uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                   cor_coef = 0)
+set.seed(trait_seed)
+low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                     cor_coef = 0.3)
+
+set.seed(trait_seed)
+high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                      cor_coef = 0.7)
+
+
+# Graphical parameters ---------------------------------------------------------
+theme_set(theme_bw(12))
+
+# Graphical functions ----------------------------------------------------------
+label_scenar_facets = function(scenar_name) {
+    scenar_name %>%
+        as.character() %>%
+        str_remove("R") %>%
+        str_split("A") %>%
+        map_chr(~paste0("Growth = ",  .x[1], "%\n",
+                        "Compet. = ", .x[2], "%"))
+}
+
+facet_scenar = facet_wrap(vars(scenario),
+                          labeller = labeller(scenario = label_scenar_facets))
+
+lab_compet_env = labeller(
+    compet_status = c(compet    = "Intra + Inter competition",
+                      no_compet = "Intra Only"),
+    env_width     = c(constant          = "Constant\nWide Env. Filter",
+                      constant_strong   = "Constant\nStrong Env. Filter",
+                      constant_stronger = "Constant\nVery Strong Env. Filter",
+                      varying           = "Increasing\nFilter Strength"))
+
+lab_cor = c(uncor    = "r = 0",
+            low_cor  = "r = 0.3",
+            high_cor = "r = 0.7")
+
+```
+
+```{r normal_k}
+# Competition == Environmental Filtering
+# Simulation parameters --------------------------------------------------------
+normal_k = 1.15
+normal_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ",
+                           B, "; k = ", normal_k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+normal_k_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = normal_k)
+}, .progress = TRUE)
+tictoc::toc()
+```
+
+```{r low_k_same_A}
+# Competition >> Environmental filtering
+# Simulation parameters --------------------------------------------------------
+low_k = 1.05
+low_k_same_A_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ",
+                               B, "; k = ", low_k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+low_k_same_A_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = low_k)
+}, .progress = FALSE)
+tictoc::toc()
+```
+
+```{r high_k_same_A}
+# Competition << Environmental Filtering
+# Simulation parameters --------------------------------------------------------
+high_k = 1.4
+high_k_same_A_run_char = paste0("N = ", total_runs, "; A = ", A,
+                                  "; B = ", B, "; k = ",
+                                  high_k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+high_k_same_A_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = high_k, given_A = A)
+}, .progress = FALSE)
+tictoc::toc()
+```
+
+```{r normal_k_low_A}
+# Competition >> Environmental filtering
+# Simulation parameters --------------------------------------------------------
+low_A = 2e-5
+normal_k_low_A_run_char = paste0("N = ", total_runs, "; A = ", low_A, "; B = ",
+                               B, "; k = ", k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+normal_k_low_A_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = k, given_A = low_A)
+}, .progress = FALSE)
+tictoc::toc()
+```
+
+```{r normal_k_high_A}
+# Competition << Environmental Filtering
+# Simulation parameters --------------------------------------------------------
+high_A = 2e-3
+normal_k_high_A_run_char = paste0("N = ", total_runs, "; A = ", high_A,
+                                  "; B = ", B, "; k = ", k)
+
+# Actual simulation -----------------------------------------------------------
+tictoc::tic()
+normal_k_high_A_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, given_k = k, given_A = high_A)
+}, .progress = FALSE)
+tictoc::toc()
+```
+
+```{r normal_k_summaries}
+# Compute summaries ------------------------------------------------------------
+# Compute slope of CWM <-> Environment relationship
+normal_k_simuls_slope = normal_k_simuls %>%
+    map(~.x %>%
+        gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
+        group_by(cwm_name, add = TRUE) %>%
+        do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+        ungroup() %>%
+        mutate(mod_glance = lapply(mod_cwm_env, broom::tidy)) %>%
+        unnest(mod_glance) %>%
+            filter(term == "patch_optim")) %>%
+    bind_rows()
+
+# Gather the variance of traits along environment
+normal_k_simuls_var = normal_k_simuls %>%
+    map(~.x %>%
+            select(-ends_with("cwm"))) %>%
+    bind_rows() %>%
+    gather("var_name", "var_value", ends_with("var")) %>%
+    ungroup()
+```
+
+```{r paper_figures}
+# Show shape of CWM <-> across situations --------------------------------------
+all_simuls = list(normal_k_normal_A = normal_k_simuls,
+                  high_k_normal_A   = high_k_same_A_simuls,
+                  low_k_normal_A    = low_k_same_A_simuls) %>%
+    purrr::map_df(bind_rows, .id = "simul_param")
+
+plot_all_k_cwm_env = all_simuls %>%
+    filter(!(scenario %in% c("R75A25", "R25A75")),
+           compet_status == "compet",
+           env_width == "constant") %>%
+    mutate(simul_param = factor(simul_param, levels = c("high_k_normal_A",
+                                                        "normal_k_normal_A",
+                                                        "low_k_normal_A"))) %>%
+    ggplot(aes(patch_optim, trait2_cwm, color = fct_rev(cor_level),
+               group = interaction(cor_level, seed_number))) +
+    geom_line(aes(group = interaction(cor_level, seed_number)), alpha = 1/20) +
+    geom_smooth(aes(group = cor_level), se = FALSE) +
+    facet_grid(rows = vars(simul_param), cols = vars(scenario),
+               labeller = lab_compet_env) +
+    scale_color_viridis_d("Correlation", labels = lab_cor) +
+    labs(x = "Environment",
+         y = "Trait 2 CWM",
+         title = paste0("CWM <-> Env. Relationship across N = ", total_runs,
+                           " sets of traits"),
+         subtitle = paste0("opaque line = smoothed average\n",
+                           "background lines = individual simulations")) +
+    theme(panel.grid = element_blank(),
+          legend.position = "top")
+plot_normal_k_cwm_env
+
+# Slope in function of scenario & competition status ---------------------------
+plot_normal_k_slope_constant_env = normal_k_simuls_slope %>%
+    filter(env_width != "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, estimate)) +
+    geom_violin(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9), draw_quantiles = 0.5) +
+    facet_grid(rows = vars(env_width), cols = vars(cwm_name),
+               labeller = lab_compet_env) +
+    ylim(0, 1) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment ",
+                           "with Constant Env. Filter\n",
+                           normal_k_run_char),
+         x = "Scenario",
+         y = "Slope") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_normal_k_var_constant_env = normal_k_simuls_var %>%
+    filter(env_width != "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width), cols = vars(var_name),
+               labeller = lab_compet_env, scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches ",
+                           "with Constant Env. Filter\n", normal_k_run_char),
+         x = "Scenario",
+         y = "Trait Variance among patches") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_normal_k_slope_constant_env
+plot_normal_k_var_constant_env
+
+plot_normal_k_slope_var_env = normal_k_simuls_slope %>%
+    filter(env_width == "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, estimate)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(cols = vars(cwm_name),
+               labeller = lab_compet_env) +
+    ylim(0, 1) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment ",
+                           "with Constant Env. Filter\n",
+                           normal_k_run_char),
+         x = "Scenario",
+         y = "Slope") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_normal_k_var_var_env = normal_k_simuls_var %>%
+    filter(env_width == "varying", compet_status == "compet",
+           !(scenario %in% c("R75A25", "R25A75"))) %>%
+    ggplot(aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(cols = vars(var_name),
+               labeller = lab_compet_env, scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches ",
+                           "with Constant Env. Filter\n", normal_k_run_char),
+         x = "Scenario",
+         y = "Trait Variance among patches") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_grid(plot_normal_k_slope_var_env,
+          plot_normal_k_var_var_env, nrow = 2, align = "hv")
+```
+
+```{r normal_k_complex_figures, eval=FALSE}
+plot_normal_k_slope = ggplot(normal_k_simuls_slope, aes(scenario, estimate)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width, compet_status), cols = vars(cwm_name),
+               labeller = lab_compet_env) +
+    ylim(0, 1) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment; ",
+                           normal_k_run_char),
+         x = "Scenario",
+         y = "Slope") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+plot_normal_k_slope
+
+plot_normal_k_var = ggplot(normal_k_simuls_var, aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width, compet_status), cols = vars(var_name),
+               labeller = lab_compet_env, scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches; ", normal_k_run_char),
+         x = "Scenario",
+         y = "Trait Variance among patches") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_normal_k_var
+```
+
+
+```{r, eval = FALSE}
+high_k = 1.57
+high_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
+                        high_k)
+
+plan(multiprocess)
+tictoc::tic()
+
+high_k_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul(x, high_k)
+}, .progress = TRUE)
+tictoc::toc()
+
+high_k_simuls_r2 = high_k_simuls %>%
+    map(~.x %>%
+        gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
+        group_by(cwm_name, add = TRUE) %>%
+        do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+        ungroup() %>%
+        mutate(mod_glance = lapply(mod_cwm_env, broom::glance)) %>%
+        unnest(mod_glance)) %>%
+    bind_rows()
+
+high_k_simuls_var = high_k_simuls %>%
+    map(~.x %>%
+            select(-ends_with("cwm"))) %>%
+    bind_rows() %>%
+    gather("var_name", "var_value", ends_with("var"))
+
+plot_high_k_r2 = ggplot(high_k_simuls_r2, aes(scenario, r.squared)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width, compet_status), cols = vars(cwm_name),
+               labeller = lab_compet_env) +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("R2 of trait2 CWM ~ environment; ", high_k_run_char),
+         x = "Scenario",
+         y = expression("R"^2)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_high_k_r2
+
+plot_high_k_var = ggplot(high_k_simuls_var, aes(scenario, var_value)) +
+    geom_boxplot(aes(fill = fct_rev(cor_level)),
+                 position = position_dodge(width = 0.9)) +
+    facet_grid(rows = vars(env_width, compet_status), cols = vars(var_name),
+               labeller = lab_compet_env, scales = "free_y") +
+    ylim(0, NA) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Trait Variance across Patches; ", high_k_run_char),
+         x = "Scenario",
+         y = "Trait Variance among patches") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+plot_high_k_var
+```
+
+```{r varying_A_and_k, eval = FALSE}
+list_A = 2*10^-(seq(4, 6))
+list_k = 1 + c(0.05, 0.15, 0.25)
+
+plan(multiprocess(workers = availableCores()))
+tictoc::tic()
+
+var_k_var_a = cross(list(run_n = seq(total_runs), A = list_A, k = list_k)) %>%
+    future_map(function(x) {
+    devtools::load_all()
+    
+    meta_simul2(x$run_n, x$k, x$A) %>%
+        mutate(k = x$k, A = x$A)
+}, .progress = TRUE)
+tictoc::toc()
+
+var_k_var_a_cwm = var_k_var_a %>%
+    bind_rows() %>%
+    ungroup() %>%
+    nest(-k, -A, -seed_number, -scenario) %>%
+    mutate(data = data %>%
+               map(~.x %>%
+                       gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
+                       group_by(cwm_name, add = TRUE) %>%
+                       do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+                       ungroup() %>%
+                       mutate(mod_glance = lapply(mod_cwm_env, broom::glance)) %>%
+                       unnest(mod_glance))) %>%
+    unnest(data) %>%
+    filter(cwm_name == "trait2_cwm")
+
+var_k_var_a_var = var_k_var_a %>%
+    map(~.x %>%
+            select(-ends_with("cwm"))) %>%
+    bind_rows() %>%
+    gather("var_name", "var_value", ends_with("var")) %>%
+    filter(var_name == "trait2_var") %>%
+    select(k, A, seed_number, everything())
+```
+
+```{r looking_at_slopes, eval = FALSE}
+list_A = 2*10^-(seq(4, 6))
+list_k = 1 + c(0.05, 0.15, 0.25)
+
+plan(multiprocess(workers = availableCores() - 1))
+tictoc::tic()
+
+var_k_var_a = cross(list(run_n = seq(total_runs), A = list_A, k = list_k)) %>%
+    future_map(function(x) {
+    devtools::load_all()
+    
+    meta_simul2(x$run_n, x$k, x$A) %>%
+        mutate(k = x$k, A = x$A)
+}, .progress = TRUE)
+tictoc::toc()
+
+var_k_var_a_cwm = var_k_var_a %>%
+    bind_rows() %>%
+    ungroup() %>%
+    nest(-k, -A, -seed_number, -scenario) %>%
+    mutate(data = data %>%
+               map(~.x %>%
+                       gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
+                       group_by(cwm_name, add = TRUE) %>%
+                       do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+                       ungroup() %>%
+                       mutate(mod_glance = lapply(mod_cwm_env, broom::tidy)) %>%
+                       unnest(mod_glance))) %>%
+    unnest(data) %>%
+    filter(cwm_name == "trait2_cwm")
+# 
+# var_k_var_a_var = var_k_var_a %>%
+#     map(~.x %>%
+#             select(-ends_with("cwm"))) %>%
+#     bind_rows() %>%
+#     gather("var_name", "var_value", ends_with("var")) %>%
+#     filter(var_name == "trait2_var") %>%
+#     select(k, A, seed_number, everything())
+```
+
+We want to follow the dynamics through time to understand the variation in Rsquare
+```{r, eval = FALSE}
+patch_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
+                        k)
+
+plan(multiprocess)
+tictoc::tic()
+
+patch_k_simuls = future_map(seq(total_runs), function(x) {
+    devtools::load_all()
+    
+    meta_simul_patch(x, )
+}, .progress = TRUE)
+tictoc::toc()
+
+patch_k_simuls[[1]][[1]][[1]]$compo[15,,] %>%
+    as.data.frame() %>%
+    rownames_to_column("species") %>%
+    gather("time", "N", -species) %>%
+    group_by(time) %>%
+    mutate(tot_abund = sum(N)) %>%
+    ungroup() %>%
+    mutate(rel_abund = N / tot_abund) %>%
+    inner_join(patch_k_simuls[[1]]$trait %>%
+                   as.data.frame() %>%
+                   rownames_to_column("species"),
+               by = "species") %>%
+    mutate_at(vars(starts_with("trait")), funs(precwm = rel_abund * .)) %>%
+    group_by(time) %>%
+    summarise_at(vars(ends_with("cwm")), sum) %>%
+    mutate(time = as.numeric(gsub("time", "", time))) %>%
+    gather("cwm_name", "cwm_value", contains("precwm")) %>%
+    ggplot(aes(time, cwm_value)) +
+    geom_line() +
+    facet_grid(cols = vars(cwm_name))
+```
+
+
+## Coexistence plot depending on A, B/A and k
+
+```{r param_space_simuls}
+list_A = 10^-(seq(2, 6, length.out = 5))
+list_k = seq(1, 1.5, length.out = 5)
+list_B_over_A = 10^seq(0, 4, length.out = 5)
+list_H_over_k = seq(0, 1, length.out = 5)
+
+plan(multiprocess(workers = availableCores()))
+tictoc::tic()
+
+var_a_var_k_var_ba = cross(list(run_n = seq(1), A = list_A, k = list_k,
+                         B_over_A = list_B_over_A,
+                         H_over_k = list_H_over_k)) %>%
+    future_map(function(x) {
+    devtools::load_all()
+    
+    meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
+                           given_H_over_k = x$H_over_k) %>%
+        mutate(k = x$k, A = x$A, B_over = x$B_over_A, H_over_k = x$H_over_k)
+}, .progress = TRUE)
+tictoc::toc()
+
+var_ba_df = bind_rows(var_a_var_k_var_ba)
+
+var_labs = c(k        = "k (maximum growth rate)",
+             A        = "A (interspecific competition)",
+             B_over   = "B/A (ratio intra/inter)",
+             H_over_k = "H/k (ratio hierarch./max. growth)")
+```
+
+```{r interactive_species_rich_plot}
+library("plotly")
+
+var_ba_df %>%
+    filter(patch == "patches13", species_rich > 0) %>%
+    plot_ly(x = ~k, y = ~A, z = ~B_over, color = ~species_rich,
+            text = ~paste("SR: ", species_rich)) %>%
+    add_markers() %>%
+    layout(scene = list(xaxis = list(title = ),
+                        yaxis = list(title = 'A (interspecific competition)',
+                                     type = "log"),
+                        zaxis = list(title = 'B/A (ratio intra/inter)',
+                                     type = "log")))
+```
+
+```{r biplot_of_parameters_richness}
+plot_species_richness = function(var_df, x_var, y_var, given_labs = var_labs) {
+    
+    not_used_vars = setdiff(names(given_labs), c(x_var, y_var))
+    
+    var_df %>%
+        ggplot(aes_string(x_var, y_var)) +
+        stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
+        facet_wrap(~patch) +
+        scale_fill_viridis_c() +
+        labs(x = var_labs[[x_var]],
+             y = var_labs[[y_var]],
+             fill = "Species Richness\n(at t = 150)",
+             subtitle = paste0("Avg. SR over values of ",
+                               paste(not_used_vars, collapse = " and "))) +
+        theme(legend.position = "top",
+              legend.text = element_text(angle = 45))
+}
+
+plot_k_A = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    plot_species_richness("k", "A") +
+    scale_y_log10()
+
+plot_A_BA = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    plot_species_richness("A", "B_over") +
+    scale_x_log10() +
+    scale_y_log10()
+
+plot_k_BA = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    plot_species_richness("k", "B_over") +
+    scale_y_log10()
+
+plot_k_Hk = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    plot_species_richness("k", "H_over_k")
+
+plot_A_Hk = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    plot_species_richness("A", "H_over_k") +
+    scale_x_log10()
+
+plot_BA_Hk = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    plot_species_richness("B_over", "H_over_k") +
+    scale_x_log10()
+
+plot_grid(plot_k_A,
+          plot_k_Hk,
+          plot_A_BA,
+          plot_A_Hk,
+          plot_k_BA,
+          plot_BA_Hk,
+          ncol = 2)
+```
+
+```{r biplot_with_R2}
+var_ba_r2 = var_ba_df %>%
+    ungroup() %>%
+    filter(!is.nan(trait2_cwm)) %>%
+    nest(-k, -A,-B_over, -H_over_k, -seed_number, -scenario) %>%
+    mutate(data = data %>%
+               map(~.x %>%
+                       gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
+                       group_by(cwm_name, add = TRUE) %>%
+                       do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+                       ungroup() %>%
+                       mutate(mod_glance = lapply(mod_cwm_env, broom::glance)) %>%
+                       unnest(mod_glance))) %>%
+    unnest(data) %>%
+    filter(cwm_name == "trait2_cwm")
+
+# function to plot R² of CWM <-> Env relationship
+plot_average_r_squared = function(var_df, x_var, y_var, given_labs = var_labs) {
+    
+    not_used_vars = setdiff(names(given_labs), c(x_var, y_var))
+    
+    var_df %>%
+        ggplot(aes_string(x_var, y_var)) +
+    stat_summary_2d(aes(z = adj.r.squared), fun = "mean", geom = "raster") +
+    scale_fill_viridis_c() +
+    labs(x = var_labs[[x_var]],
+         y = var_labs[[y_var]],
+         fill = "CWM <-> Env. R^2",
+         subtitle = paste0("Avg. R² over values of ",
+                           paste(not_used_vars, collapse = " and "))) +
+    theme(legend.position = "top",
+          legend.text = element_text(angle = 45))
+}
+
+
+
+# Plotting R-squared
+plot_k_A_r2 = plot_average_r_squared(var_ba_r2, "k", "A") +
+    scale_y_log10()
+
+plot_A_BA_r2 = plot_average_r_squared(var_ba_r2, "A", "B_over") +
+    scale_x_log10() +
+    scale_y_log10()
+
+plot_k_BA_r2 = plot_average_r_squared(var_ba_r2, "k", "B_over") +
+    scale_y_log10()
+
+plot_k_Hk_r2 = plot_average_r_squared(var_ba_r2, "k", "H_over_k")
+
+plot_A_Hk_r2 = plot_average_r_squared(var_ba_r2, "A", "H_over_k") +
+    scale_x_log10()
+
+plot_BA_Hk_r2 = plot_average_r_squared(var_ba_r2, "B_over", "H_over_k") +
+    scale_x_log10()
+
+plot_grid(plot_k_A_r2,
+          plot_k_Hk_r2,
+          plot_A_BA_r2,
+          plot_A_Hk_r2,
+          plot_k_BA_r2,
+          plot_BA_Hk_r2,
+          ncol = 2)
+```
+
+```{r biplot_with_slopes}
+var_ba_slope = var_ba_df %>%
+    ungroup() %>%
+    filter(!is.nan(trait2_cwm)) %>%
+    nest(-k, -A,-B_over, -H_over_k, -seed_number, -scenario) %>%
+    mutate(data = data %>%
+               map(~.x %>%
+                       gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
+                       group_by(cwm_name, add = TRUE) %>%
+                       do(mod_cwm_env = lm(cwm_value ~ patch_optim, data = .)) %>%
+                       ungroup() %>%
+                       mutate(mod_glance = lapply(mod_cwm_env, broom::tidy)) %>%
+                       unnest(mod_glance))) %>%
+    unnest(data) %>%
+    filter(cwm_name == "trait2_cwm") %>%
+    filter(term == "patch_optim")
+
+plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
+    
+    not_used_vars = setdiff(names(given_labs), c(x_var, y_var))
+    
+    var_df %>%
+        ggplot(aes_string(x_var, y_var)) +
+        stat_summary_2d(aes(z = estimate), fun = "mean", geom = "raster") +
+        scale_fill_viridis_c() +
+        labs(x = var_labs[[x_var]],
+             y = var_labs[[y_var]],
+             fill = "CWM <-> Env. Slope",
+             subtitle = paste0("Avg. R² over values of ",
+                               paste(not_used_vars, collapse = " and "))) +
+        theme(legend.position = "top",
+          legend.text = element_text(angle = 45))
+}
+
+# Plotting CWM <-> Env. Slope
+plot_k_A_slope = plot_average_slope(var_ba_slope, "k", "A") +
+    scale_y_log10()
+
+plot_A_BA_slope = plot_average_slope(var_ba_slope, "A", "B_over") +
+    scale_x_log10() +
+    scale_y_log10()
+
+plot_k_BA_slope = plot_average_slope(var_ba_slope, "k", "B_over") +
+    scale_y_log10()
+
+plot_k_Hk_slope = plot_average_slope(var_ba_slope, "k", "H_over_k")
+
+plot_A_Hk_slope = plot_average_slope(var_ba_slope, "A", "H_over_k") +
+    scale_x_log10()
+
+plot_BA_Hk_slope = plot_average_slope(var_ba_slope, "B_over", "H_over_k") +
+    scale_x_log10()
+
+plot_grid(plot_k_A_slope,
+          plot_k_Hk_slope,
+          plot_A_BA_slope,
+          plot_A_Hk_slope,
+          plot_k_BA_slope,
+          plot_BA_Hk_slope,
+          nrow = 3)
+```
