@@ -99,12 +99,13 @@ n_traits  <- 3    # number of traits
 k         <- 1.15 # Maximum growth rate
 env_width <- rep(10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
-total_runs = 100  # Number of set of traits to test
+total_runs = 20  # Number of set of traits to test
 
 # Competition + Dispersion coefficients
-B = 2e-4 # Scalar for intraspecific competition
-A = 2e-4 # Alpha scalar
-d = 0.05 # Dispersal percentage
+B = 2e-4       # Scalar for intraspecific competition
+A = 2e-4       # Alpha scalar
+d = 0.05       # Dispersal percentage
+dist_power = 2 # Power of trait dissimilarity
 
 # Hierarchical coefficients
 H = 1.01
@@ -197,6 +198,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A) {
                  B = all_compet[[given_row[["compet_status"]]]][["B"]],
                  d = d,
                  k = given_k,
+                 dist_power = dist_power,
                  H = H, th_max = th_max,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],
@@ -267,6 +269,7 @@ meta_simul2 = function(seed_number, given_k = k, given_A = A) {
                  B = all_compet[[given_row[["compet_status"]]]][["B"]],
                  d = d,
                  k = given_k,
+                 dist_power = dist_power,
                  H = H, th_max = th_max,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],
@@ -337,8 +340,9 @@ meta_simul_patch = function(seed_number, given_k = k, given_A = A) {
     list(simul = all_simuls, trait = uncor_traits)
 }
 
-meta_simul_A_B_and_k = function(seed_number, given_k = k, given_A = A,
-                                given_B_over_A = B/A) {
+meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
+                                  given_B_over_A = B/A,
+                                  given_H_over_k = H/k) {
     set.seed(seed_number)
     uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
@@ -346,7 +350,8 @@ meta_simul_A_B_and_k = function(seed_number, given_k = k, given_A = A,
     
     all_env = list(constant = env_width)
     
-    all_compet = list(compet = list(A = given_A, B = given_A * given_B_over_A))
+    all_compet = list(compet = list(A = given_A, B = given_A * given_B_over_A,
+                                    H = given_k * given_H_over_k))
     
     our_scenars = list(
     R50A50   = data.frame(trait = paste0("trait", 1:3),
@@ -370,8 +375,9 @@ meta_simul_A_B_and_k = function(seed_number, given_k = k, given_A = A,
                  B = all_compet[[given_row[["compet_status"]]]][["B"]],
                  d = d,
                  k = given_k,
-                 H = H, th_max = th_max,
-                 dist_power = 2,
+                 dist_power = dist_power,
+                 H = all_compet[[given_row[["compet_status"]]]][["H"]],
+                 th_max = th_max,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],
                          trait_scenarios[[given_row[["scenario"]]]],
@@ -464,7 +470,7 @@ normal_k_simuls = future_map(seq(total_runs), function(x) {
     devtools::load_all()
     
     meta_simul(x, given_k = normal_k)
-}, .progress = FALSE)
+}, .progress = TRUE)
 tictoc::toc()
 ```
 
@@ -885,20 +891,23 @@ patch_k_simuls[[1]][[1]][[1]]$compo[15,,] %>%
 ## Coexistence plot depending on A, B/A and k
 
 ```{r param_space_simuls}
-list_A = 10^-(seq(2, 6, length.out = 10))
-list_k = seq(1, 1.5, length.out = 10)
-list_B_over_A = 10^seq(0, 4, length.out = 10)
+list_A = 10^-(seq(2, 6, length.out = 5))
+list_k = seq(1, 1.5, length.out = 5)
+list_B_over_A = 10^seq(0, 4, length.out = 5)
+list_H_over_k = seq(0, 1, length.out = 5)
 
 plan(multiprocess(workers = availableCores()))
 tictoc::tic()
 
 var_a_var_k_var_ba = cross(list(run_n = seq(1), A = list_A, k = list_k,
-                         B_over_A = list_B_over_A)) %>%
+                         B_over_A = list_B_over_A,
+                         H_over_k = list_H_over_k)) %>%
     future_map(function(x) {
     devtools::load_all()
     
-    meta_simul_A_B_and_k(x$run_n, x$k, x$A, x$B_over_A) %>%
-        mutate(k = x$k, A = x$A, B_over = x$B_over_A)
+    meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
+                           given_H_over_k = x$H_over_k) %>%
+        mutate(k = x$k, A = x$A, B_over = x$B_over_A, H_over_k = x$H_over_k)
 }, .progress = TRUE)
 tictoc::toc()
 
@@ -931,7 +940,7 @@ plot_k_A = var_ba_df %>%
     labs(x = "k (maximum growth rate)",
          y = "A (interspecific competition)",
          fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of B/A") +
+         subtitle = "Average Richness over all values of B/A & H/k") +
     theme(legend.position = "top")
 
 plot_A_BA = var_ba_df %>%
@@ -945,7 +954,7 @@ plot_A_BA = var_ba_df %>%
     labs(x = "A (interspecific competition)",
          y = "B/A (ratio intra/inter)",
          fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of k") +
+         subtitle = "Average Richness over all values of k & H/k") +
     theme(legend.position = "top")
 
 plot_k_BA = var_ba_df %>%
@@ -958,17 +967,61 @@ plot_k_BA = var_ba_df %>%
     labs(x = "k (maximum growth rate)",
          y = "B/A (ratio intra/inter)",
          fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of A") +
+         subtitle = "Average Richness over all values of A & H/k") +
     theme(legend.position = "top")
 
-plot_grid(plot_k_A, plot_A_BA, plot_k_BA, nrow = 3)
+plot_k_Hk = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    ggplot(aes(k, H_over_k)) +
+    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
+    facet_wrap(~patch) +
+    scale_fill_viridis_c() +
+    labs(x = "k (maximum growth rate)",
+         y = "H/k (ratio hierarchical compet/max. growth)",
+         fill = "Species Richness\n(at t = 150)",
+         subtitle = "Average Richness over all values of A and B/A") +
+    theme(legend.position = "top")
+
+plot_A_Hk = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    ggplot(aes(A, H_over_k)) +
+    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
+    facet_wrap(~patch) +
+    scale_fill_viridis_c() +
+    scale_x_log10() +
+    labs(x = "A (interspecific competition)",
+         y = "H/k (ratio hierarchical compet/max. growth)",
+         fill = "Species Richness\n(at t = 150)",
+         subtitle = "Average Richness over all values of k and B/A") +
+    theme(legend.position = "top")
+
+plot_BA_Hk = var_ba_df %>%
+    filter(patch %in% paste0("patches", c(1, 13))) %>%
+    ggplot(aes(B_over, H_over_k)) +
+    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
+    facet_wrap(~patch) +
+    scale_fill_viridis_c() +
+    scale_x_log10() +
+    labs(x = "B/A (ratio intra/inter)",
+         y = "H/k (ratio hierarchical compet/max. growth)",
+         fill = "Species Richness\n(at t = 150)",
+         subtitle = "Average Richness over all values of k and A") +
+    theme(legend.position = "top")
+
+plot_grid(plot_k_A,
+          plot_k_Hk,
+          plot_A_BA,
+          plot_A_Hk,
+          plot_k_BA,
+          plot_BA_Hk,
+          ncol = 2)
 ```
 
-```{r biplot_with_R2_and_slope_values}
+```{r biplot_with_R2}
 var_ba_r2 = var_ba_df %>%
     ungroup() %>%
     filter(!is.nan(trait2_cwm)) %>%
-    nest(-k, -A,-B_over, -seed_number, -scenario) %>%
+    nest(-k, -A,-B_over, -H_over_k, -seed_number, -scenario) %>%
     mutate(data = data %>%
                map(~.x %>%
                        gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
@@ -980,10 +1033,64 @@ var_ba_r2 = var_ba_df %>%
     unnest(data) %>%
     filter(cwm_name == "trait2_cwm")
 
+var_labs = c(k        = "k (maximum growth rate)",
+             A        = "A (interspecific competition)",
+             B_over   = "B/A (ratio intra/inter)",
+             H_over_k = "H/k (ratio hierarch./max. growth)")
+
+# function to plot R² of CWM <-> Env relationship
+plot_average_r_squared = function(var_df, x_var, y_var, given_labs = var_labs) {
+    
+    not_used_vars = setdiff(names(given_labs), c(x_var, y_var))
+    
+    var_df %>%
+        ggplot(aes_string(x_var, y_var)) +
+    stat_summary_2d(aes(z = adj.r.squared), fun = "mean", geom = "raster") +
+    scale_fill_viridis_c() +
+    labs(x = var_labs[[x_var]],
+         y = var_labs[[y_var]],
+         fill = "CWM <-> Env. R^2",
+         subtitle = paste0("Average R-squared over all values of ",
+                           paste(not_used_vars, collapse = " and "))) +
+    theme(legend.position = "top",
+          legend.text = element_text(angle = 45))
+}
+
+
+
+# Plotting R-squared
+plot_k_A_r2 = plot_average_r_squared(var_ba_r2, "k", "A") +
+    scale_y_log10()
+
+plot_A_BA_r2 = plot_average_r_squared(var_ba_r2, "A", "B_over") +
+    scale_x_log10() +
+    scale_y_log10()
+
+plot_k_BA_r2 = plot_average_r_squared(var_ba_r2, "k", "B_over") +
+    scale_y_log10()
+
+plot_k_Hk_r2 = plot_average_r_squared(var_ba_r2, "k", "H_over_k")
+
+plot_A_Hk_r2 = plot_average_r_squared(var_ba_r2, "A", "H_over_k") +
+    scale_x_log10()
+
+plot_BA_Hk_r2 = plot_average_r_squared(var_ba_r2, "B_over", "H_over_k") +
+    scale_x_log10()
+
+plot_grid(plot_k_A_r2,
+          plot_k_Hk_r2,
+          plot_A_BA_r2,
+          plot_A_Hk_r2,
+          plot_k_BA_r2,
+          plot_BA_Hk_r2,
+          ncol = 2)
+```
+
+```{r biplot_with_slopes}
 var_ba_slope = var_ba_df %>%
     ungroup() %>%
     filter(!is.nan(trait2_cwm)) %>%
-    nest(-k, -A,-B_over, -seed_number, -scenario) %>%
+    nest(-k, -A,-B_over, -H_over_k, -seed_number, -scenario) %>%
     mutate(data = data %>%
                map(~.x %>%
                        gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
@@ -996,83 +1103,47 @@ var_ba_slope = var_ba_df %>%
     filter(cwm_name == "trait2_cwm") %>%
     filter(term == "patch_optim")
 
-# Plotting R-squared
-plot_k_A_r2 = var_ba_r2 %>%
-    ggplot(aes(k, A)) +
-    stat_summary_2d(aes(z = adj.r.squared), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
-    scale_y_log10() +
-    labs(x = "k (maximum growth rate)",
-         y = "A (interspecific competition)",
-         fill = "CWM <-> Env. R^2",
-         subtitle = "Average R-squared over all values of B/A") +
-    theme(legend.position = "top")
-
-plot_A_BA_r2 = var_ba_r2 %>%
-    ggplot(aes(A, B_over)) +
-    stat_summary_2d(aes(z = adj.r.squared), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
-    scale_x_log10() +
-    scale_y_log10() +
-    labs(x = "A (interspecific competition)",
-         y = "B/A (ratio intra/inter)",
-         fill = "CWM <-> Env. R^2",
-         subtitle = "Average R-squared over all values of k") +
-    theme(legend.position = "top")
-
-plot_k_BA_r2 = var_ba_r2 %>%
-    ggplot(aes(k, B_over)) +
-    stat_summary_2d(aes(z = adj.r.squared), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
-    scale_y_log10() +
-    labs(x = "k (maximum growth rate)",
-         y = "B/A (ratio intra/inter)",
-         fill = "CWM <-> Env. R^2",
-         subtitle = "Average R-squared over all values of A") +
-    theme(legend.position = "top")
-
-
+plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
+    
+    not_used_vars = setdiff(names(given_labs), c(x_var, y_var))
+    
+    var_df %>%
+        ggplot(aes_string(x_var, y_var)) +
+        stat_summary_2d(aes(z = estimate), fun = "mean", geom = "raster") +
+        scale_fill_viridis_c() +
+        labs(x = var_labs[[x_var]],
+             y = var_labs[[y_var]],
+             fill = "CWM <-> Env. Slope",
+             subtitle = paste0("Average R-squared over all values of ",
+                               paste(not_used_vars, collapse = " and "))) +
+        theme(legend.position = "top",
+          legend.text = element_text(angle = 45))
+}
 
 # Plotting CWM <-> Env. Slope
-plot_k_A_slope = var_ba_slope %>%
-    ggplot(aes(k, A)) +
-    stat_summary_2d(aes(z = estimate), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
-    scale_y_log10() +
-    labs(x = "k (maximum growth rate)",
-         y = "A (interspecific competition)",
-         fill = "CWM <-> Env. Slope",
-         subtitle = "Average Slope over all values of B/A") +
-    theme(legend.position = "top")
+plot_k_A_slope = plot_average_slope(var_ba_slope, "k", "A") +
+    scale_y_log10()
 
-plot_A_BA_slope = var_ba_slope %>%
-    ggplot(aes(A, B_over)) +
-    stat_summary_2d(aes(z = estimate), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
+plot_A_BA_slope = plot_average_slope(var_ba_slope, "A", "B_over") +
     scale_x_log10() +
-    scale_y_log10() +
-    labs(x = "A (interspecific competition)",
-         y = "B/A (ratio intra/inter)",
-         fill = "CWM <-> Env. Slope",
-         subtitle = "Average Slope over all values of k") +
-    theme(legend.position = "top")
+    scale_y_log10()
 
-plot_k_BA_slope = var_ba_slope %>%
-    ggplot(aes(k, B_over)) +
-    stat_summary_2d(aes(z = estimate), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
-    scale_y_log10() +
-    labs(x = "k (maximum growth rate)",
-         y = "B/A (ratio intra/inter)",
-         fill = "CWM <-> Env. Slope",
-         subtitle = "Average Slope over all values of A") +
-    theme(legend.position = "top")
+plot_k_BA_slope = plot_average_slope(var_ba_slope, "k", "B_over") +
+    scale_y_log10()
 
-plot_grid(plot_k_A_r2,
-          plot_k_A_slope,
-          plot_A_BA_r2,
+plot_k_Hk_slope = plot_average_slope(var_ba_slope, "k", "H_over_k")
+
+plot_A_Hk_slope = plot_average_slope(var_ba_slope, "A", "H_over_k") +
+    scale_x_log10()
+
+plot_BA_Hk_slope = plot_average_slope(var_ba_slope, "B_over", "H_over_k") +
+    scale_x_log10()
+
+plot_grid(plot_k_A_slope,
+          plot_k_Hk_slope,
           plot_A_BA_slope,
-          plot_k_BA_r2,
+          plot_A_Hk_slope,
           plot_k_BA_slope,
+          plot_BA_Hk_slope,
           nrow = 3)
 ```

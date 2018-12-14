@@ -158,12 +158,13 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max,
                      dist_power = dist_power) {
 
+    power_dist = dist_power
+
     # Check assumptions on trait_weights data.frame
     check_trait_weights(trait_weights, traits)
 
     # Calculate dist trait
-    disttraits <- compute_compet_distance(trait_weights, traits,
-                                          dist_power = dist_power)
+    disttraits <- compute_compet_distance(trait_weights, traits, power_dist)
 
     # Calculate fitness term (R = growth)
     env_param <- cbind(env, k, width, H, th_max)
