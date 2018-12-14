@@ -912,6 +912,11 @@ var_a_var_k_var_ba = cross(list(run_n = seq(1), A = list_A, k = list_k,
 tictoc::toc()
 
 var_ba_df = bind_rows(var_a_var_k_var_ba)
+
+var_labs = c(k        = "k (maximum growth rate)",
+             A        = "A (interspecific competition)",
+             B_over   = "B/A (ratio intra/inter)",
+             H_over_k = "H/k (ratio hierarch./max. growth)")
 ```
 
 ```{r interactive_species_rich_plot}
@@ -930,83 +935,53 @@ var_ba_df %>%
 ```
 
 ```{r biplot_of_parameters_richness}
+plot_species_richness = function(var_df, x_var, y_var, given_labs = var_labs) {
+    
+    not_used_vars = setdiff(names(given_labs), c(x_var, y_var))
+    
+    var_df %>%
+        ggplot(aes_string(x_var, y_var)) +
+        stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
+        facet_wrap(~patch) +
+        scale_fill_viridis_c() +
+        labs(x = var_labs[[x_var]],
+             y = var_labs[[y_var]],
+             fill = "Species Richness\n(at t = 150)",
+             subtitle = paste0("Avg. SR over values of ",
+                               paste(not_used_vars, collapse = " and "))) +
+        theme(legend.position = "top",
+              legend.text = element_text(angle = 45))
+}
+
 plot_k_A = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    ggplot(aes(k, A)) +
-    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
-    facet_wrap(~patch) +
-    scale_fill_viridis_c() +
-    scale_y_log10() +
-    labs(x = "k (maximum growth rate)",
-         y = "A (interspecific competition)",
-         fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of B/A & H/k") +
-    theme(legend.position = "top")
+    plot_species_richness("k", "A") +
+    scale_y_log10()
 
 plot_A_BA = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    ggplot(aes(A, B_over)) +
-    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
-    facet_wrap(~patch) +
-    scale_fill_viridis_c() +
+    plot_species_richness("A", "B_over") +
     scale_x_log10() +
-    scale_y_log10() +
-    labs(x = "A (interspecific competition)",
-         y = "B/A (ratio intra/inter)",
-         fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of k & H/k") +
-    theme(legend.position = "top")
+    scale_y_log10()
 
 plot_k_BA = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    ggplot(aes(k, B_over)) +
-    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
-    facet_wrap(~patch) +
-    scale_fill_viridis_c() +
-    scale_y_log10() +
-    labs(x = "k (maximum growth rate)",
-         y = "B/A (ratio intra/inter)",
-         fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of A & H/k") +
-    theme(legend.position = "top")
+    plot_species_richness("k", "B_over") +
+    scale_y_log10()
 
 plot_k_Hk = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    ggplot(aes(k, H_over_k)) +
-    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
-    facet_wrap(~patch) +
-    scale_fill_viridis_c() +
-    labs(x = "k (maximum growth rate)",
-         y = "H/k (ratio hierarchical compet/max. growth)",
-         fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of A and B/A") +
-    theme(legend.position = "top")
+    plot_species_richness("k", "H_over_k")
 
 plot_A_Hk = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    ggplot(aes(A, H_over_k)) +
-    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
-    facet_wrap(~patch) +
-    scale_fill_viridis_c() +
-    scale_x_log10() +
-    labs(x = "A (interspecific competition)",
-         y = "H/k (ratio hierarchical compet/max. growth)",
-         fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of k and B/A") +
-    theme(legend.position = "top")
+    plot_species_richness("A", "H_over_k") +
+    scale_x_log10()
 
 plot_BA_Hk = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    ggplot(aes(B_over, H_over_k)) +
-    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
-    facet_wrap(~patch) +
-    scale_fill_viridis_c() +
-    scale_x_log10() +
-    labs(x = "B/A (ratio intra/inter)",
-         y = "H/k (ratio hierarchical compet/max. growth)",
-         fill = "Species Richness\n(at t = 150)",
-         subtitle = "Average Richness over all values of k and A") +
-    theme(legend.position = "top")
+    plot_species_richness("B_over", "H_over_k") +
+    scale_x_log10()
 
 plot_grid(plot_k_A,
           plot_k_Hk,
@@ -1033,11 +1008,6 @@ var_ba_r2 = var_ba_df %>%
     unnest(data) %>%
     filter(cwm_name == "trait2_cwm")
 
-var_labs = c(k        = "k (maximum growth rate)",
-             A        = "A (interspecific competition)",
-             B_over   = "B/A (ratio intra/inter)",
-             H_over_k = "H/k (ratio hierarch./max. growth)")
-
 # function to plot R² of CWM <-> Env relationship
 plot_average_r_squared = function(var_df, x_var, y_var, given_labs = var_labs) {
     
@@ -1050,7 +1020,7 @@ plot_average_r_squared = function(var_df, x_var, y_var, given_labs = var_labs) {
     labs(x = var_labs[[x_var]],
          y = var_labs[[y_var]],
          fill = "CWM <-> Env. R^2",
-         subtitle = paste0("Average R-squared over all values of ",
+         subtitle = paste0("Avg. R² over values of ",
                            paste(not_used_vars, collapse = " and "))) +
     theme(legend.position = "top",
           legend.text = element_text(angle = 45))
@@ -1114,7 +1084,7 @@ plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
         labs(x = var_labs[[x_var]],
              y = var_labs[[y_var]],
              fill = "CWM <-> Env. Slope",
-             subtitle = paste0("Average R-squared over all values of ",
+             subtitle = paste0("Avg. R² over values of ",
                                paste(not_used_vars, collapse = " and "))) +
         theme(legend.position = "top",
           legend.text = element_text(angle = 45))
