@@ -1,8 +1,13 @@
 ---
 title: "fdcoexist equation only"
-author: "Matthias Grenié"
-date: "14 décembre 2018"
+author:
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
+date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{Full equation of the model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 ---
 title: "fdcoexist"

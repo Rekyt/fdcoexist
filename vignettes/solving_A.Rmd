@@ -1,11 +1,16 @@
 ---
-title: "Solving Equation to get A value"
-author: "Matthias Grenié"
-date: "7 septembre 2018"
+title: "Exploring to find the good A value"
+author:
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{Full equation of the model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 header-includes:
     - \usepackage{cancel}
     - \usepackage{mathtools}
-output: pdf_document
 ---
 
 ```{r setup, include=FALSE}

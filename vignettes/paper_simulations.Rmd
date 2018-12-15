@@ -1,9 +1,13 @@
 ---
-title: "fdcoexist"
+title: "fdcoexist exploring single simulations"
 author:
-    - Pierre Denelle, Matthias Grenié, Cyrille Violle and Caroline M. Tucker
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{Full equation of the model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 editor_options: 
   chunk_output_type: console
 ---

@@ -1,9 +1,20 @@
 Package: fdcoexist
-Title: What the Package Does (one line, title case)
+Title: Coexistence Model of Species
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-Depends: R (>= 3.3.3),
+Authors@R: c(
+  person("Matthias", "Grenié", email = "matthias.grenie@gmail.com",
+         role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4659-7522")),
+  person("Pierre", "Denelle", email = "pierre.denelle@cefe.cnrs.fr",
+         role = "aut", comment = c(ORCID = "0000-0001-5037-2281")),
+  person("Caroline", "Tucker", email = "carolinemtucker@gmail.com",
+         role = "aut", comment = c(ORCID = "0000-0002-4871-2010")),
+  person("François", "Munoz", email = "fmunoz@univ-grenoble-alpes.fr",
+         role = "ths", comment = c(ORCID = "0000-0001-8776-4705")),
+  person("Cyrille", "Violle", email = "cyrille.violle@cefe.cnrs.fr",
+         role = "ths", comment = c(ORCID = "0000-0002-2471-9226"))
+  )
+Description: The package provides functions to use a modified Beverton-Holt model used in the Denelle et al. (in prep) article. It provides all the code necessary to rerun the analyses that are available in the vignettes.
+Depends: R (>= 3.3.0),
     ggplot2
 License: GPL (>= 2)
 Encoding: UTF-8

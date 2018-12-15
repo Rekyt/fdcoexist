@@ -4,7 +4,8 @@
 \alias{env_curve}
 \title{Species growth rate for a given trait and environment}
 \usage{
-env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5)
+env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5,
+  H = 0, th_max = 25)
 }
 \arguments{
 \item{trait_values}{a numeric vector of species trait values}
@@ -15,11 +16,17 @@ env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5)
 (giving the name of the concerned traits in \code{traits}
 df), \code{growth_weight} the relative weight of the trait in
 growth and \code{compet_weight} the relative weight of the
-trait in competition.}
+trait in competition, both hierarchical and based on
+limiting similarity.}
 
 \item{k}{a scalar giving the maximum growth rate in optimal environment}
 
 \item{width}{a numeric for niche breadth, constant in gaussian function}
+
+\item{H}{a numeric for hierarchical competition such as H/k <= 1}
+
+\item{th_max}{a numeric for the hierarchical trait value maximizing
+hierarchical competiton}
 }
 \description{
 Using traits that affect growth rate and specified environments, this

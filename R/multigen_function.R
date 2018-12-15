@@ -94,8 +94,8 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
     if (identical(sum(trait_weights$growth_weight, na.rm = TRUE), 0)) {
         R <- k
     } else {
-        fitness_traits <- subset(trait_weights, growth_weight != 0 &
-                                  !is.na(growth_weight))
+        fitness_traits <- trait_weights[trait_weights$growth_weight != 0 &
+                                         !is.na(trait_weights$growth_weight),]
 
         given_values <- trait_values[fitness_traits$trait]
 
@@ -107,8 +107,8 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         # Add to R effect of hierarchical traits
         # (so far same traits as limiting similarity traits)
-        hierarchical_trait <- subset(trait_weights, compet_weight != 0 &
-                                         !is.na(compet_weight))
+        hierarchical_trait <- trait_weights[trait_weights$compet_weight != 0 &
+                                         !is.na(trait_weights$compet_weight),]
 
         hierarchical_values <- trait_values[hierarchical_trait$trait]
 
@@ -151,6 +151,9 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param k           a scalar giving the maximum growth rate in optimal
 #'                    environment
 #' @param width       a numeric giving niche breadth of all species
+#' @param H           a numeric for hierarchical competition such as H/k <= 1
+#' @param th_max      a numeric for the hierarchical trait value maximizing
+#'                    hierarchical competiton
 #'
 #'
 #' @export
@@ -308,8 +311,8 @@ compute_compet_distance = function(trait_weights, traits, dist_power = NULL) {
     } else {
 
         # Extract weights of traits contributing to competition
-        compet_weights <- subset(trait_weights, !is.na(compet_weight) &
-                                     compet_weight != 0)
+        compet_weights <- trait_weights[!is.na(trait_weights$compet_weight) &
+                                            trait_weights$compet_weight != 0,]
 
         compet_traits <- traits[, compet_weights$trait, drop = FALSE]
 

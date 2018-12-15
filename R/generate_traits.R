@@ -36,7 +36,7 @@ generate_cor_traits = function(number_patches, number_species, number_other = 9,
     res <- lapply(seq(n_other), function(x) {
 
         # Independent trait
-        x2 <- runif(number_species, 1, number_patches)
+        x2 <- stats::runif(number_species, 1, number_patches)
 
         # Correlated trait in second row
         cov_mat %*% matrix(c(x1, x2), nrow = 2, byrow = TRUE)
