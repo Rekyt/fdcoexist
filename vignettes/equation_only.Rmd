@@ -62,6 +62,15 @@ with $T_c$ the number of traits contributing to competition, $\text{trait}_{i, c
 \end{gather}
 with $w_c$ the contribution of trait $c$ in limiting similarity.
 
+However, we here consider linear dissimilarity, the influence of species is directly proportional to their distance. There are some evidence in the literature that closer species have disproportionately more impact that species further way. This suggest an exponential shape of the competition as follow:
+
+\begin{gather}
+\delta_{ij}' = \exp \left[ \left(
+    \frac{\delta_{ij} - \text{min}(\delta_{ij})}{
+        \text{max}(\delta_{ij}) - \text{min}(\delta_{ij})} \right)^d \right],
+\end{gather}
+
+with $d$ the power to which we should scale the exponential relationship
 
 ## Adding intra-specific competition
 
