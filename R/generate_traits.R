@@ -89,12 +89,12 @@ create_trait_weights = function(R, A, H) {
         stop("All weights should be in [0; 100]")
     }
 
-    g_weights = c(100 - R, R, 0)
-    c_weights = c(0,       A, 100 - A)
-    h_weights = c(0,       H, 0)
+    g_weights = c(100 - R, R,       0,       0)
+    c_weights = c(      0, A, 100 - A,       0)
+    h_weights = c(      0, H,       0, 100 - H)
 
     data.frame(
-        trait            = paste0("trait", 1:3),
+        trait            = paste0("trait", 1:4),
         growth_weight    = g_weights/100,
         compet_weight    = c_weights/100,
         hierarchy_weight = h_weights/100

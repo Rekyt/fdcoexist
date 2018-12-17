@@ -14,8 +14,7 @@ editor_options:
 
 ```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      error = TRUE,
-                      fig.width = 8, fig.height = 10.5)
+                      error = TRUE, fig.width = 8, fig.height = 10.5)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -26,26 +25,6 @@ suppressPackageStartupMessages({
     })
 })
 # Functions --------------------------------------------------------------------
-compute_moments = function(simulation_routine, trait_df = traits) {
-    # CWM computation
-    ab_rel = (simulation_routine$compo[,,150] /
-                  rowSums(simulation_routine$compo[,,150]))
-    cwm_df = ab_rel %*% trait_df
-    # Values stored in moments_df
-    moments_df = as.data.frame(cwm_df)
-    colnames(moments_df) = "cwm"
-    moments_df = tibble::rownames_to_column(moments_df, "patch")
-    moments_df$env = seq(patches)
-    # Add CWV
-    cwv_df = (ab_rel %*% trait_df^2) - cwm_df^2
-    cwv_df = as.data.frame(cwv_df)
-    colnames(cwv_df) = "cwv"
-    cwv_df = tibble::rownames_to_column(cwv_df, "patch")
-    moments_df = dplyr::left_join(moments_df, cwv_df, by = "patch")
-    
-    return(moments_df)
-}
-
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
 landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
@@ -117,13 +96,13 @@ n_patches <- 25   # Number of patches
 n_species <- 100  # Number of species
 n_gen     <- 150  # Length of model run (generations)
 initpop   <- 50   # initial population size
-n_traits  <- 3    # number of traits
+n_traits  <- 4    # number of traits
 k         <- 1.2  # Maximum growth rate
 env_width <- seq(10, 10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 
 # Competition + Dispersion coefficients
-B = 1e-3 # Scalar for intraspecific competition
+B = 1e-2 # Scalar for intraspecific competition
 A = 1e-5 # Alpha scalar
 d = 0.0 # Dispersal percentage
 
@@ -145,16 +124,18 @@ composition[,, "time1"] <- initpop
 
 # Define scenarios -------------------------------------------------------------
 # Scenarios on traits affecting growth and competition
-trait_scenarios = c("R0A0", "R0A100", "R10A90", "R25A75", "R50A50", "R75A25",
-                    "R90A10", "R100A0", "R100A100")
+trait_scenarios = c("R0A0H0", "R0A100H0", "R10A90H0", "R25A75H0", "R50A50H0",
+                    "R75A25H0", "R90A10H0", "R100A0H0", "R100A100H0",
+                    "R100A100H100")
 
 names(trait_scenarios) = trait_scenarios
 
 trait_scenarios = lapply(trait_scenarios, function(scenar_name) {
-    growth = as.numeric(gsub("R(\\d+)A\\d+", "\\1", scenar_name, perl = TRUE))
-    compet = as.numeric(gsub("R\\d+A(\\d+)", "\\1", scenar_name, perl = TRUE))
+    growth = as.numeric(gsub("R(\\d+)A\\d+H\\d+", "\\1", scenar_name, perl = TRUE))
+    compet = as.numeric(gsub("R\\d+A(\\d+)H\\d+", "\\1", scenar_name, perl = TRUE))
+    hier   = as.numeric(gsub("R\\d+A\\d+H(\\d+)", "\\1", scenar_name, perl = TRUE))
     
-    create_trait_weights(growth, compet, 0)
+    create_trait_weights(growth, compet, hier)
 })
 
 # Generate traits --------------------------------------------------------------
@@ -178,12 +159,16 @@ theme_set(theme_bw(12) +
 
 # Graphical functions ----------------------------------------------------------
 label_scenar_facets = function(scenar_name) {
-    scenar_name %>%
+    scenar_prop = scenar_name %>%
         as.character() %>%
         str_remove("R") %>%
         str_split("A") %>%
-        map_chr(~paste0("Growth = ",  .x[1], "%\n",
-                        "Compet. = ", .x[2], "%"))
+        lapply(str_split, pattern = "H") %>%
+        unlist()
+    
+        paste0("Growth = ",  scenar_prop[1], "%\n",
+               "Compet. = ", scenar_prop[2], "%\n",
+               "Hier. = ",   scenar_prop[3], "%")
 }
 
 facet_scenar = facet_wrap(vars(scenario),
@@ -193,6 +178,10 @@ label_compet_env = labeller(compet_status = c(compet = "Competition",
                                               no_compet = "Only intra comp."),
                             env_width     = c(constant = "Constant\nEnv. Filter Strength",
                                               varying  = "Varying\nEnv. Filter Strength"))
+
+lab_cor =c(no_cor   = "r = 0",
+                                    low_cor  = "r = 0.3",
+                                    high_cor = "r = 0.7")
 
 # Plot the relationship between species abundances along the environment in the
 # different scenarios
@@ -277,8 +266,7 @@ fig_ind_landscape = function(simul_df, simul_label, n_bins = 22,
         stat_summary_2d(geom = "raster", bins = n_bins, interpolate = TRUE) +
         geom_line(aes(patch_optim, cwm, color = "firebrick"), size = 1) +
         facet_grid(vars(scenario), vars(trait_name),
-                   labeller = labeller(scenario = label_scenar_facets,
-                                       trait_name = function(x) gsub("_", " ",
+                   labeller = labeller(trait_name = function(x) gsub("_", " ",
                                                                      x))) +
         scale_fill_viridis_c(trans = given_trans, option = "E") +
         scale_color_manual(name = "CWM", values = c(firebrick = "grey80"),
@@ -848,9 +836,7 @@ plot_r2_cwm_env = ggplot(mod_df %>%
                labeller = label_compet_env) +
     ylim(0, NA) +
     scale_fill_viridis_d("Trait\nCorrelations",
-                         labels = c(no_cor   = "r = 0",
-                                    low_cor  = "r = 0.3",
-                                    high_cor = "r = 0.7")) +
+                         labels = lab_cor) +
     guides(fill = guide_legend(override.aes = list(size = 4))) +
     labs(subtitle = "R2 of trait2 CWM ~ environment",
          x = "Scenario",
@@ -859,6 +845,27 @@ plot_r2_cwm_env = ggplot(mod_df %>%
           legend.position = "top")
 
 plot_r2_cwm_env
+
+# Slope plot
+mod_df %>%
+    mutate(mod_tidy = lapply(mod_cwm_env, broom::tidy)) %>%
+    unnest(mod_tidy) %>%
+    filter(term == "patch_optim") %>%
+    ggplot(aes(scenario, estimate)) +
+    geom_point(aes(fill = fct_rev(cor_level)),
+               size = 4, position = position_dodge(width = 0.7),
+               shape = 21) +
+    facet_grid(rows = vars(env_width, compet_status),
+               cols = vars(cwm_name),
+               labeller = label_compet_env) +
+    ylim(0, 1) +
+    scale_fill_viridis_d("Trait\nCorrelations", labels = lab_cor) +
+    labs(subtitle = paste0("Slope of Trait 2 CWM ~ environment ",
+                           "with Constant Env. Filter"),
+         x = "Scenario",
+         y = "Slope") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
 ```
 
 
