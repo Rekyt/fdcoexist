@@ -95,28 +95,28 @@ with $A$ the coefficient scaling inter-specific competition and $B$ the one for 
 
 Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
 \begin{equation}
-R_{i, x} = \sum_{g = 1}^T w_g \times k \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2} \right)
+R_{i, x} = \sum_{g = 1}^{T_g} w_g \times k \times \exp\left(- \frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right)
 \end{equation}
 
-with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^T w_g = 1$), $\text{trait}_{g, i}$ the trait number $g$ of species $i$.
+with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T_g} w_g = 1$), $\text{trait}_{i, g}$ the trait number $g$ of species $i$.
 
 ## Adding Hierarchical competition
 
 If we add hierarchical competition, the species with the largest trait has an increased growth. We can include this as a "bonus" term in the computation of the growth term $R_{i,x}$ such as:
 
 \begin{gather}
-R_{i, x} = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}}\\
-R_{i, x, \text{hierarch.}} = \sum_{c = 1}^{T_c} w_c \times H \times \frac{t_i}{\text{max}(t_i)} \\
-R_{i, x} = k \left[ \sum_{g = 1}^T w_g \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2} \right) + \frac{H}{k} \sum_{c = 1}^{T_c} w_c \frac{\text{trait}_i}{\text{max}(\text{trait}_i)} \right],
+R_{i, x}                   = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}} \\
+R_{i, x, \text{hierarch.}} = \sum_{h = 1}^{T_h} w_h \times H \times \frac{\text{trait}_{i, h}}{\text{max}(\text{trait}_{i, h})} \\
+R_{i, x}                   = k \left[  \sum_{g = 1}^{T_g} w_g \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2} \right) + \frac{H}{k} \sum_{h = 1}^{T_h} w_h \frac{\text{trait}_{i, h}}{\text{max}(\text{trait}_{i, h})} \right],
 \end{gather}
 
-with$w_g$ the weight of traits contributing to growth, $w_c$ the weight of traits contributing to competition (as many as $T_c$).
+with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of traits contributing to hierarchical competition (as many as $T_h$).
 
 So the final equation looks like the following:
 
 \begin{equation}
 N_{t+1, i, x} = \frac{
-    k \left[ \displaystyle\sum_{g = 1}^T w_g \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) + \frac{H}{k} \sum_{c = 1}^{T_c} w_c \frac{\text{trait}_{i, c}}{\text{max}(\text{trait}_{i, c})} \right] \times N_{t, i, x}}{
+    k \left[ \displaystyle\sum_{g = 1}^T w_g \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) + \frac{H}{k} \sum_{h = 1}^{T_h} w_h \frac{\text{trait}_{i, h}}{\text{max}(\text{trait}_{i, h})} \right] \times N_{t, i, x}}{
 1 + A \left( \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
 \frac{B}{A} \times N_{t,i,x} \right)
 }

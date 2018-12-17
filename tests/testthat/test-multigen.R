@@ -60,7 +60,7 @@ test_that("compute_compet_distance() works", {
                                                     growth_weight = c(1, 0),
                                                     compet_weight = c(0, 0)),
                                          sp_traits),
-                 matrix(0, ncol = 3, nrow = 3,
+                 matrix(1, ncol = 3, nrow = 3,
                         dimnames = list(rownames(sp_traits),
                                         rownames(sp_traits))))
 
@@ -73,6 +73,7 @@ test_that("compute_compet_distance() works", {
                                                     compet_weight = c(0.5, 0.5)),
                                          sp_traits),
                  multi_trait_dist)
+
     expect_equal(compute_compet_distance(data.frame(trait = paste0("trait", 1:2),
                                                     growth_weight = c(1, 0),
                                                     compet_weight = c(0.3, 0.3)),

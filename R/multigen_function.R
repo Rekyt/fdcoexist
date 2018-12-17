@@ -298,14 +298,12 @@ check_trait_weights = function(trait_weights, traits) {
 #' @return an euclidean distance matrix (of type matrix)
 #' @importFrom stats dist weighted.mean
 #' @export
-#'
-#' @examples
 compute_compet_distance = function(trait_weights, traits, dist_power = NULL) {
 
     # If there is no defined competition trait, there is no competition
     if (sum(trait_weights$compet_weight, na.rm = TRUE) == 0) {
 
-        disttraits <- matrix(0, nrow = nrow(traits), ncol = nrow(traits),
+        disttraits <- matrix(1, nrow = nrow(traits), ncol = nrow(traits),
                              dimnames = list(rownames(traits),
                                              rownames(traits)))
 
