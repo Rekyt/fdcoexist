@@ -6,8 +6,8 @@ date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 vignette: >
   %\VignetteIndexEntry{Full equation of the model}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
 ---
@@ -129,36 +129,17 @@ composition[,, "time1"] <- initpop
 
 # Define scenarios -------------------------------------------------------------
 # Scenarios on traits affecting growth and competition
-trait_scenarios = list(
-    R0A0 = data.frame(trait = paste0("trait", 1:3),
-                      growth_weight = c(1, 0, 0),
-                      compet_weight = c(0, 0, 1)),
-    R0A100 = data.frame(trait = paste0("trait", 1:3),
-                        growth_weight = c(1, 0, 0),
-                        compet_weight = c(0, 1, 0)),
-    R10A90   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0.90, 0.10, 0),
-                          compet_weight = c(0,    0.90, 0.10)),
-    R25A75   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0.75, 0.25, 0),
-                          compet_weight = c(0,    0.75, 0.25)),
-    R50A50   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0.5, 0.5, 0),
-                          compet_weight = c(0,   0.5, 0.5)),
-    R75A25   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0.25, 0.75, 0),
-                          compet_weight = c(0,    0.25, 0.75)),
-    R90A10   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0.10, 0.90, 0),
-                          compet_weight = c(0,    0.10, 0.90)),
-    R100A0   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0, 1, 0),
-                          compet_weight = c(0, 0, 1)),
-    R100A100 = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0, 1, 0),
-                          compet_weight = c(0, 1, 0))
-)
+trait_scenarios = c("R0A0", "R0A100", "R10A90", "R25A75", "R50A50", "R75A25",
+                    "R90A10", "R100A0", "R100A100")
 
+names(trait_scenarios) = trait_scenarios
+
+trait_scenarios = lapply(trait_scenarios, function(scenar_name) {
+    growth = as.numeric(gsub("R(\\d+)A\\d+", "\\1", scenar_name, perl = TRUE))
+    compet = as.numeric(gsub("R\\d+A(\\d+)", "\\1", scenar_name, perl = TRUE))
+    
+    create_trait_weights(growth, compet, 0)
+})
 
 # Define meta-function to run all analyses with many trait levels --------------
 
@@ -357,10 +338,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     all_compet = list(compet = list(A = given_A, B = given_A * given_B_over_A,
                                     H = given_k * given_H_over_k))
     
-    our_scenars = list(
-    R50A50   = data.frame(trait = paste0("trait", 1:3),
-                          growth_weight = c(0.5, 0.5, 0),
-                          compet_weight = c(0,   0.5, 0.5)))
+    our_scenars = list(R50A50   = create_trait_weights(50, 50, 0))
     
     all_facets = expand.grid(compet_status = names(all_compet),
                              env_width     = names(all_env),

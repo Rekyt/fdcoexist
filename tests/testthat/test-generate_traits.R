@@ -49,3 +49,28 @@ test_that("Trait generation works", {
                                              paste0("trait", 1:2))),
                       tolerance = 5e-2)
 })
+
+test_that("Trait Weights generation works", {
+
+    expect_error(create_trait_weights("a", "nb", "k"),
+                 "All provided weights should be integer", fixed = TRUE)
+
+    expect_error(create_trait_weights(-5, 6, 76),
+                 "All weights should be in [0; 100]", fixed = TRUE)
+
+    expect_equal(create_trait_weights(5, 0, 0),
+                 data.frame(
+                     trait            = paste0("trait", 1:3),
+                     growth_weight    = c(0.95, 0.05, 0),
+                     compet_weight    = c(   0,    0, 1),
+                     hierarchy_weight = c(   0,    0, 0)
+                 ))
+
+    expect_equal(create_trait_weights(5, 0, 50),
+                 data.frame(
+                     trait            = paste0("trait", 1:3),
+                     growth_weight    = c(0.95, 0.05, 0),
+                     compet_weight    = c(   0,    0, 1),
+                     hierarchy_weight = c(   0,  0.5, 0)
+                 ))
+})

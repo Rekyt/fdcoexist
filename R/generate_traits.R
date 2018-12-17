@@ -65,3 +65,38 @@ generate_cor_traits = function(number_patches, number_species, number_other = 9,
 
     return(trait_mat)
 }
+
+
+#' Generates a data.frame of trait weights
+#'
+#' Only in the special case of 3 traits with 1 always driving growth and
+#' another one only driving competition
+#' @param R an integer value giving the contribution of trait in growth
+#' @param A an integer value giving the contribution of trait in limiting
+#'          similarity
+#' @param H an integer value giving the contribution of trait in hierarchical
+#'          competition
+#'
+#' @export
+#'
+#' @examples create_trait_weights(50, 50, 0)
+create_trait_weights = function(R, A, H) {
+    if (any(!is.numeric(R), !is.numeric(A), !is.numeric(H))) {
+        stop("All provided weights should be integer")
+    }
+
+    if (any(R > 100, R < 0, A > 100, A < 0, H > 100, H < 0)) {
+        stop("All weights should be in [0; 100]")
+    }
+
+    g_weights = c(100 - R, R, 0)
+    c_weights = c(0,       A, 100 - A)
+    h_weights = c(0,       H, 0)
+
+    data.frame(
+        trait            = paste0("trait", 1:3),
+        growth_weight    = g_weights/100,
+        compet_weight    = c_weights/100,
+        hierarchy_weight = h_weights/100
+    )
+}
