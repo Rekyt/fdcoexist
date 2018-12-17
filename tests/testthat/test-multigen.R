@@ -177,6 +177,21 @@ test_that("env_curve() works as expected", {
                  fixed = TRUE)
 
     # Add Hierarchical Competition
+    expect_error(env_curve(sp_traits[3,, drop = FALSE], 1,
+                           data.frame(trait = paste0("trait", 1:2),
+                                      growth_weight = c(0.5, 0.5),
+                                      compet_weight = c(1, 1)),
+                           1.25, 1, H = 50),
+                 "H must be inferior or equal to k", fixed = TRUE)
+
+    expect_error(env_curve(sp_traits[3,, drop = FALSE], 1,
+                           data.frame(trait = paste0("trait", 1:2),
+                                      growth_weight = c(0.5, 0.5),
+                                      compet_weight = c(1, 1)),
+                           1.25, 1, th_max = 0.1),
+                 paste0("th_max must be superior to any hierarchical trait ",
+                        "value in a directional filter perspective"),
+                 fixed = TRUE)
 })
 
 test_that("alphaterm() works as expected", {

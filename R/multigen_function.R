@@ -112,12 +112,12 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         hierarchical_values <- trait_values[hierarchical_trait$trait]
 
-        if (sum(hierarchical_values > th_max) > 0){
-            stop("th_max must be superior to any hierarchical trait value in a
-                 directional filter perspective")
+        if (any(hierarchical_values > th_max)) {
+            stop("th_max must be superior to any hierarchical trait value in a",
+                 " directional filter perspective")
         }
 
-        if (H > k){
+        if (H > k) {
             stop("H must be inferior or equal to k")
         }
 
@@ -161,13 +161,11 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max,
                      dist_power = dist_power) {
 
-    power_dist = dist_power
-
     # Check assumptions on trait_weights data.frame
     check_trait_weights(trait_weights, traits)
 
     # Calculate dist trait
-    disttraits <- compute_compet_distance(trait_weights, traits, power_dist)
+    disttraits <- compute_compet_distance(trait_weights, traits, dist_power)
 
     # Calculate fitness term (R = growth)
     env_param <- cbind(env, k, width, H, th_max)
