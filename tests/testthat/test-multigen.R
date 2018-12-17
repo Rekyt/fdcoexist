@@ -107,6 +107,18 @@ test_that("Computing trait distance with exponents", {
                                                   rownames(sp_traits))))
 })
 
+test_that("bevHoltFct() returns good result", {
+
+    R = runif(1, 1, 2)
+
+    N = rbinom(1, 80, 1/2)
+
+    expect_equal(bevHoltFct(0, 0, 0), 0)
+    expect_equal(bevHoltFct(R, N, 0), R * N)
+    expect_equal(bevHoltFct(R, 0, 0), 0)
+    expect_equal(bevHoltFct(0, N, 0), 0)
+    expect_equal(bevHoltFct(R, N, R * N - 1), 1)
+})
 
 test_that("env_curve() works as expected", {
     # Single trait growth
