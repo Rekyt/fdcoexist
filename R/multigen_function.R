@@ -306,7 +306,9 @@ compute_compet_distance = function(trait_weights, traits, dist_power = NULL) {
     # If there is no defined competition trait, there is no competition
     if (sum(trait_weights$compet_weight, na.rm = TRUE) == 0) {
 
-        disttraits <- matrix(0, nrow = nrow(traits), ncol = nrow(traits))
+        disttraits <- matrix(0, nrow = nrow(traits), ncol = nrow(traits),
+                             dimnames = list(rownames(traits),
+                                             rownames(traits)))
 
     } else {
 
