@@ -6,8 +6,8 @@ date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 vignette: >
   %\VignetteIndexEntry{Full equation of the model}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
 ---
@@ -146,33 +146,42 @@ composition[,, "time1"] <- initpop
 # Define scenarios -------------------------------------------------------------
 # Scenarios on traits affecting growth and competition
 trait_scenarios = list(
-    R0A0 = data.frame(trait = paste0("trait", 1:3),
-                      growth_weight = c(1, 0, 0),
-                      compet_weight = c(0, 0, 1)),
-    R0A100 = data.frame(trait = paste0("trait", 1:3),
-                        growth_weight = c(1, 0, 0),
-                        compet_weight = c(0, 1, 0)),
+    R0A0     = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(1, 0, 0),
+                          compet_weight = c(0, 0, 1),
+                          hierarchy_weight = c(0, 0, 0)),
+    R0A100   = data.frame(trait = paste0("trait", 1:3),
+                          growth_weight = c(1, 0, 0),
+                          compet_weight = c(0, 1, 0),
+                          hierarchy_weight = c(0, 0, 0)),
     R10A90   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.90, 0.10, 0),
-                          compet_weight = c(0,    0.90, 0.10)),
+                          compet_weight = c(0,    0.90, 0.10),
+                          hierarchy_weight = c(0, 0, 0)),
     R25A75   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.75, 0.25, 0),
-                          compet_weight = c(0,    0.75, 0.25)),
+                          compet_weight = c(0,    0.75, 0.25),
+                          hierarchy_weight = c(0, 0, 0)),
     R50A50   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.5, 0.5, 0),
-                          compet_weight = c(0,   0.5, 0.5)),
+                          compet_weight = c(0,   0.5, 0.5),
+                          hierarchy_weight = c(0, 0, 0)),
     R75A25   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.25, 0.75, 0),
-                          compet_weight = c(0,    0.25, 0.75)),
+                          compet_weight = c(0,    0.25, 0.75),
+                          hierarchy_weight = c(0, 0, 0)),
     R90A10   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0.10, 0.90, 0),
-                          compet_weight = c(0,    0.10, 0.90)),
+                          compet_weight = c(0,    0.10, 0.90),
+                          hierarchy_weight = c(0, 0, 0)),
     R100A0   = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0, 1, 0),
-                          compet_weight = c(0, 0, 1)),
+                          compet_weight = c(0, 0, 1),
+                          hierarchy_weight = c(0, 0, 0)),
     R100A100 = data.frame(trait = paste0("trait", 1:3),
                           growth_weight = c(0, 1, 0),
-                          compet_weight = c(0, 1, 0))
+                          compet_weight = c(0, 1, 0),
+                          hierarchy_weight = c(0, 0, 0))
 )
 
 # Generate traits --------------------------------------------------------------
@@ -312,62 +321,7 @@ fig_ind_landscape = function(simul_df, simul_label, n_bins = 22,
 ```
 
 This document presents the relationships between functional traits of species and an environmental gradient.
-
-Our coexistence model is developed following this equation:
-
-\begin{equation}
-N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha_i}
-\end{equation}
-
-with
-
-\begin{gather}
-\alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})\\
-R_{i, x} = k \times \exp\left(- \frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right)
-\end{gather}
-
-If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
-
-\begin{equation}
-N_{t+1, i, x} = \frac{
-k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
-1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times (1 - \delta_{ij})
-}
-\end{equation}
-
-The equation above only considers inter-specific competition when $j \neq i$ in the sum. We can however add intra-specific competition when $j = i$. Each site has a species-specific carrying capacity $K$ as the number of individuals approaches this carrying capacity the intra-specific competition increases:
-\begin{equation}
-\alpha_{ii} = B \times N_{t,i,x}
-\end{equation}
-
-Thus the equation becomes:
-
-\begin{equation}
-N_{t+1, i, x} = \frac{
-k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
-1 + A \left( \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
-\frac{B}{A} \times N_{t,i,x} \right)
-}
-\end{equation}
-
-with $A$ the coefficient scaling inter-specific competition and $B$ the one for intra-specific competition. 
-
-Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
-\begin{equation}
-R_{i, x} = \sum_{g = 1}^T w_g \times k \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2} \right)
-\end{equation}
-
-with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^T w_g = 1$), $\text{trait}_{g, i}$ the trait number $g$ of species $i$.
-
-If we add hierarchical competition, the species with the largest trait has an increased growth. We can include this as a "bonus" term in the computation of the growth term $R_{i,x}$ such as:
-
-\begin{gather}
-R_{i, x} = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}}\\
-R_{i, x, \text{hierarch.}} = \sum_{c = 1}^{T_c} w_c \times H \times \frac{t_i}{\text{max}(t_i)} \\
-R_{i, x} = k \left[ \sum_{g = 1}^T w_g \times \exp\left(- \frac{(\text{trait}_{g,i} - \text{env}_x)^2}{2\times \text{width}^2} \right) + \frac{H}{k} \sum_{c = 1}^{T_c} w_c \frac{\text{trait}_i}{\text{max}(\text{trait}_i)} \right],
-\end{gather}
-
-with$w_g$ the weight of traits contributing to growth, $w_c$ the weight of traits contributing to competition (as many as $T_c$).
+Refer to the `equation_only` vignette to see the development of the equation used in our model.
 
 # Constant environmental filtering strength
 

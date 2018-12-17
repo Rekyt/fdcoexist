@@ -107,8 +107,8 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         # Add to R effect of hierarchical traits
         # (so far same traits as limiting similarity traits)
-        hierarchical_trait <- trait_weights[trait_weights$compet_weight != 0 &
-                                         !is.na(trait_weights$compet_weight),]
+        hierarchical_trait <- trait_weights[trait_weights$hierarchy_weight != 0 &
+                                         !is.na(trait_weights$hierarchy_weight),]
 
         hierarchical_values <- trait_values[hierarchical_trait$trait]
 
@@ -123,10 +123,10 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         R_h <- H * (hierarchical_values/(th_max))
         # Weigh each trait function of contribution to competition
-        R_h <- weighted.mean(R_h, hierarchical_trait$compet_weight)
+        R_h <- weighted.mean(R_h, hierarchical_trait$hierarchy_weight)
 
         # Final sum
-        R <- R + R_h
+        R <- sum(R, R_h, na.rm = TRUE)
     }
 }
 
@@ -262,7 +262,8 @@ check_trait_weights = function(trait_weights, traits) {
     }
 
     # Check that trait_weightts contains the needed columns
-    needed_cols = c("trait", "growth_weight", "compet_weight")
+    needed_cols = c("trait", "growth_weight", "compet_weight",
+                    "hierarchy_weight")
 
     if (!all(needed_cols %in% colnames(trait_weights))) {
 

@@ -6,8 +6,9 @@ sp_traits = matrix(c(1, 2, 1, 1, 2, 0), ncol = 2)
 dimnames(sp_traits) = list(species = paste0("sp", 1:3),
                            trait   = paste0("trait", 1:2))
 trait_weights = data.frame(trait = paste0("trait", 1:2),
-                           growth_weight = c(1, 0),
-                           compet_weight = c(0, 1))
+                           growth_weight    = c(1, 0),
+                           compet_weight    = c(0, 1),
+                           hierarchy_weight = c(0, 1))
 
 # Actual tests -----------------------------------------------------------------
 
@@ -24,19 +25,20 @@ test_that("testing check_trait_weights()", {
     ## Missing columns
     # Forgotten single colunms
     expect_error(check_trait_weights(trait_weights[, 1:2], sp_traits),
-                 "Column(s) compet_weight is (are) not in trait_weights",
-                 fixed = TRUE)
+                 paste0("Column(s) compet_weight, hierarchy_weight is ",
+                        "(are) not in trait_weights"), fixed = TRUE)
     expect_error(check_trait_weights(trait_weights[, c(1, 3)], sp_traits),
-                 "Column(s) growth_weight is (are) not in trait_weights",
-                 fixed = TRUE)
+                 paste0("Column(s) growth_weight, hierarchy_weight is ",
+                        "(are) not in trait_weights"), fixed = TRUE)
     expect_error(check_trait_weights(trait_weights[, 2:3], sp_traits),
-                 "Column(s) trait is (are) not in trait_weights",
-                 fixed = TRUE)
+                 paste0("Column(s) trait, hierarchy_weight is ",
+                        "(are) not in trait_weights"), fixed = TRUE)
     # Forgot several columns
     expect_error(check_trait_weights(trait_weights[, 1, drop = FALSE],
                                      sp_traits),
-                 paste0("Column(s) growth_weight, compet_weight is (are) not ",
-                        "in trait_weights"), fixed = TRUE)
+                 paste0("Column(s) growth_weight, compet_weight, ",
+                        "hierarchy_weight is (are) not in trait_weights"),
+                 fixed = TRUE)
 
     ## Missing traits in weights df that are in traits df
     expect_error(check_trait_weights(trait_weights, sp_traits[, 1, drop = FALSE]),
@@ -139,7 +141,8 @@ test_that("env_curve() works as expected", {
     expect_equal(env_curve(sp_traits[2,, drop = FALSE], 1,
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0, 0),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(0, 0)),
                            1.25, 10),
                  1.25)
 
@@ -147,7 +150,8 @@ test_that("env_curve() works as expected", {
     expect_equal(env_curve(sp_traits[3,, drop = FALSE], 1,
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0.5, 0.5),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(0, 0)),
                            1.25, 10),
                  mean(c(1.25 * exp(-1/200), 1.25)))
 
@@ -156,14 +160,16 @@ test_that("env_curve() works as expected", {
     expect_equal(env_curve(sp_traits[3,, drop = FALSE], 1,
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0.5, 0.5),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(0, 0)),
                            1.25, 1),
                  mean(c(1.25 * exp(-1/2), 1.25)))
 
     expect_error(env_curve(sp_traits[2,, drop = FALSE], 1,
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0, 0),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(0, 0)),
                            1.25, c(10, 5)),
                  "There are either too many or not enough values for width",
                  fixed = TRUE)
@@ -171,7 +177,8 @@ test_that("env_curve() works as expected", {
     expect_error(env_curve(sp_traits[2,, drop = FALSE], c(1, 2, 3),
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0, 0),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(0, 0)),
                            1.25, c(10, 5)),
                  "There are either too many or not enough values for width",
                  fixed = TRUE)
@@ -180,18 +187,27 @@ test_that("env_curve() works as expected", {
     expect_error(env_curve(sp_traits[3,, drop = FALSE], 1,
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0.5, 0.5),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(1, 1)),
                            1.25, 1, H = 50),
                  "H must be inferior or equal to k", fixed = TRUE)
 
     expect_error(env_curve(sp_traits[3,, drop = FALSE], 1,
                            data.frame(trait = paste0("trait", 1:2),
                                       growth_weight = c(0.5, 0.5),
-                                      compet_weight = c(1, 1)),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(1, 1)),
                            1.25, 1, th_max = 0.1),
                  paste0("th_max must be superior to any hierarchical trait ",
                         "value in a directional filter perspective"),
                  fixed = TRUE)
+
+    expect_silent(env_curve(sp_traits[3,, drop = FALSE], 1,
+                           data.frame(trait = paste0("trait", 1:2),
+                                      growth_weight = c(0.5, 0.5),
+                                      compet_weight = c(1, 1),
+                                      hierarchy_weight = c(1, 1)),
+                           1.25, 1))
 })
 
 test_that("alphaterm() works as expected", {
