@@ -19,9 +19,15 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
     suppressWarnings({
+        
         library("cowplot")
-        library("tidyverse")
+        library("tidyr")
+        library("dplyr")
+        library("ggplot2")
+        library("stringr")
+        library("tibble")
         library("directlabels")
+        library("furrr")
     })
 })
 # Functions --------------------------------------------------------------------

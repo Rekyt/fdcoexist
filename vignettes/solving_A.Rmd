@@ -16,7 +16,15 @@ header-includes:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 
-library("tidyverse")
+
+library("cowplot")
+library("tidyr")
+library("dplyr")
+library("ggplot2")
+library("stringr")
+library("tibble")
+library("directlabels")
+library("furrr")
 
 # Functions --------------------------------------------------------------------
 compute_moments = function(simulation_routine, trait_df = traits) {

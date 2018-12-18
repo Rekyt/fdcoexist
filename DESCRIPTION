@@ -27,7 +27,11 @@ Suggests:
     testthat,
     knitr,
     rmarkdown,
-    tidyr
+    tidyr,
+    dplyr,
+    stringr,
+    furrr,
+    tibble
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
