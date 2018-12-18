@@ -14,7 +14,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 
 library("tidyverse")
 
@@ -133,9 +133,10 @@ names(env) <- dimnames(composition)[[1]]
 composition[,, "time1"] <- initpop
 
 # Scenarios on traits affecting growth and competition
-single_scenar = data.frame(trait = "trait1",
-                           growth_weight = 1,
-                           compet_weight = 1)
+single_scenar = data.frame(trait            = "trait1",
+                           growth_weight    = 1,
+                           compet_weight    = 1,
+                           hierarchy_weight = 1)
 
 # Generate traits --------------------------------------------------------------
 trait_df = data.frame(trait1 = rep(1, n_species))

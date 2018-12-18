@@ -6,15 +6,15 @@ date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 vignette: >
   %\VignetteIndexEntry{Full equation of the model}
-  %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 8, fig.height = 10.5, cache = TRUE)
+                      fig.width = 8, fig.height = 10.5, cache = TRUE, eval = FALSE)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({

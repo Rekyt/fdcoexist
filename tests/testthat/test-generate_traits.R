@@ -35,19 +35,19 @@ test_that("Trait generation works", {
                       matrix(c(1, 0.3, 0.3, 1), nrow = 2, ncol = 2,
                              dimnames = list(paste0("trait", 1:2),
                                              paste0("trait", 1:2))),
-                      tolerance = 5e-2)
+                      tolerance = 8e-2)
 
     expect_equivalent(cor(mid_cor),
                       matrix(c(1, 0.7, 0.7, 1), nrow = 2, ncol = 2,
                              dimnames = list(paste0("trait", 1:2),
                                              paste0("trait", 1:2))),
-                      tolerance = 5e-2)
+                      tolerance = 8e-2)
 
     expect_equivalent(cor(high_cor),
                       matrix(c(1, 0.9, 0.9, 1), nrow = 2, ncol = 2,
                              dimnames = list(paste0("trait", 1:2),
                                              paste0("trait", 1:2))),
-                      tolerance = 5e-2)
+                      tolerance = 8e-2)
 })
 
 test_that("Trait Weights generation works", {
@@ -60,17 +60,17 @@ test_that("Trait Weights generation works", {
 
     expect_equal(create_trait_weights(5, 0, 0),
                  data.frame(
-                     trait            = paste0("trait", 1:3),
-                     growth_weight    = c(0.95, 0.05, 0),
-                     compet_weight    = c(   0,    0, 1),
-                     hierarchy_weight = c(   0,    0, 0)
+                     trait            = paste0("trait", 1:4),
+                     growth_weight    = c(0.95, 0.05, 0, 0),
+                     compet_weight    = c(0,    0,    1, 0),
+                     hierarchy_weight = c(0,    0,    0, 1)
                  ))
 
     expect_equal(create_trait_weights(5, 0, 50),
                  data.frame(
-                     trait            = paste0("trait", 1:3),
-                     growth_weight    = c(0.95, 0.05, 0),
-                     compet_weight    = c(   0,    0, 1),
-                     hierarchy_weight = c(   0,  0.5, 0)
+                     trait            = paste0("trait", 1:4),
+                     growth_weight    = c(0.95, 0.05, 0, 0),
+                     compet_weight    = c(   0, 0,    1, 0),
+                     hierarchy_weight = c(   0, 0.5,  0, 0.5)
                  ))
 })

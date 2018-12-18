@@ -16,14 +16,18 @@ Authors@R: c(
 Description: The package provides functions to use a modified Beverton-Holt model used in the Denelle et al. (in prep) article. It provides all the code necessary to rerun the analyses that are available in the vignettes.
 Depends: R (>= 3.3.0),
     ggplot2
+LazyData: true
 License: GPL (>= 2)
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 6.1.1
-Roxygen: list(markdown = TRUE)
 Imports: 
     directlabels,
     FD,
     cowplot
 Suggests: 
-    testthat
+    testthat,
+    knitr,
+    rmarkdown,
+    tidyr
+RoxygenNote: 6.1.1
+Roxygen: list(markdown = TRUE)
+VignetteBuilder: knitr

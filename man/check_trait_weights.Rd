@@ -31,8 +31,9 @@ traits = data.frame(trait1 = 1, trait2 = 2, trait3 = 3)
 
 weight_1 = data.frame(
    trait = c("trait1", "trait2", "trait3"),
-   growth_weight = c(0.5, 0.5, 0),
-   compet_weight = c(0, 0.5, 0.5))
+   growth_weight    = c(0.5, 0.5, 0),
+   compet_weight    = c(0,   0.5, 0.5),
+   hierarchy_weight = c(0,   0,   0))
 
 # Silent function
 check_trait_weights(weight_1, traits)

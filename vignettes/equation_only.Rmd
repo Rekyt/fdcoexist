@@ -9,15 +9,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
----
-title: "fdcoexist"
-author:
-    - Pierre Denelle, Matthias Grenié, Cyrille Violle and Caroline M. Tucker
-date: "`r format(Sys.time(), '%d %B %Y')`"
-output: pdf_document
-editor_options: 
-  chunk_output_type: console
----
 
 ## Basic Equation
 

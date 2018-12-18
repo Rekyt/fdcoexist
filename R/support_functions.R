@@ -13,13 +13,18 @@
 #'         * `patch_optim` environmental value of given patch
 #' @export
 landscape_df = function(given_composition, time = 150) {
-    given_composition$compo[,,time] %>%
-        as.data.frame() %>%
-        rownames_to_column("patch") %>%  # Add patch names as column
+
+    compo_df = as.data.frame(given_composition$compo[,,time])
+
+    # Add patch names as column
+    compo_df$patch = rownames(compo_df)
+
+
         # Transform to tidy data.frame (define name of columns and column name
         # for values)
-        gather("species", "N", -patch) %>%
+    tidy_compo = tidyr::gather(compo_df, "species", "N", -"patch")
         # Add patch number as a new column and compute distance to optimal value
-        mutate(patch_optim = gsub("\\w+(\\d+)", "\\1", patch) %>%
-                   as.numeric())
+    tidy_compo$patch_optim = gsub("\\w+(\\d+)", "\\1", tidy_compo$patch)
+
+    return(tidy_compo)
 }

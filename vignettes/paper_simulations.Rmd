@@ -6,8 +6,8 @@ date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 vignette: >
   %\VignetteIndexEntry{Full equation of the model}
-  %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 editor_options: 
   chunk_output_type: console
 ---

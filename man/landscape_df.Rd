@@ -4,20 +4,20 @@
 \alias{landscape_df}
 \title{Simpler data.frame extracted from population}
 \usage{
-landscape_df(given_composition, trait_df, trait_weights, time = 150)
+landscape_df(given_composition, time = 150)
 }
 \arguments{
 \item{given_composition}{a result of a call to \code{multigen()}}
 
-\item{trait_df}{the trait data.frame}
-
-\item{trait_weights}{the data.frame of trait weights}
+\item{time}{the timestep at which population abundances should
+be extracted}
 }
 \value{
 a data.frame with the following columns
-* \code{N} for population
-* \code{species}
-* \code{growth_trait}
+* \code{patch} the label of the patch
+* \code{species} the name of the species
+* \code{N} the local abundance of species in given patch
+* \code{patch_optim} environmental value of given patch
 }
 \description{
 Simpler data.frame extracted from population
