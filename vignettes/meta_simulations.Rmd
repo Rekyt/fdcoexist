@@ -14,7 +14,7 @@ editor_options:
 
 ```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 8, fig.height = 10.5, cache = TRUE, eval = FALSE)
+                      fig.width = 8, fig.height = 10.5, cache = TRUE)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -22,6 +22,8 @@ suppressPackageStartupMessages({
         library("cowplot")
         library("tidyr")
         library("dplyr")
+        library("purrr")
+        library("forcats")
         library("ggplot2")
         library("stringr")
         library("tibble")
@@ -103,7 +105,7 @@ n_patches <- 25   # Number of patches
 n_species <- 100  # Number of species
 n_gen     <- 150  # Length of model run (generations)
 initpop   <- 50   # initial population size
-n_traits  <- 3    # number of traits
+n_traits  <- 4    # number of traits
 k         <- 1.15 # Maximum growth rate
 env_width <- rep(10, length.out = n_patches)  # Envtal filter strength
 var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
@@ -331,7 +333,14 @@ meta_simul_patch = function(seed_number, given_k = k, given_A = A) {
 
 meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                                   given_B_over_A = B/A,
-                                  given_H_over_k = H/k) {
+                                  given_H_over_k = H/k, given_scenars = NULL) {
+    
+    our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
+    
+    if (!is.null(given_scenars)) {
+        our_scenars = given_scenars
+    }
+    
     set.seed(seed_number)
     uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
@@ -341,8 +350,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     
     all_compet = list(compet = list(A = given_A, B = given_A * given_B_over_A,
                                     H = given_k * given_H_over_k))
-    
-    our_scenars = list(R50A50   = create_trait_weights(50, 50, 0))
+
     
     all_facets = expand.grid(compet_status = names(all_compet),
                              env_width     = names(all_env),
@@ -351,7 +359,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     
     apply(all_facets, 1, function(given_row) {
         multigen(traits = all_cor[[given_row[["cor_level"]]]],
-                 trait_weights = trait_scenarios[[given_row[["scenario"]]]],
+                 trait_weights = our_scenars[[given_row[["scenario"]]]],
                  env = env,
                  time = n_gen,
                  species = n_species,
@@ -366,7 +374,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                  th_max = th_max,
                  width = all_env[[given_row[["env_width"]]]]) %>%
             landscape_df(all_cor[[given_row[["cor_level"]]]],
-                         trait_scenarios[[given_row[["scenario"]]]],
+                         our_scenars[[given_row[["scenario"]]]],
                          time = 150) %>%
             inner_join(all_cor[[given_row[["cor_level"]]]] %>%
                            as.data.frame() %>%
@@ -385,7 +393,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     }) %>%
         bind_rows() %>%
         mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
-        mutate(scenario = fct_relevel(scenario, names(trait_scenarios)),
+        mutate(scenario = fct_relevel(scenario, names(our_scenars)),
                patch_optim = as.numeric(gsub("patches", "", patch))) %>%
         group_by(seed_number, compet_status, env_width, cor_level, scenario,
                  patch) %>%
@@ -876,11 +884,12 @@ patch_k_simuls[[1]][[1]][[1]]$compo[15,,] %>%
 
 ## Coexistence plot depending on A, B/A and k
 
+
 ```{r param_space_simuls}
 list_A = 10^-(seq(2, 6, length.out = 5))
 list_k = seq(1, 1.5, length.out = 5)
 list_B_over_A = 10^seq(0, 4, length.out = 5)
-list_H_over_k = seq(0, 1, length.out = 5)
+list_H_over_k = seq(0, 2, length.out = 5)
 
 plan(multiprocess(workers = availableCores()))
 tictoc::tic()
@@ -893,7 +902,7 @@ var_a_var_k_var_ba = cross(list(run_n = seq(1), A = list_A, k = list_k,
     
     meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
                            given_H_over_k = x$H_over_k) %>%
-        mutate(k = x$k, A = x$A, B_over = x$B_over_A, H_over_k = x$H_over_k)
+        mutate(k = x$k, A = x$A, B_over_A = x$B_over_A, H_over_k = x$H_over_k)
 }, .progress = TRUE)
 tictoc::toc()
 
@@ -901,7 +910,7 @@ var_ba_df = bind_rows(var_a_var_k_var_ba)
 
 var_labs = c(k        = "k (maximum growth rate)",
              A        = "A (interspecific competition)",
-             B_over   = "B/A (ratio intra/inter)",
+             B_over_A   = "B/A (ratio intra/inter)",
              H_over_k = "H/k (ratio hierarch./max. growth)")
 ```
 
@@ -910,7 +919,7 @@ library("plotly")
 
 var_ba_df %>%
     filter(patch == "patches13", species_rich > 0) %>%
-    plot_ly(x = ~k, y = ~A, z = ~B_over, color = ~species_rich,
+    plot_ly(x = ~k, y = ~A, z = ~B_over_A, color = ~species_rich,
             text = ~paste("SR: ", species_rich)) %>%
     add_markers() %>%
     layout(scene = list(xaxis = list(title = ),
@@ -929,7 +938,7 @@ plot_species_richness = function(var_df, x_var, y_var, given_labs = var_labs) {
         ggplot(aes_string(x_var, y_var)) +
         stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
         facet_wrap(~patch) +
-        scale_fill_viridis_c() +
+        scale_fill_viridis_c(limits = c(0, 100)) +
         labs(x = var_labs[[x_var]],
              y = var_labs[[y_var]],
              fill = "Species Richness\n(at t = 150)",
@@ -946,13 +955,13 @@ plot_k_A = var_ba_df %>%
 
 plot_A_BA = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    plot_species_richness("A", "B_over") +
+    plot_species_richness("A", "B_over_A") +
     scale_x_log10() +
     scale_y_log10()
 
 plot_k_BA = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    plot_species_richness("k", "B_over") +
+    plot_species_richness("k", "B_over_A") +
     scale_y_log10()
 
 plot_k_Hk = var_ba_df %>%
@@ -966,23 +975,24 @@ plot_A_Hk = var_ba_df %>%
 
 plot_BA_Hk = var_ba_df %>%
     filter(patch %in% paste0("patches", c(1, 13))) %>%
-    plot_species_richness("B_over", "H_over_k") +
+    plot_species_richness("B_over_A", "H_over_k") +
     scale_x_log10()
 
-plot_grid(plot_k_A,
+sr_grid = plot_grid(plot_k_A,
           plot_k_Hk,
           plot_A_BA,
           plot_A_Hk,
           plot_k_BA,
           plot_BA_Hk,
           ncol = 2)
+sr_grid
 ```
 
 ```{r biplot_with_R2}
 var_ba_r2 = var_ba_df %>%
     ungroup() %>%
     filter(!is.nan(trait2_cwm)) %>%
-    nest(-k, -A,-B_over, -H_over_k, -seed_number, -scenario) %>%
+    nest(-k, -A,-B_over_A, -H_over_k, -seed_number, -scenario) %>%
     mutate(data = data %>%
                map(~.x %>%
                        gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
@@ -1002,7 +1012,7 @@ plot_average_r_squared = function(var_df, x_var, y_var, given_labs = var_labs) {
     var_df %>%
         ggplot(aes_string(x_var, y_var)) +
     stat_summary_2d(aes(z = adj.r.squared), fun = "mean", geom = "raster") +
-    scale_fill_viridis_c() +
+    scale_fill_viridis_c(limits = c(0, 1)) +
     labs(x = var_labs[[x_var]],
          y = var_labs[[y_var]],
          fill = "CWM <-> Env. R^2",
@@ -1018,11 +1028,11 @@ plot_average_r_squared = function(var_df, x_var, y_var, given_labs = var_labs) {
 plot_k_A_r2 = plot_average_r_squared(var_ba_r2, "k", "A") +
     scale_y_log10()
 
-plot_A_BA_r2 = plot_average_r_squared(var_ba_r2, "A", "B_over") +
+plot_A_BA_r2 = plot_average_r_squared(var_ba_r2, "A", "B_over_A") +
     scale_x_log10() +
     scale_y_log10()
 
-plot_k_BA_r2 = plot_average_r_squared(var_ba_r2, "k", "B_over") +
+plot_k_BA_r2 = plot_average_r_squared(var_ba_r2, "k", "B_over_A") +
     scale_y_log10()
 
 plot_k_Hk_r2 = plot_average_r_squared(var_ba_r2, "k", "H_over_k")
@@ -1030,23 +1040,25 @@ plot_k_Hk_r2 = plot_average_r_squared(var_ba_r2, "k", "H_over_k")
 plot_A_Hk_r2 = plot_average_r_squared(var_ba_r2, "A", "H_over_k") +
     scale_x_log10()
 
-plot_BA_Hk_r2 = plot_average_r_squared(var_ba_r2, "B_over", "H_over_k") +
+plot_BA_Hk_r2 = plot_average_r_squared(var_ba_r2, "B_over_A", "H_over_k") +
     scale_x_log10()
 
-plot_grid(plot_k_A_r2,
+r2_grid = plot_grid(plot_k_A_r2,
           plot_k_Hk_r2,
           plot_A_BA_r2,
           plot_A_Hk_r2,
           plot_k_BA_r2,
           plot_BA_Hk_r2,
           ncol = 2)
+
+r2_grid
 ```
 
 ```{r biplot_with_slopes}
 var_ba_slope = var_ba_df %>%
     ungroup() %>%
     filter(!is.nan(trait2_cwm)) %>%
-    nest(-k, -A,-B_over, -H_over_k, -seed_number, -scenario) %>%
+    nest(-k, -A,-B_over_A, -H_over_k, -seed_number, -scenario) %>%
     mutate(data = data %>%
                map(~.x %>%
                        gather("cwm_name", "cwm_value", ends_with("cwm")) %>%
@@ -1066,7 +1078,7 @@ plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
     var_df %>%
         ggplot(aes_string(x_var, y_var)) +
         stat_summary_2d(aes(z = estimate), fun = "mean", geom = "raster") +
-        scale_fill_viridis_c() +
+        scale_fill_viridis_c(limits = c(0, 1)) +
         labs(x = var_labs[[x_var]],
              y = var_labs[[y_var]],
              fill = "CWM <-> Env. Slope",
@@ -1080,11 +1092,11 @@ plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
 plot_k_A_slope = plot_average_slope(var_ba_slope, "k", "A") +
     scale_y_log10()
 
-plot_A_BA_slope = plot_average_slope(var_ba_slope, "A", "B_over") +
+plot_A_BA_slope = plot_average_slope(var_ba_slope, "A", "B_over_A") +
     scale_x_log10() +
     scale_y_log10()
 
-plot_k_BA_slope = plot_average_slope(var_ba_slope, "k", "B_over") +
+plot_k_BA_slope = plot_average_slope(var_ba_slope, "k", "B_over_A") +
     scale_y_log10()
 
 plot_k_Hk_slope = plot_average_slope(var_ba_slope, "k", "H_over_k")
@@ -1092,14 +1104,42 @@ plot_k_Hk_slope = plot_average_slope(var_ba_slope, "k", "H_over_k")
 plot_A_Hk_slope = plot_average_slope(var_ba_slope, "A", "H_over_k") +
     scale_x_log10()
 
-plot_BA_Hk_slope = plot_average_slope(var_ba_slope, "B_over", "H_over_k") +
+plot_BA_Hk_slope = plot_average_slope(var_ba_slope, "B_over_A", "H_over_k") +
     scale_x_log10()
 
-plot_grid(plot_k_A_slope,
+slope_grid = plot_grid(plot_k_A_slope,
           plot_k_Hk_slope,
           plot_A_BA_slope,
           plot_A_Hk_slope,
           plot_k_BA_slope,
           plot_BA_Hk_slope,
           nrow = 3)
+
+slope_grid
+```
+
+
+```{r cwm_env_param}
+var_ba_df %>%
+    filter(k %in% c(1.125, 1.5), H_over_k %in% c(0, 1, 2), A <= 1e-3, A >= 1e-5, B_over_A >= 10, B_over_A <= 1e4) %>%
+    ggplot(aes(patch_optim, trait2_cwm, color = as.factor(B_over_A))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line() +
+    facet_grid(vars(A), vars(k, H_over_k), labeller = label_context) +
+    labs(x = "Environment",
+         y = "Trait 2 CWM")
+```
+
+## Considering all scenarios to explore
+
+If we want to be exhaustive in terms of scenario we can use the following:
+
+```{r all_scenars}
+weights = round(seq(0, 100, length.out = 3), digits = 0)
+
+scenar_df = expand.grid(R = weights, A = weights, H = weights) %>%
+    as_data_frame() %>%
+    mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
+           trait_weights = purrr::pmap(list(R, A, H),
+                                       ~create_trait_weights(..1, ..2, ..3)))
 ```

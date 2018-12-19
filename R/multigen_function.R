@@ -117,10 +117,6 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
                  " directional filter perspective")
         }
 
-        if (H > k) {
-            stop("H must be inferior or equal to k")
-        }
-
         R_h <- H * (hierarchical_values/(th_max))
         # Weigh each trait function of contribution to competition
         R_h <- weighted.mean(R_h, hierarchical_trait$hierarchy_weight)
