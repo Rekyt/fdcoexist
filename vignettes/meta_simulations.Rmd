@@ -951,3 +951,60 @@ ggplot(var_scenars_abund %>%
                                                          color = "grey50"))) +
         theme(legend.position = "top")
 ```
+
+We want to test the effect of initial conditions on patch dynamics.
+
+```{r init_cond_patch_dynamics}
+composition[,, "time1"] <- initpop
+
+plan(multiprocess(workers = availableCores()))
+tictoc::tic()
+
+higher_init_pop = meta_simul_A_B_k_and_H(1,
+                                         fixed_k,
+                                         fixed_A,
+                                         fixed_B_over_A,
+                                         fixed_H_over_k,
+                                         given_scenars = scenar_list) %>%
+    map_dfr(as_tibble)
+
+tictoc::toc()
+
+higher_init_pop_df = higher_init_pop %>%
+    mutate(patch1 = map(compo, function(x) {
+        x["patches1",,] %>%
+            as.data.frame() %>%
+            rownames_to_column("species") %>%
+            gather("timestep", "N", -species) %>%
+            mutate(timestep = as.numeric(gsub("time", "", timestep)))
+    }),
+    patch13 = map(compo, function(x) {
+        x["patches13",,] %>%
+            as.data.frame() %>%
+            rownames_to_column("species") %>%
+            gather("timestep", "N", -species) %>%
+            mutate(timestep = as.numeric(gsub("time", "", timestep)))
+    }),
+    patch25 = map(compo, function(x) {
+        x["patches25",,] %>%
+            as.data.frame() %>%
+            rownames_to_column("species") %>%
+            gather("timestep", "N", -species) %>%
+            mutate(timestep = as.numeric(gsub("time", "", timestep)))
+    }),
+    R_scenar = as.numeric(gsub("R(\\d+)A\\d+H\\d+", "\\1", scenario, perl = TRUE)),
+    A_scenar = as.numeric(gsub("R\\d+A(\\d+)H\\d+", "\\1", scenario, perl = TRUE)),
+    H_scenar = as.numeric(gsub("R\\d+A\\d+H(\\d+)", "\\1", scenario, perl = TRUE)))
+
+higher_init_pop_df  %>%
+    unnest(patch1) %>%
+    ggplot(aes(timestep, N, color = species)) +
+    geom_line() +
+    facet_grid(vars(R_scenar), vars(A_scenar, H_scenar), labeller = label_context) +
+    labs(subtitle = paste0("Patch 1 Dynamics – ",
+                           "A: ", fixed_A,
+                           " ; k: ", fixed_k,
+                           " ; B_over_A: ", fixed_B_over_A,
+                           " ; H_over_k: ", fixed_H_over_k)) +
+    theme(legend.position = "none")
+```
