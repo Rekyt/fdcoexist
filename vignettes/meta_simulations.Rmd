@@ -32,7 +32,7 @@ suppressPackageStartupMessages({
     })
 })
 
-plan(multiprocess, workers = availableCores())
+plan(multiprocess, workers = 15)
 # Functions --------------------------------------------------------------------
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
@@ -438,7 +438,7 @@ lab_cor = c(uncor    = "r = 0",
 list_A = 2*10^-(seq(4, 6))
 list_k = 1 + c(0.05, 0.15, 0.25)
 
-plan(multiprocess(workers = availableCores() - 1))
+plan(multiprocess, workers = 15)
 tictoc::tic()
 
 var_k_var_a = cross(list(run_n = seq(total_runs), A = list_A, k = list_k)) %>%
@@ -471,7 +471,7 @@ We want to follow the dynamics through time to understand the variation in Rsqua
 patch_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
                         k)
 
-plan(multiprocess)
+plan(multiprocess, workers = 15)
 tictoc::tic()
 
 patch_k_simuls = future_map(seq(total_runs), function(x) {
@@ -513,7 +513,7 @@ list_k = seq(1, 1.5, length.out = 5)
 list_B_over_A = 10^seq(0, 4, length.out = 5)
 list_H_over_k = seq(0, 2, length.out = 5)
 
-plan(multiprocess(workers = availableCores()))
+plan(multiprocess, workers = 15)
 tictoc::tic()
 
 var_a_var_k_var_ba = cross(list(run_n = seq(1), A = list_A, k = list_k,
@@ -842,7 +842,7 @@ scenar_list = scenar_df$trait_weights
 names(scenar_list) = scenar_df$scenar_name
 
 # Actual simulation
-plan(multiprocess(workers = availableCores()))
+plan(multiprocess, workers = 15)
 tictoc::tic()
 
 var_scenars = meta_simul_A_B_k_and_H(1,
@@ -957,7 +957,7 @@ We want to test the effect of initial conditions on patch dynamics.
 ```{r init_cond_patch_dynamics}
 composition[,, "time1"] <- 500
 
-plan(multiprocess(workers = availableCores()))
+plan(multiprocess, workers = 15)
 tictoc::tic()
 
 higher_init_pop = meta_simul_A_B_k_and_H(1,
