@@ -16,6 +16,15 @@ jobs:
             - deps1-{{ .Branch }}
             - deps1-
       - run:
+          name: Set environmental variables
+          command: |
+            Rscript --vanilla \
+              -e 'dsc <- read.dcf("DESCRIPTION")' \
+              -e 'cat(sprintf("export PKG_TARBALL=%s_%s.tar.gz\n", dsc[,"Package"], dsc[,"Version"]))' \
+              -e 'cat(sprintf("export RCHECK_DIR=%s.Rcheck\n", dsc[,"Package"]))' \
+              >> ${BASH_ENV}
+
+      - run:
           name: Install Dependencies
           command: |
             R -e 'devtools::install_deps(dependencies = TRUE)'
@@ -33,7 +42,7 @@ jobs:
       - run:
           name: Check Package, Coverage & Good Practice
           command: |
-            Rscript -e 'message(devtools::check_failures(path = '${RCHECK_DIR}'))'
+            Rscript -e 'message(devtools::check_failures(path = "${RCHECK_DIR}"))'
             Rscript -e 'covr::codecov()'
             Rscript -e "goodpractice::gp()"
       - store_artifacts:
