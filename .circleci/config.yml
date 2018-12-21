@@ -25,7 +25,7 @@ jobs:
             - "/usr/local/lib/R/site-library"
       - run:
           command: |
-            R -e 'devtools::check()'
+            R -e 'devtools::check(args = "--no-vignettes")'
             R -e 'covr::codecov()'
             R -e "goodpractice::gp()"
       - store_artifacts:
