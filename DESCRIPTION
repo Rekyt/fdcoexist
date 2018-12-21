@@ -33,7 +33,8 @@ Suggests:
     furrr,
     tibble,
     forcats,
-    spelling
+    spelling,
+    tictoc
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
