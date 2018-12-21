@@ -6,7 +6,7 @@
 #' patches provided. Then the other traits are generated correlated to this
 #' first one. In the end all the traits are scaled between 1 and the number of
 #' patches.
-#' @param number_patches a numeric value giving the total number of pathces
+#' @param number_patches a numeric value giving the total number of patches
 #' @param number_species a numeric value giving the total number of species to
 #'                       simulate (number of rows in the trait tables)
 #' @param number_other   a numeric value giving the number of additional traits

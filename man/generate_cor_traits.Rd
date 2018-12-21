@@ -8,7 +8,7 @@ generate_cor_traits(number_patches, number_species, number_other = 9,
   cor_coef = 0.7)
 }
 \arguments{
-\item{number_patches}{a numeric value giving the total number of pathces}
+\item{number_patches}{a numeric value giving the total number of patches}
 
 \item{number_species}{a numeric value giving the total number of species to
 simulate (number of rows in the trait tables)}

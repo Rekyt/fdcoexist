@@ -21,7 +21,7 @@
 #' species j, at time t, in patch x and delta_ij the functional distance between
 #' species i and species j.
 #'
-#' @param distance competiton matrix of species
+#' @param distance dissimilarity matrix between species
 #' @param Nts      vector of abundances of species at time t
 #' @param A        scalar for the inter-specific competition
 #' @param B        scalar for the intra-specific competition
@@ -138,7 +138,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param patches     an integer giving the total number of patches to simulate
 #' @param composition the actual array containing species abundances per site
 #'                    over time, giving the initial populations of each species
-#' @param A           the scalar of inter-specific competition coefficent
+#' @param A           the scalar of inter-specific competition coefficient
 #'                    (see [bevHoltFct()])
 #' @param B           the scalar for intra-specific competition coefficient
 #'                    by default B = A
@@ -149,7 +149,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param width       a numeric giving niche breadth of all species
 #' @param H           a numeric for hierarchical competition such as H/k <= 1
 #' @param th_max      a numeric for the hierarchical trait value maximizing
-#'                    hierarchical competiton
+#'                    hierarchical competition
 #'
 #'
 #' @export
@@ -229,7 +229,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
 #'                      traits as numeric columns with names matching
 #'                      `trait_weights` column `trait`
 #'
-#' @return nothing if data.frame passess the checks, stops early otherwise.
+#' @return nothing if data.frame passes the checks, stops early otherwise.
 #' @export
 #' @examples
 #' # Working trait weights data.frame
@@ -286,7 +286,7 @@ check_trait_weights = function(trait_weights, traits) {
 #' This function compute trait distance between species using a trait matrix and
 #' a trait weights data.frame. For all the traits with competition weights not
 #' equal to zero, it computes a weighted 'composite trait' that is then used to
-#' compute euclidea trait distance between species.
+#' compute euclidean trait distance between species.
 #'
 #' @inheritParams check_trait_weights
 #' @param dist_power power used when weighting distance exponentially

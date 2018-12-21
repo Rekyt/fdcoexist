@@ -29,7 +29,7 @@ trait in competition.}
 \item{composition}{the actual array containing species abundances per site
 over time, giving the initial populations of each species}
 
-\item{A}{the scalar of inter-specific competition coefficent
+\item{A}{the scalar of inter-specific competition coefficient
 (see \code{\link[=bevHoltFct]{bevHoltFct()}})}
 
 \item{B}{the scalar for intra-specific competition coefficient
@@ -46,7 +46,7 @@ environment}
 \item{H}{a numeric for hierarchical competition such as H/k <= 1}
 
 \item{th_max}{a numeric for the hierarchical trait value maximizing
-hierarchical competiton}
+hierarchical competition}
 
 \item{dist_power}{power used when weighting distance exponentially
 (\code{NULL} by default = euclidean distance)}

@@ -43,7 +43,7 @@ landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
     compet_traits = subset(trait_weights, compet_weight != 0)$trait
     
     
-    population_df = multiple_traits_scenario$compo[,,time] %>%
+    population_df = multiple_traits_scenario$compo[[1]][,,time] %>%
         as.data.frame() %>%
         rownames_to_column("patch") %>%  # Add patch names as column
         # Transform to tidy data.frame (define name of columns and column name
@@ -464,14 +464,6 @@ var_k_var_a_cwm = var_k_var_a %>%
                        unnest(mod_glance))) %>%
     unnest(data) %>%
     filter(cwm_name == "trait2_cwm")
-# 
-# var_k_var_a_var = var_k_var_a %>%
-#     map(~.x %>%
-#             select(-ends_with("cwm"))) %>%
-#     bind_rows() %>%
-#     gather("var_name", "var_value", ends_with("var")) %>%
-#     filter(var_name == "trait2_var") %>%
-#     select(k, A, seed_number, everything())
 ```
 
 We want to follow the dynamics through time to understand the variation in Rsquare
@@ -535,6 +527,10 @@ var_a_var_k_var_ba = cross(list(run_n = seq(1), A = list_A, k = list_k,
 }, .progress = TRUE)
 tictoc::toc()
 
+set.seed(1)
+used_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0)
+
 gh = map_dfr(var_a_var_k_var_ba, function(x) as_tibble(x[[1]]))
 
 gj = gh %>%
@@ -560,34 +556,38 @@ gj = gh %>%
             mutate(timestep = as.numeric(gsub("time", "", timestep)))
     }))
 
+single_scenario = list(R50A50H50 = create_trait_weights(50, 50, 50))
 
 
 var_ba_df = lapply(var_a_var_k_var_ba, function(x) {
-    x %>%
-            landscape_df(all_cor[[given_row[["cor_level"]]]],
-                         our_scenars[[given_row[["scenario"]]]],
+    x[[1]] %>%
+            landscape_df(used_traits,
+                         single_scenario[[1]],
                          time = 150) %>%
-            inner_join(all_cor[[given_row[["cor_level"]]]] %>%
+            inner_join(used_traits %>%
                            as.data.frame() %>%
                            rownames_to_column("species"),
                        by = "species") %>%
             group_by(patch) %>%
             mutate(rel_abund = N/sum(N)) %>%
             ungroup() %>%
-            mutate(compet_status = given_row[["compet_status"]],
-                   env_width     = given_row[["env_width"]],
-                   cor_level     = given_row[["cor_level"]],
-                   scenario      = given_row[["scenario"]],
-                   seed_number = seed_number) %>%
-            select(seed_number, compet_status, env_width, cor_level, scenario,
-                   everything())
+            mutate(k             = x[[1]]$k,
+                   A             = x[[1]]$A,
+                   B_over_A      = x[[1]]$B_over_A,
+                   H_over_k      = x[[1]]$H_over_k,
+                   compet_status = "compet",
+                   env_width     = "constant",
+                   cor_level     = "uncor",
+                   scenario      = names(single_scenario),
+                   seed_number   = 1) %>%
+            select(k, A, B_over_A, H_over_k, seed_number, compet_status,
+                   env_width, cor_level, scenario, everything())
 }) %>%
         bind_rows() %>%
         mutate_at(vars(contains("trait")), funs(cwm = rel_abund * .)) %>%
-        mutate(scenario = fct_relevel(scenario, names(our_scenars)),
-               patch_optim = as.numeric(gsub("patches", "", patch))) %>%
-        group_by(k, A, B_over_A, H_over_k, seed_number, compet_status, env_width, cor_level, scenario,
-                 patch) %>%
+        mutate(patch_optim = as.numeric(gsub("patches", "", patch))) %>%
+        group_by(k, A, B_over_A, H_over_k, seed_number, compet_status,
+                 env_width, cor_level, scenario, patch) %>%
         summarise(species_rich = sum(N > 0),
                   trait1_cwm   = sum(trait1_cwm),
                   trait2_cwm   = sum(trait2_cwm),
@@ -955,7 +955,7 @@ ggplot(var_scenars_abund %>%
 We want to test the effect of initial conditions on patch dynamics.
 
 ```{r init_cond_patch_dynamics}
-composition[,, "time1"] <- initpop
+composition[,, "time1"] <- 500
 
 plan(multiprocess(workers = availableCores()))
 tictoc::tic()

@@ -8,7 +8,7 @@ Compute alpha term in Beverton-Holt function}
 alphaterm(distance, Nts, A, B)
 }
 \arguments{
-\item{distance}{competiton matrix of species}
+\item{distance}{dissimilarity matrix between species}
 
 \item{Nts}{vector of abundances of species at time t}
 

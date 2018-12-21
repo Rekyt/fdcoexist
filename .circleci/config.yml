@@ -27,6 +27,7 @@ jobs:
           command: |
             R -e 'devtools::check()'
             R -e 'covr::codecov()'
+            R -e "goodpractice::gp()"
       - store_artifacts:
           path: man/
           destination: man

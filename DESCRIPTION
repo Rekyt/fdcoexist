@@ -31,7 +31,9 @@ Suggests:
     dplyr,
     stringr,
     furrr,
-    tibble
+    tibble,
+    forcats,
+    spelling
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr

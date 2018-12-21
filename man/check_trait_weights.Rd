@@ -18,7 +18,7 @@ traits as numeric columns with names matching
 \code{trait_weights} column \code{trait}}
 }
 \value{
-nothing if data.frame passess the checks, stops early otherwise.
+nothing if data.frame passes the checks, stops early otherwise.
 }
 \description{
 This is an internal help function to check the trait weights data.frame

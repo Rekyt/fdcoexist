@@ -27,5 +27,5 @@ an euclidean distance matrix (of type matrix)
 This function compute trait distance between species using a trait matrix and
 a trait weights data.frame. For all the traits with competition weights not
 equal to zero, it computes a weighted 'composite trait' that is then used to
-compute euclidea trait distance between species.
+compute euclidean trait distance between species.
 }
