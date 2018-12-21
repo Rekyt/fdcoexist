@@ -16,6 +16,7 @@ jobs:
             - deps1-{{ .Branch }}
             - deps1-
       - run:
+          name: Install Dependencies
           command: |
             R -e 'devtools::install_deps(dependencies = TRUE)'
             R -e "devtools::install_github('MangoTheCat/goodpractice')"
@@ -24,10 +25,17 @@ jobs:
           paths:
             - "/usr/local/lib/R/site-library"
       - run:
+          name: Build package
+          command: R CMD build .
+      - run:
+          name: Check package
+          command: R CMD check "${PKG_TARBALL}" --as-cran --no-manual --no-vignettes
+      - run:
+          name: Check Package, Coverage & Good Practice
           command: |
-            R -e 'devtools::check(args = "--no-vignettes")'
-            R -e 'covr::codecov()'
-            R -e "goodpractice::gp()"
+            Rscript -e 'message(devtools::check_failures(path = '${RCHECK_DIR}'))'
+            Rscript -e 'covr::codecov()'
+            Rscript -e "goodpractice::gp()"
       - store_artifacts:
           path: man/
           destination: man
