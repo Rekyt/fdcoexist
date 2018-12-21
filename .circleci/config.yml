@@ -42,7 +42,7 @@ jobs:
       - run:
           name: Check Package, Coverage & Good Practice
           command: |
-            Rscript -e 'message(devtools::check_failures(path = "${RCHECK_DIR}"))'
+            Rscript -e 'message(devtools::check_failures(path = "fdcoexist.Rcheck"))'
             Rscript -e 'covr::codecov()'
             Rscript -e "goodpractice::gp()"
       - store_artifacts:
