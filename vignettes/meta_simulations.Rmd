@@ -230,14 +230,8 @@ meta_simul2 = function(seed_number, given_k = k, given_A = A) {
     set.seed(seed_number)
     uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
-    set.seed(seed_number)
-    low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                         cor_coef = 0.3)
-    
-    set.seed(seed_number)
-    high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                          cor_coef = 0.7)
-    all_cor = list(low_cor  = low_cor_traits)
+
+    all_cor = list(uncor  = uncor_traits)
     
     all_env = list(constant = env_width)
     
@@ -467,7 +461,7 @@ var_k_var_a_cwm = var_k_var_a %>%
 ```
 
 We want to follow the dynamics through time to understand the variation in Rsquare
-```{r, eval = FALSE}
+```{r time_dynamics, eval = FALSE}
 patch_k_run_char = paste0("N = ", total_runs, "; A = ", A, "; B = ", B, "; k = ",
                         k)
 
@@ -1007,4 +1001,108 @@ higher_init_pop_df  %>%
                            " ; B_over_A: ", fixed_B_over_A,
                            " ; H_over_k: ", fixed_H_over_k)) +
     theme(legend.position = "none")
+```
+
+
+## The fitness, optimality and abundance triangle
+
+Here we want to investigate the link between abundance, fitness and optimality.
+For this we first pull out a single simulation with given parameters.
+Now that we've done it for a single site we can try to generalize the process for all sites.
+
+```{r all_sites_optimality}
+given_compo = var_a_var_k_var_ba[[325]][[1]]$compo[[1]]
+
+all_sp_data = lapply(seq_len(nrow(given_compo)), function(site_index) {
+    
+    site_abund = given_compo[site_index,,]
+    
+    
+    # Estimate maximum growth rate
+    max_growth = apply(site_abund, 1, function(given_abund) {
+        
+        time_before_extinct = sum(given_abund > 0)
+        
+        growth_rate = NA
+        
+        if (time_before_extinct > 10) {
+            given_time = 1:time_before_extinct
+            
+            growth_model = growthrates::fit_spline(given_time,
+                                                   given_abund[given_time])
+            
+            growth_rate = growth_model@par["mumax"]
+        }
+    }) %>%
+        enframe("species", "max_growth_rate")
+    
+    
+    # Get optimality
+    optim_dist = apply(used_traits, 1, function(given_traits) {
+        weighted.mean(abs(site_index - given_traits), c(0.5, 0.5, 0, 0))
+    }) %>%
+        enframe("species", "distance_to_optimum")
+    
+    
+    # Abundance
+    sp_abund = site_abund[, 150] %>%
+        enframe("species", "N150") %>%
+        mutate(patch = site_index) %>%
+        select(patch, everything())
+    
+    
+    # Combine all data
+    sp_abund %>%
+        inner_join(optim_dist, by = "species") %>%
+        inner_join(max_growth, by = "species")
+}) %>%
+    bind_rows()
+```
+
+```{r plot_patches, fig.width=7, fig.height=7}
+plot_ab_growth_dist = all_sp_data %>%
+    ggplot(aes(N150, max_growth_rate, color = distance_to_optimum)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
+    ylim(0, 1) +
+    facet_wrap(~patch, labeller = label_both) +
+    scale_color_viridis_c(option = "C") +
+    labs(x     = "Abundance at time = 150",
+         y     = "Maximum Growth Rate",
+         color = "Distance to Optimum") +
+    theme(legend.position = "top")
+plot_ab_growth_dist
+
+
+plot_ab_dist_growth = all_sp_data %>%
+    ggplot(aes(N150, distance_to_optimum, color = max_growth_rate)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
+                          label.x.npc = "right") +
+    facet_wrap(~patch, labeller = label_both) +
+    scale_color_viridis_c(option = "C", limits = c(0, 1)) +
+    labs(x     = "Abundance at time = 150",
+         y     = "Distance to Optimum",
+         color = "Maximum Growth Rate") +
+    theme(legend.position = "top")
+plot_ab_dist_growth
+
+
+
+plot_growth_dist_ab = all_sp_data %>%
+    ggplot(aes(max_growth_rate, distance_to_optimum, color = N150)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
+                          label.x.npc = "right") +
+    xlim(0, 1) +
+    facet_wrap(~patch, labeller = label_both) +
+    scale_color_viridis_c(option = "C") +
+    labs(x     = "Maximum Growth Rate",
+         y     = "Distance to Optimum",
+         color = "Abundance at time = 150") +
+    theme(legend.position = "top")
+plot_growth_dist_ab
 ```
