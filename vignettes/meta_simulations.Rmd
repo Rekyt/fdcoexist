@@ -1065,7 +1065,7 @@ plot_ab_growth_dist = all_sp_data %>%
     geom_point() +
     geom_smooth(method = "lm", se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
-    ylim(0, 1) +
+    ylim(NA, 1) +
     facet_wrap(~patch, labeller = label_both) +
     scale_color_viridis_c(option = "C") +
     labs(x     = "Abundance at time = 150",
@@ -1082,7 +1082,7 @@ plot_ab_dist_growth = all_sp_data %>%
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
                           label.x.npc = "right") +
     facet_wrap(~patch, labeller = label_both) +
-    scale_color_viridis_c(option = "C", limits = c(0, 1)) +
+    scale_color_viridis_c(option = "C", limits = c(NA, 1)) +
     labs(x     = "Abundance at time = 150",
          y     = "Distance to Optimum",
          color = "Maximum Growth Rate") +
@@ -1097,7 +1097,7 @@ plot_growth_dist_ab = all_sp_data %>%
     geom_smooth(method = "lm", se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
                           label.x.npc = "right") +
-    xlim(0, 1) +
+    xlim(NA, 1) +
     facet_wrap(~patch, labeller = label_both) +
     scale_color_viridis_c(option = "C") +
     labs(x     = "Maximum Growth Rate",
