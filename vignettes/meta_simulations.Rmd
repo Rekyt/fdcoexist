@@ -1216,14 +1216,14 @@ multi_traits_triangle = map2(multi_traits_fixed, trait_list,
 fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
                             given_label_pos = "left") {
     given_df %>%
-        filter(patch %in% seq(1, 25, by = 2)) %>%
+        filter(patch %in% seq(1, 25, by = 6)) %>%
     ggplot(aes_string(x_var, y_var, color = col_var)) +
         geom_hline(yintercept = 0, linetype = 2) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
         ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
                               label.x.npc = given_label_pos, size = 3) +
-        facet_wrap(~patch + trait_cor, ncol = 12,
+        facet_wrap(~patch + trait_cor, ncol = 3,
                    labeller = labeller(patch = label_both)) +
         labs(x     = given_labs[[x_var]],
              y     = given_labs[[y_var]],
