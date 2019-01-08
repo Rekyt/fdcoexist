@@ -327,7 +327,8 @@ meta_simul_patch = function(seed_number, given_k = k, given_A = A) {
 
 meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                                   given_B_over_A = B/A,
-                                  given_H_over_k = H/k, given_scenars = NULL) {
+                                  given_H_over_k = H/k, given_scenars = NULL,
+                                  given_traits = NULL) {
     
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
     
@@ -339,6 +340,10 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
     all_cor = list(uncor = uncor_traits)
+    
+    if (!is.null(given_traits)) {
+        all_cor = given_traits
+    }
     
     all_env = list(constant = env_width)
     
@@ -1108,4 +1113,142 @@ plot_realized_growth_rate = ggplot(real_gr_df, aes(time, growth_rate,
     facet_wrap(~patch) +
     labs(x = "Time", y = "Realized Growth Rate")
 plot_realized_growth_rate
+```
+
+
+### Exploring the triangle across various trait scenarios (r = 0, r = -0.7, r = 0.7)
+
+We want to explore the relationship between fitness, optimality and local abundance in function of trait scenarios (as well as different contributions)
+
+```{r optimality_different_trait_corr}
+# Simulation parameters
+fixed_A = 1e-4
+fixed_k = 1.5
+fixed_B_over_A = 100
+fixed_H_over_k = 1
+
+# Generate trait list
+set.seed(1)
+trait_list = list(
+    uncor   = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0),
+    negcor  = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = -0.7),
+    highcor = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0.7)
+)
+
+
+# Actual simulation
+plan(multiprocess, workers = 15)
+tictoc::tic()
+
+multi_traits_fixed = cross(
+    list(run_n = seq(1),
+         A = fixed_A, k = fixed_k, B_over_A = fixed_B_over_A,
+         H_over_k = fixed_H_over_k)) %>%
+    future_map(function(x) {
+        devtools::load_all()
+        
+        meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
+                               given_H_over_k = x$H_over_k,
+                               given_traits = trait_list)
+    }, .progress = TRUE)
+tictoc::toc()
+
+given_compo = var_a_var_k_var_ba[[325]][[1]]$compo[[1]]
+
+multi_traits_triangle = map2(multi_traits_fixed, trait_list,
+                             function(simul, trait_df) {
+    
+    given_compo = simul[[1]]$compo[[1]]
+    
+    lapply(seq_len(nrow(given_compo)), function(site_index) {
+        
+        site_abund = given_compo[site_index,,]
+        
+        # Estimate maximum growth rate
+        max_growth = apply(site_abund, 1, function(given_abund) {
+            
+            time_before_extinct = sum(given_abund > 0)
+            
+            growth_rate = NA_real_
+            
+            if (time_before_extinct > 10) {
+                given_time = 1:time_before_extinct
+                
+                growth_model = growthrates::fit_spline(given_time,
+                                                       given_abund[given_time])
+                
+                growth_rate = growth_model@par[["mumax"]]
+            }
+            
+            ifelse(is.null(growth_rate), NA_real_, growth_rate)
+        }) %>%
+            enframe("species", "max_growth_rate")
+        
+        # Get optimality
+        optim_dist = apply(trait_df, 1, function(given_traits) {
+            weighted.mean(abs(site_index - given_traits), c(0.5, 0.5, 0, 0))
+        }) %>%
+            enframe("species", "distance_to_optimum")
+        
+        
+        # Abundance
+        sp_abund = site_abund[, 150] %>%
+            enframe("species", "N150") %>%
+            mutate(patch = site_index) %>%
+            select(patch, everything())
+        
+        
+        # Combine all data
+        sp_abund %>%
+            inner_join(optim_dist, by = "species") %>%
+            inner_join(max_growth, by = "species")
+    }) %>%
+        bind_rows()
+}) %>%
+    set_names(nm = names(trait_list)) %>%
+    bind_rows(.id = "trait_cor")
+```
+
+```{r plot_optimality_diff_trait_cor, fig.height=9.5}
+fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
+                            given_label_pos = "left") {
+    given_df %>%
+        filter(patch %in% seq(1, 25, by = 2)) %>%
+    ggplot(aes_string(x_var, y_var, color = col_var)) +
+        geom_hline(yintercept = 0, linetype = 2) +
+        geom_point() +
+        geom_smooth(method = "lm", se = FALSE) +
+        ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
+                              label.x.npc = given_label_pos, size = 3) +
+        facet_wrap(~patch + trait_cor, ncol = 12,
+                   labeller = labeller(patch = label_both)) +
+        labs(x     = given_labs[[x_var]],
+             y     = given_labs[[y_var]],
+             color = given_labs[[col_var]]) +
+        scale_color_viridis_c(option = "C") +
+        theme(legend.position = "top",
+              strip.text = element_text(size = 8, margin = margin()))
+}
+
+triangle_labs = c(N150                = "Abundance at time = 150",
+                  max_growth_rate     = "Maximum Growth Rate",
+                  distance_to_optimum = "Distance to Optimum")
+
+plot_multi_ab_growth_dist = fig_double_facet(
+    multi_traits_triangle, "N150", "max_growth_rate", "distance_to_optimum",
+    triangle_labs)
+plot_multi_ab_growth_dist
+
+plot_multi_ab_dist_growth = fig_double_facet(
+    multi_traits_triangle, "N150", "distance_to_optimum", "max_growth_rate",
+    triangle_labs, "right")
+plot_multi_ab_dist_growth
+
+plot_multi_growth_dist_ab = fig_double_facet(
+    multi_traits_triangle, "max_growth_rate", "distance_to_optimum", "N150",
+    triangle_labs, "right")
+plot_multi_growth_dist_ab
 ```
