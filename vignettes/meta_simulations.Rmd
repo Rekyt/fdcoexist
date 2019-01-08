@@ -525,31 +525,6 @@ set.seed(1)
 used_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                   cor_coef = 0)
 
-gh = map_dfr(var_a_var_k_var_ba, function(x) as_tibble(x[[1]]))
-
-gj = gh %>%
-    mutate(patch1 = map(compo, function(x) {
-        x["patches1",,] %>%
-            as.data.frame() %>%
-            rownames_to_column("species") %>%
-            gather("timestep", "N", -species) %>%
-            mutate(timestep = as.numeric(gsub("time", "", timestep)))
-    }),
-    patch13 = map(compo, function(x) {
-        x["patches13",,] %>%
-            as.data.frame() %>%
-            rownames_to_column("species") %>%
-            gather("timestep", "N", -species) %>%
-            mutate(timestep = as.numeric(gsub("time", "", timestep)))
-    }),
-    patch25 = map(compo, function(x) {
-        x["patches25",,] %>%
-            as.data.frame() %>%
-            rownames_to_column("species") %>%
-            gather("timestep", "N", -species) %>%
-            mutate(timestep = as.numeric(gsub("time", "", timestep)))
-    }))
-
 single_scenario = list(R50A50H50 = create_trait_weights(50, 50, 50))
 
 
@@ -946,6 +921,8 @@ ggplot(var_scenars_abund %>%
         theme(legend.position = "top")
 ```
 
+### Higher Initial population
+
 We want to test the effect of initial conditions on patch dynamics.
 
 ```{r init_cond_patch_dynamics}
@@ -1007,7 +984,6 @@ higher_init_pop_df  %>%
 ## The fitness, optimality and abundance triangle
 
 Here we want to investigate the link between abundance, fitness and optimality.
-For this we first pull out a single simulation with given parameters.
 Now that we've done it for a single site we can try to generalize the process for all sites.
 
 ```{r all_sites_optimality}
@@ -1105,4 +1081,31 @@ plot_growth_dist_ab = all_sp_data %>%
          color = "Abundance at time = 150") +
     theme(legend.position = "top")
 plot_growth_dist_ab
+```
+
+### Showing the evolution of realized growth rates across patches
+
+From a single simulation we can compute the realized growth rate. Then we can compare it across patches to see if certain patches exhibit specific dynamics.
+
+```{r realized_growth_rate}
+# Compute realized growth rates
+real_gr = plyr::aaply(var_a_var_k_var_ba[[325]][[1]]$compo[[1]], 1,
+                      function(species_time) {
+    
+  real_gr = (species_time[,-1] - species_time[, -ncol(species_time)]) /
+               species_time[,-ncol(species_time)]
+  
+  return(real_gr)
+})
+
+real_gr_df = as.data.frame.table(real_gr) %>%
+    rename(patch = X1, species = Var2, time = Var3, growth_rate = Freq) %>%
+    mutate(time = as.numeric(gsub("time", "", time)))
+
+plot_realized_growth_rate = ggplot(real_gr_df, aes(time, growth_rate,
+                                                   color = species)) +
+    geom_line() +
+    facet_wrap(~patch) +
+    labs(x = "Time", y = "Realized Growth Rate")
+plot_realized_growth_rate
 ```
