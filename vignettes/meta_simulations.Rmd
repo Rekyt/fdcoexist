@@ -577,7 +577,7 @@ var_labs = c(k        = "k (maximum growth rate)",
              H_over_k = "H/k (ratio hierarch./max. growth)")
 ```
 
-```{r interactive_species_rich_plot}
+```{r interactive_species_rich_plot, eval = FALSE}
 library("plotly")
 
 var_ba_df %>%
@@ -1122,7 +1122,7 @@ We want to explore the relationship between fitness, optimality and local abunda
 
 ```{r optimality_different_trait_corr}
 # Simulation parameters
-fixed_A = 1e-4
+fixed_A = 1e-6
 fixed_k = 1.5
 fixed_B_over_A = 100
 fixed_H_over_k = 1
@@ -1153,15 +1153,14 @@ multi_traits_fixed = cross(
         meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
                                given_H_over_k = x$H_over_k,
                                given_traits = trait_list)
-    }, .progress = TRUE)
+    }, .progress = TRUE) %>%
+    flatten()
 tictoc::toc()
-
-given_compo = var_a_var_k_var_ba[[325]][[1]]$compo[[1]]
 
 multi_traits_triangle = map2(multi_traits_fixed, trait_list,
                              function(simul, trait_df) {
-    
-    given_compo = simul[[1]]$compo[[1]]
+                                 
+    given_compo = simul$compo[[1]]
     
     lapply(seq_len(nrow(given_compo)), function(site_index) {
         
@@ -1230,7 +1229,7 @@ fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
              color = given_labs[[col_var]]) +
         scale_color_viridis_c(option = "C") +
         theme(legend.position = "top",
-              strip.text = element_text(size = 8, margin = margin()))
+              strip.text = element_text(size = 8, margin = margin(1, 1, 1, 1)))
 }
 
 triangle_labs = c(N150                = "Abundance at time = 150",
@@ -1239,7 +1238,8 @@ triangle_labs = c(N150                = "Abundance at time = 150",
 
 plot_multi_ab_growth_dist = fig_double_facet(
     multi_traits_triangle, "N150", "max_growth_rate", "distance_to_optimum",
-    triangle_labs)
+    triangle_labs) +
+    scale_y_sqrt()
 plot_multi_ab_growth_dist
 
 plot_multi_ab_dist_growth = fig_double_facet(
@@ -1249,6 +1249,7 @@ plot_multi_ab_dist_growth
 
 plot_multi_growth_dist_ab = fig_double_facet(
     multi_traits_triangle, "max_growth_rate", "distance_to_optimum", "N150",
-    triangle_labs, "right")
+    triangle_labs, "right") +
+    scale_x_sqrt()
 plot_multi_growth_dist_ab
 ```
