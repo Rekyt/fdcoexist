@@ -163,12 +163,14 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     # Calculate dist trait
     disttraits <- compute_compet_distance(trait_weights, traits, dist_power)
 
+    traits_and_k <- cbind(traits, k)
+
     # Calculate fitness term (R = growth)
     env_param <- cbind(env, k, width, H, th_max)
-    Rmatrix <- apply(traits, 1, function(x) { # Loop over the species
+    Rmatrix <- apply(traits_and_k, 1, function(x) { # Loop over the species
         apply(env_param, 1, function(y){ # Loop over env, k, width combinations
-            env_curve(x, y[1], trait_weights, k = y[2], width = y[3], H = y[4],
-                      th_max = y[5])
+            env_curve(x[-length(x)], y[1], trait_weights, k = x[length(x)],
+                      width = y[3], H = y[4], th_max = y[5])
         })
     })
 
@@ -180,7 +182,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         # Calculate niche term (alpha) including carrying capacity
         alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B)
 
-        alphalist[[m]] = alpha
+        alphalist[[m]] <- alpha
 
         composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], alpha)
 

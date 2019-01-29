@@ -32,7 +32,7 @@ suppressPackageStartupMessages({
     })
 })
 
-plan(multiprocess, workers = 15)
+plan(sequential)
 # Functions --------------------------------------------------------------------
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
@@ -1123,9 +1123,15 @@ We want to explore the relationship between fitness, optimality and local abunda
 ```{r optimality_different_trait_corr}
 # Simulation parameters
 fixed_A = 1e-6
-fixed_k = 1.5
+mean_k = 1.5
+var_k  = 0.1
 fixed_B_over_A = 100
 fixed_H_over_k = 1
+
+# Matrix of species maximum growth rates
+k_matrix = matrix(rnorm(n_species, mean_k, var_k))
+rownames(k_matrix) = paste0("species", seq(n_species))
+colnames(k_matrix) = "k"
 
 # Generate trait list
 set.seed(1)
@@ -1145,7 +1151,7 @@ tictoc::tic()
 
 multi_traits_fixed = cross(
     list(run_n = seq(1),
-         A = fixed_A, k = fixed_k, B_over_A = fixed_B_over_A,
+         A = fixed_A, k = k_matrix, B_over_A = fixed_B_over_A,
          H_over_k = fixed_H_over_k)) %>%
     future_map(function(x) {
         devtools::load_all()
