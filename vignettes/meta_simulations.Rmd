@@ -1129,6 +1129,7 @@ fixed_B_over_A = 100
 fixed_H_over_k = 1
 
 # Matrix of species maximum growth rates
+set.seed(20190129)
 k_matrix = matrix(rnorm(n_species, mean_k, var_k))
 rownames(k_matrix) = paste0("species", seq(n_species))
 colnames(k_matrix) = "k"
