@@ -219,8 +219,9 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
                                         composition[,, m + 1])
     }
-    return(list(compo = composition,
-                alpha = alphalist))
+    return(list(compo   = composition,
+                alpha   = alphalist,
+                rmatrix = Rmatrix))
 }
 
 #' Check trait weights data.frame
