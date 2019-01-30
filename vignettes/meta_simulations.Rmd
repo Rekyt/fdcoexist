@@ -1233,7 +1233,7 @@ fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
         geom_smooth(method = "lm", se = FALSE) +
         ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
                               label.x.npc = given_label_pos, size = 3) +
-        facet_wrap(~patch + trait_cor, ncol = 3,
+        facet_grid(vars(patch), vars(k_type, trait_cor),
                    labeller = labeller(patch = label_both)) +
         labs(x     = given_labs[[x_var]],
              y     = given_labs[[y_var]],
