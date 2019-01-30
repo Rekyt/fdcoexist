@@ -1124,7 +1124,7 @@ We want to explore the relationship between fitness, optimality and local abunda
 # Simulation parameters
 fixed_A = 1e-6
 mean_k = 1.5
-var_k  = 0.1
+var_k  = 0.3
 fixed_B_over_A = 100
 fixed_H = 1
 
@@ -1255,7 +1255,7 @@ plot_multi_ab_growth_dist
 
 plot_multi_ab_dist_growth = fig_double_facet(
     multi_traits_triangle, "N150", "distance_to_optimum", "max_growth_rate",
-    triangle_labs, "right", "log10")
+    triangle_labs, "right")
 plot_multi_ab_dist_growth
 
 plot_multi_growth_dist_ab = fig_double_facet(
