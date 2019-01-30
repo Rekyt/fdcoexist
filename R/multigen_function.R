@@ -185,6 +185,19 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         })
     })
 
+    # Compute only the environmental part of growth_rate
+    Rmatrix_env <- apply(traits_k_and_H, 1, function(x) { # Loop over the species
+        apply(env_param, 1, function(y){ # Loop over env, k, width combinations
+            env_curve(trait_values  = x[-c(length(x) - 1, length(x))],
+                      env_value     = y[1],
+                      trait_weights = trait_weights,
+                      k             = x[length(x) - 1],
+                      width         = y[2],
+                      H             = 0,
+                      th_max = y[3])
+        })
+    })
+
     # List of alphaterms
     alphalist = list()
 
@@ -221,7 +234,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     }
     return(list(compo   = composition,
                 alpha   = alphalist,
-                rmatrix = Rmatrix))
+                rmatrix = Rmatrix,
+                rmatenv = Rmatrix_env))
 }
 
 #' Check trait weights data.frame

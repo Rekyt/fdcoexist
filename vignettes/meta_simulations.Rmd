@@ -387,7 +387,8 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                 traits        = given_row[["cor_level"]],
                 scenario      = given_row[["scenario"]],
                 compo         = list(simul$compo),
-                rmatrix       = simul$rmatrix))
+                rmatrix       = simul$rmatrix,
+                rmatenv       = simul$rmatenv))
     })
 }
 # Generate traits --------------------------------------------------------------
@@ -1180,6 +1181,12 @@ multi_traits_triangle = map_dfr(multi_traits_fixed, function(simul_given_k) {
                  mutate(patch = as.numeric(patch)) %>%
                  gather("species", "th_growth_rate", -patch)
              
+             env_growth_rate = simul$rmatenv %>%
+                 as_data_frame() %>%
+                 rownames_to_column("patch") %>%
+                 mutate(patch = as.numeric(patch)) %>%
+                 gather("species", "env_growth_rate", -patch)
+             
              lapply(seq_len(nrow(given_compo)), function(site_index) {
                  
                  site_abund = given_compo[site_index,,]
@@ -1230,7 +1237,8 @@ multi_traits_triangle = map_dfr(multi_traits_fixed, function(simul_given_k) {
                      inner_join(max_growth, by = "species")
              }) %>%
                  bind_rows() %>%
-                 inner_join(th_growth_rate, by = c("patch", "species"))
+                 inner_join(th_growth_rate, by = c("patch", "species")) %>%
+                 inner_join(env_growth_rate, by = c("patch", "species"))
          }) %>%
         set_names(nm = names(trait_list)) %>%
         bind_rows(.id = "trait_cor") },
