@@ -327,7 +327,7 @@ meta_simul_patch = function(seed_number, given_k = k, given_A = A) {
 
 meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                                   given_B_over_A = B/A,
-                                  given_H_over_k = H/k, given_scenars = NULL,
+                                  given_H = H, given_scenars = NULL,
                                   given_traits = NULL) {
     
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
@@ -347,10 +347,10 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     
     all_env = list(constant = env_width)
     
-    all_compet = list(compet = list(A = given_A, B = given_A * given_B_over_A,
-                                    H = given_k * given_H_over_k,
-                                    B_over_A = given_B_over_A,
-                                    H_over_k = given_H_over_k))
+    all_compet = list(compet = list(A        = given_A,
+                                    B        = given_A * given_B_over_A,
+                                    H        = given_H,
+                                    B_over_A = given_B_over_A))
 
     
     all_facets = expand.grid(compet_status = names(all_compet),
@@ -379,7 +379,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
             k             = given_k,
             A             = all_compet[[given_row[["compet_status"]]]][["A"]],
             B_over_A      = all_compet[[given_row[["compet_status"]]]][["B_over_A"]],
-            H_over_k      = all_compet[[given_row[["compet_status"]]]][["H_over_k"]],
+            H             = all_compet[[given_row[["compet_status"]]]][["H"]],
             seed          = seed_number,
             compet_status = given_row[["compet_status"]],
             env           = given_row[["env_width"]],
@@ -1126,7 +1126,7 @@ fixed_A = 1e-6
 mean_k = 1.5
 var_k  = 0.1
 fixed_B_over_A = 100
-fixed_H_over_k = 1
+fixed_H = 1
 
 # Matrix of species maximum growth rates
 set.seed(20190129)
@@ -1147,24 +1147,27 @@ trait_list = list(
 
 
 # Actual simulation
-plan(multiprocess, workers = 15)
 tictoc::tic()
-
-multi_traits_fixed = cross(
-    list(run_n = seq(1),
-         A = fixed_A, k = k_matrix, B_over_A = fixed_B_over_A,
-         H_over_k = fixed_H_over_k)) %>%
-    future_map(function(x) {
-        devtools::load_all()
-        
-        meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
-                               given_H_over_k = x$H_over_k,
-                               given_traits = trait_list)
-    }, .progress = TRUE) %>%
-    flatten()
+multi_traits_fixed = list(seed     = seq(1),
+                          k        = list(k_matrix, k),
+                          A        = fixed_A,
+                          B_over_A = fixed_B_over_A,
+                          H        = fixed_H) %>%
+    cross() %>%
+    future_map(function(x){
+        meta_simul_A_B_k_and_H(
+            seed_number    = x$seed,
+            given_k        = x$k,
+            given_A        = x$A,
+            given_B_over_A = x$B_over_A,
+            given_H        = x$H,
+            given_traits   = trait_list)
+    }) %>%
+    set_names(nm = c("gaussian", "fixed"))
 tictoc::toc()
 
-multi_traits_triangle = map2(multi_traits_fixed, trait_list,
+multi_traits_triangle = map_dfr(multi_traits_fixed, function(simul_given_k) {
+                            map2(simul_given_k, trait_list,
                              function(simul, trait_df) {
                                  
     given_compo = simul$compo[[1]]
@@ -1213,14 +1216,15 @@ multi_traits_triangle = map2(multi_traits_fixed, trait_list,
             inner_join(max_growth, by = "species")
     }) %>%
         bind_rows()
-}) %>%
-    set_names(nm = names(trait_list)) %>%
-    bind_rows(.id = "trait_cor")
+                             }) %>%
+        set_names(nm = names(trait_list)) %>%
+        bind_rows(.id = "trait_cor") },
+    .id = "k_type")
 ```
 
 ```{r plot_optimality_diff_trait_cor, fig.height=9.5}
 fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
-                            given_label_pos = "left") {
+                            given_label_pos = "left", trans_col = "identity") {
     given_df %>%
         filter(patch %in% seq(1, 25, by = 6)) %>%
     ggplot(aes_string(x_var, y_var, color = col_var)) +
@@ -1234,7 +1238,7 @@ fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
         labs(x     = given_labs[[x_var]],
              y     = given_labs[[y_var]],
              color = given_labs[[col_var]]) +
-        scale_color_viridis_c(option = "C") +
+        scale_color_viridis_c(option = "C", trans = trans_col) +
         theme(legend.position = "top",
               strip.text = element_text(size = 8, margin = margin(1, 1, 1, 1)))
 }
@@ -1251,7 +1255,7 @@ plot_multi_ab_growth_dist
 
 plot_multi_ab_dist_growth = fig_double_facet(
     multi_traits_triangle, "N150", "distance_to_optimum", "max_growth_rate",
-    triangle_labs, "right")
+    triangle_labs, "right", "log10")
 plot_multi_ab_dist_growth
 
 plot_multi_growth_dist_ab = fig_double_facet(

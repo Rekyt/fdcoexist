@@ -157,20 +157,31 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max,
                      dist_power = dist_power) {
 
+    # Check k dimensions
+    if ((length(k) != 1 & length(k) != species)) {
+        stop("k should be either length one (one k for all species) or ",
+             "k should be a matrix with one row per species")
+    }
+
     # Check assumptions on trait_weights data.frame
     check_trait_weights(trait_weights, traits)
 
     # Calculate dist trait
     disttraits <- compute_compet_distance(trait_weights, traits, dist_power)
 
-    traits_and_k <- cbind(traits, k)
+    traits_k_and_H <- cbind(traits, k, H)
 
     # Calculate fitness term (R = growth)
-    env_param <- cbind(env, k, width, H, th_max)
-    Rmatrix <- apply(traits_and_k, 1, function(x) { # Loop over the species
+    env_param <- cbind(env, width, th_max)
+    Rmatrix <- apply(traits_k_and_H, 1, function(x) { # Loop over the species
         apply(env_param, 1, function(y){ # Loop over env, k, width combinations
-            env_curve(x[-length(x)], y[1], trait_weights, k = x[length(x)],
-                      width = y[3], H = y[4], th_max = y[5])
+            env_curve(trait_values  = x[-c(length(x) - 1, length(x))],
+                      env_value     = y[1],
+                      trait_weights = trait_weights,
+                      k             = x[length(x) - 1],
+                      width         = y[2],
+                      H             = x[length(x)],
+                      th_max = y[3])
         })
     })
 
