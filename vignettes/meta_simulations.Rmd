@@ -391,6 +391,96 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                 rmatenv       = simul$rmatenv))
     })
 }
+
+extract_performances_from_simul = 
+         function(simul, trait_df, compute_realized_growth_rate = TRUE) {
+             
+             given_compo = simul$compo[[1]]
+             
+             given_k = simul$k
+             
+             if (length(given_k) == 1) {
+                 given_k = paste0("fixed = ", given_k)
+             } else {
+                 given_k = "gaussian"
+             }
+             
+             th_growth_rate = simul$rmatrix %>%
+                 as_tibble() %>%
+                 rownames_to_column("patch") %>%
+                 mutate(patch = as.numeric(patch)) %>%
+                 gather("species", "th_growth_rate", -patch)
+             
+             env_growth_rate = simul$rmatenv %>%
+                 as_tibble() %>%
+                 rownames_to_column("patch") %>%
+                 mutate(patch = as.numeric(patch)) %>%
+                 gather("species", "env_growth_rate", -patch)
+             
+             lapply(seq_len(nrow(given_compo)), function(site_index) {
+                 
+                 site_abund = given_compo[site_index,,]
+                 
+                 if (compute_realized_growth_rate) {
+                     
+                     # Estimate maximum growth rate
+                     max_growth = apply(site_abund, 1, function(given_abund) {
+                         
+                         # Get first moment where species goes extinct
+                         time_before_extinct = which(given_abund == 0)[1] - 1
+                         
+                         # When species doesn't go extinct consider maximum time
+                         if (is.na(time_before_extinct)) {
+                             time_before_extinct = length(given_abund)
+                         }
+                         
+                         growth_rate = NA_real_
+                         
+                         if (time_before_extinct > 10) {
+                             given_time = 1:time_before_extinct
+                             
+                             growth_model = growthrates::fit_spline(given_time,
+                                                                    given_abund[given_time])
+                             
+                             growth_rate = growth_model@par[["mumax"]]
+                         }
+                         
+                         ifelse(is.null(growth_rate), NA_real_, growth_rate)
+                     }) %>%
+                         enframe("species", "max_growth_rate")
+                 } else {
+                     max_growth = data.frame(species = rownames(site_abund),
+                                             max_growth_rate = NA)
+                 }
+                 
+                 # Get optimality
+                 optim_dist = apply(trait_df, 1, function(given_traits) {
+                     weighted.mean(abs(site_index - given_traits), c(0.5, 0.5, 0, 0))
+                 }) %>%
+                     enframe("species", "distance_to_optimum")
+                 
+                 
+                 # Abundance
+                 sp_abund = site_abund[, 150] %>%
+                     enframe("species", "N150") %>%
+                     mutate(patch = site_index) %>%
+                     select(patch, everything())
+                 
+                 
+                 # Combine all data
+                 sp_abund %>%
+                     inner_join(optim_dist, by = "species") %>%
+                     inner_join(max_growth, by = "species")
+             }) %>%
+                 bind_rows() %>%
+                 inner_join(th_growth_rate, by = c("patch", "species")) %>%
+                 inner_join(env_growth_rate, by = c("patch", "species")) %>%
+                 mutate(A         = simul$A,
+                        B_over_A  = simul$B_over_A,
+                        H         = simul$H,
+                        k         = given_k,
+                        trait_cor = simul$traits)
+         }
 # Generate traits --------------------------------------------------------------
 trait_seed = 5
 # Make traits with different correlations
@@ -433,6 +523,10 @@ lab_compet_env = labeller(
 lab_cor = c(uncor    = "r = 0",
             low_cor  = "r = 0.3",
             high_cor = "r = 0.7")
+
+triangle_labs = c(N150                = "Abundance at time = 150",
+                  max_growth_rate     = "Maximum Growth Rate",
+                  distance_to_optimum = "Distance to Optimum")
 
 ```
 
@@ -1170,79 +1264,7 @@ multi_traits_fixed = list(seed     = seq(1),
 tictoc::toc()
 
 multi_traits_triangle = map_dfr(multi_traits_fixed, function(simul_given_k) {
-    map2(simul_given_k, trait_list,
-         function(simul, trait_df) {
-             
-             given_compo = simul$compo[[1]]
-             
-             th_growth_rate = simul$rmatrix %>%
-                 as_tibble() %>%
-                 rownames_to_column("patch") %>%
-                 mutate(patch = as.numeric(patch)) %>%
-                 gather("species", "th_growth_rate", -patch)
-             
-             env_growth_rate = simul$rmatenv %>%
-                 as_tibble() %>%
-                 rownames_to_column("patch") %>%
-                 mutate(patch = as.numeric(patch)) %>%
-                 gather("species", "env_growth_rate", -patch)
-             
-             lapply(seq_len(nrow(given_compo)), function(site_index) {
-                 
-                 site_abund = given_compo[site_index,,]
-                 
-                 # Estimate maximum growth rate
-                 max_growth = apply(site_abund, 1, function(given_abund) {
-                     
-                     # Get first moment where species goes extinct
-                     time_before_extinct = which(given_abund == 0)[1] - 1
-                     
-                     # When species doesn't go extinct consider maximum time
-                     if (is.na(time_before_extinct)) {
-                         time_before_extinct = length(given_abund)
-                     }
-                     
-                     growth_rate = NA_real_
-                     
-                     if (time_before_extinct > 10) {
-                         given_time = 1:time_before_extinct
-                         
-                         growth_model = growthrates::fit_spline(given_time,
-                                                                given_abund[given_time])
-                         
-                         growth_rate = growth_model@par[["mumax"]]
-                     }
-                     
-                     ifelse(is.null(growth_rate), NA_real_, growth_rate)
-                 }) %>%
-                     enframe("species", "max_growth_rate")
-                 
-                 # Get optimality
-                 optim_dist = apply(trait_df, 1, function(given_traits) {
-                     weighted.mean(abs(site_index - given_traits), c(0.5, 0.5, 0, 0))
-                 }) %>%
-                     enframe("species", "distance_to_optimum")
-                 
-                 
-                 # Abundance
-                 sp_abund = site_abund[, 150] %>%
-                     enframe("species", "N150") %>%
-                     mutate(patch = site_index) %>%
-                     select(patch, everything())
-                 
-                 
-                 # Combine all data
-                 sp_abund %>%
-                     inner_join(optim_dist, by = "species") %>%
-                     inner_join(max_growth, by = "species")
-             }) %>%
-                 bind_rows() %>%
-                 inner_join(th_growth_rate, by = c("patch", "species")) %>%
-                 inner_join(env_growth_rate, by = c("patch", "species"))
-         }) %>%
-        set_names(nm = names(trait_list)) %>%
-        bind_rows(.id = "trait_cor") },
-    .id = "k_type")
+    map2_dfr(simul_given_k, trait_list, extract_performances_from_simul)})
 ```
 
 ```{r plot_optimality_diff_trait_cor, fig.height=9.5}
@@ -1267,10 +1289,6 @@ fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
         theme(legend.position = "top",
               strip.text = element_text(size = 8, margin = margin(1, 1, 1, 1)))
 }
-
-triangle_labs = c(N150                = "Abundance at time = 150",
-                  max_growth_rate     = "Maximum Growth Rate",
-                  distance_to_optimum = "Distance to Optimum")
 
 plot_multi_ab_growth_dist = fig_double_facet(
     multi_traits_triangle, "N150", "max_growth_rate", "distance_to_optimum",
@@ -1318,4 +1336,81 @@ multi_traits_triangle %>%
                           "; H = ", fixed_H)) +
     theme(legend.position = "top",
           panel.grid = element_blank())
+```
+
+```{r testing_more_parameters}
+# Simulation parameters
+fixed_A = 10^seq(-6, -2)
+mean_k = 1.5
+var_k  = 0.3
+fixed_B_over_A = 10^seq(1, 3)
+fixed_H = c(0, 1, 2)
+
+# Matrix of species maximum growth rates
+set.seed(20190129)
+k_matrix = matrix(rnorm(n_species, mean_k, var_k))
+rownames(k_matrix) = paste0("species", seq(n_species))
+colnames(k_matrix) = "k"
+
+# Generate trait list
+set.seed(1)
+trait_list = list(
+    uncor   = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0),
+    negcor  = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = -0.7),
+    highcor = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0.7)
+)
+
+plan(multiprocess, workers = 15)
+# Actual simulation
+tictoc::tic()
+var_param = list(seed     = seq(1),
+                 k        = list(k_matrix, mean_k),
+                 A        = fixed_A,
+                 B_over_A = fixed_B_over_A,
+                 H        = fixed_H) %>%
+    cross() %>%
+    future_map(function(x){
+        devtools::load_all()
+        meta_simul_A_B_k_and_H(
+            seed_number    = x$seed,
+            given_k        = x$k,
+            given_A        = x$A,
+            given_B_over_A = x$B_over_A,
+            given_H        = x$H,
+            given_traits   = trait_list)
+    }, .progress = TRUE)
+tictoc::toc()
+
+tictoc::tic()
+var_param_triangle = map_dfr(var_param, function(simul_given_k) {
+    map2_dfr(simul_given_k, trait_list, extract_performances_from_simul,
+             compute_realized_growth_rate = FALSE)})
+tictoc::toc()
+
+var_param_triangle %>%
+    filter(trait_cor == "uncor", H != 1, B_over_A == 100, A <= 1e-4, N150 > 0) %>%
+    ggplot(aes(distance_to_optimum, N150, color = k)) +
+    geom_point(shape = ".") +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "right",
+                          aes(label = ..rr.label..), size = 3) +
+    facet_grid(vars(A), vars(H, B_over_A), labeller = label_both) +
+    theme(aspect.ratio = 1) +
+    labs(x = triangle_labs[["distance_to_optimum"]],
+         y = triangle_labs[["N150"]],
+         subtitle = "Abundance ~ Optimality with various parameters",
+         caption = "No trait correlation; k ~~> N(1.5, 0.3)")
+
+var_param_triangle %>%
+    filter(trait_cor == "uncor", H != 1, B_over_A == 100, A <= 1e-4, N150 > 0) %>%
+    ggplot(aes(N150, env_growth_rate)) +
+    geom_point(alpha = 1/6) +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "right",
+                          aes(label = ..rr.label..), size = 3) +
+    facet_grid(vars(A), vars(k, H, B_over_A)) +
+    scale_x_log10()
 ```
