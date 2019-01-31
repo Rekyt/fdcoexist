@@ -1176,13 +1176,13 @@ multi_traits_triangle = map_dfr(multi_traits_fixed, function(simul_given_k) {
              given_compo = simul$compo[[1]]
              
              th_growth_rate = simul$rmatrix %>%
-                 as_data_frame() %>%
+                 as_tibble() %>%
                  rownames_to_column("patch") %>%
                  mutate(patch = as.numeric(patch)) %>%
                  gather("species", "th_growth_rate", -patch)
              
              env_growth_rate = simul$rmatenv %>%
-                 as_data_frame() %>%
+                 as_tibble() %>%
                  rownames_to_column("patch") %>%
                  mutate(patch = as.numeric(patch)) %>%
                  gather("species", "env_growth_rate", -patch)
@@ -1288,4 +1288,34 @@ plot_multi_growth_dist_ab = fig_double_facet(
     triangle_labs, "right") +
     scale_x_sqrt()
 plot_multi_growth_dist_ab
+```
+
+```{r growth_and_other_performance_indinces}
+multi_traits_triangle %>%
+    gather("growth_rate_type", "growth_rate_value", contains("growth_rate")) %>%
+    filter(patch %in% seq(1, 25, by = 6), growth_rate_value < 4, trait_cor == "uncor") %>%
+    mutate(growth_rate_type = as_factor(growth_rate_type)) %>%
+    gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
+    ggplot(aes(perf_value, growth_rate_value, color = growth_rate_type)) +
+    geom_point(alpha = 1/6) +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "left",
+                          aes(label = ..rr.label..), size = 3) +
+    facet_grid(vars(k_type), vars(perf_type), scales = "free_x",
+               labeller = labeller(perf_type = c(N150 = "Abundance at t = 150",
+                                                 distance_to_optimum = "Distance to Environment Optimum"),
+                                   k_type = c(fixed    = "k = 1.5",
+                                              gaussian = "k ~> N(1.5, 0.3)"))) +
+    scale_color_brewer(labels = c(env_growth_rate = "Environmental Growth Rate\n (Growth only)",
+                                  max_growth_rate = "Realized Growth Rate",
+                                  th_growth_rate  = "Theoretical Growth Rate\n(Growth + Hierarch. Compet.)"),
+                       palette = "Dark2") +
+    labs(x = "Performance Value", y = "Growth Rate", color = NULL,
+         subtitle = "Growth Estimates vs. other Performance Indices – All patches",
+         caption = paste0("No trait correlation; ",
+                          "A = ", fixed_A,
+                          "; B/A = ", fixed_B_over_A,
+                          "; H = ", fixed_H)) +
+    theme(legend.position = "top",
+          panel.grid = element_blank())
 ```
