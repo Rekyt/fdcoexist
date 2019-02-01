@@ -89,7 +89,7 @@ tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
 tidy_simulation = function(scenario, given_simul, given_traits,
                            given_trait_scenar, time = 150) {
     landscape_df(given_simul[[scenario]], given_traits,
-                 trait_scenarios[[scenario]], time = time) %>%
+                 given_trait_scenar[[scenario]], time = time) %>%
         inner_join(given_traits %>%
                        as.data.frame() %>%
                        rownames_to_column("species"),
@@ -896,16 +896,16 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A = 1e-4
-fixed_k = 1.25
+fixed_A = 1e-6
+fixed_k = 1.5
 fixed_B_over_A = 100
-fixed_H_over_k = 1
+fixed_H = 1
 
 # Generate all scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
 scenar_df = expand.grid(R = weights, A = weights, H = weights) %>%
-    as_data_frame() %>%
+    as_tibble() %>%
     mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
            trait_weights = purrr::pmap(list(R, A, H),
                                        ~create_trait_weights(..1, ..2, ..3)))
@@ -916,42 +916,46 @@ names(scenar_list) = scenar_df$scenar_name
 plan(multiprocess, workers = 15)
 tictoc::tic()
 
-var_scenars = meta_simul_A_B_k_and_H(1,
-                                     fixed_k,
-                                     fixed_A,
-                                     fixed_B_over_A,
-                                     fixed_H_over_k,
-                                     given_scenars = scenar_list) %>%
-    map_dfr(as_tibble)
-
+var_scenars = meta_simul_A_B_k_and_H(seed_number    = 1,
+                                     given_k        = fixed_k,
+                                     given_A        = fixed_A,
+                                     given_B_over_A = fixed_B_over_A,
+                                     given_H        = fixed_H,
+                                     given_scenars  = scenar_list) %>%
+    set_names(nm = names(scenar_list))
 tictoc::toc()
 
+set.seed(1)
+used_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0)
 
-var_scenars_df = var_scenars %>%
-    mutate(patch1 = map(compo, function(x) {
-        x["patches1",,] %>%
-            as.data.frame() %>%
-            rownames_to_column("species") %>%
-            gather("timestep", "N", -species) %>%
-            mutate(timestep = as.numeric(gsub("time", "", timestep)))
-    }),
-    patch13 = map(compo, function(x) {
-        x["patches13",,] %>%
-            as.data.frame() %>%
-            rownames_to_column("species") %>%
-            gather("timestep", "N", -species) %>%
-            mutate(timestep = as.numeric(gsub("time", "", timestep)))
-    }),
-    patch25 = map(compo, function(x) {
-        x["patches25",,] %>%
-            as.data.frame() %>%
-            rownames_to_column("species") %>%
-            gather("timestep", "N", -species) %>%
-            mutate(timestep = as.numeric(gsub("time", "", timestep)))
-    }),
-    R_scenar = as.numeric(gsub("R(\\d+)A\\d+H\\d+", "\\1", scenario, perl = TRUE)),
-    A_scenar = as.numeric(gsub("R\\d+A(\\d+)H\\d+", "\\1", scenario, perl = TRUE)),
-    H_scenar = as.numeric(gsub("R\\d+A\\d+H(\\d+)", "\\1", scenario, perl = TRUE)))
+var_scenars_df = tidy_simulation_list(var_scenars, used_traits, scenar_list,
+                                      scenar_names = names(scenar_list)) %>%
+    mutate(R_scenar = "R(\\d+)A\\d+H\\d+" %>%
+               gsub("\\1", scenario, perl = TRUE) %>%
+               as.numeric(),
+           A_scenar = "R\\d+A(\\d+)H\\d+" %>%
+               gsub("\\1", scenario, perl = TRUE) %>%
+               as.numeric(),
+           H_scenar = "R\\d+A\\d+H(\\d+)" %>%
+               gsub("\\1", scenario, perl = TRUE) %>%
+               as.numeric()) %>%
+    select(scenario, R_scenar, A_scenar, H_scenar, patch_optim,
+           everything()) %>%
+    select(-growth_trait, -compet_dist, -optim_dist, -growth_trait_cwm,
+           -patch) %>%
+    rename(patch = patch_optim)
+
+var_scenars_cwm = var_scenars_df %>%
+    group_by(scenario, R_scenar, A_scenar, H_scenar, patch) %>%
+    summarise(trait1_mwc = weighted.mean(trait1, N),
+              trait2_mwc = weighted.mean(trait2, N),
+              trait3_mwc = weighted.mean(trait3, N),
+              trait4_mwc = weighted.mean(trait4, N),
+              trait1_cwm = sum(trait1_cwm),
+              trait2_cwm = sum(trait2_cwm),
+              trait3_cwm = sum(trait3_cwm),
+              trait4_cwm = sum(trait4_cwm))
 ```
 
 
@@ -966,7 +970,7 @@ var_scenars_df %>%
                            "A: ", fixed_A,
                            " ; k: ", fixed_k,
                            " ; B_over_A: ", fixed_B_over_A,
-                           " ; H_over_k: ", fixed_H_over_k)) +
+                           " ; H: ", fixed_H)) +
     theme(legend.position = "none")
 ```
 
