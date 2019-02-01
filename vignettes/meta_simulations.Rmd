@@ -901,6 +901,14 @@ fixed_k = 1.5
 fixed_B_over_A = 100
 fixed_H = 1
 
+# Not fixed k
+mean_k = 1.5
+var_k  = 0.3
+set.seed(20190129)
+k_matrix = matrix(rnorm(n_species, mean_k, var_k))
+rownames(k_matrix) = paste0("species", seq(n_species))
+colnames(k_matrix) = "k"
+
 # Generate all scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
@@ -915,39 +923,54 @@ names(scenar_list) = scenar_df$scenar_name
 # Actual simulation
 plan(multiprocess, workers = 15)
 tictoc::tic()
-
-var_scenars = meta_simul_A_B_k_and_H(seed_number    = 1,
-                                     given_k        = fixed_k,
-                                     given_A        = fixed_A,
-                                     given_B_over_A = fixed_B_over_A,
-                                     given_H        = fixed_H,
-                                     given_scenars  = scenar_list) %>%
-    set_names(nm = names(scenar_list))
+var_scenars = list(seed     = seq(1),
+                  k        = list(k_matrix, k),
+                  A        = fixed_A,
+                  B_over_A = fixed_B_over_A,
+                  H        = fixed_H) %>%
+    cross() %>%
+    future_map(function(x){
+        devtools::load_all()
+        
+        meta_simul_A_B_k_and_H(
+            seed_number    = x$seed,
+            given_k        = x$k,
+            given_A        = x$A,
+            given_B_over_A = x$B_over_A,
+            given_H        = x$H,
+            given_scenars  = scenar_list)
+    }) %>%
+    set_names(nm = c("gaussian", "fixed"))
 tictoc::toc()
 
 set.seed(1)
 used_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                   cor_coef = 0)
 
-var_scenars_df = tidy_simulation_list(var_scenars, used_traits, scenar_list,
-                                      scenar_names = names(scenar_list)) %>%
-    mutate(R_scenar = "R(\\d+)A\\d+H\\d+" %>%
-               gsub("\\1", scenario, perl = TRUE) %>%
-               as.numeric(),
-           A_scenar = "R\\d+A(\\d+)H\\d+" %>%
-               gsub("\\1", scenario, perl = TRUE) %>%
-               as.numeric(),
-           H_scenar = "R\\d+A\\d+H(\\d+)" %>%
-               gsub("\\1", scenario, perl = TRUE) %>%
-               as.numeric()) %>%
-    select(scenario, R_scenar, A_scenar, H_scenar, patch_optim,
-           everything()) %>%
-    select(-growth_trait, -compet_dist, -optim_dist, -growth_trait_cwm,
-           -patch) %>%
-    rename(patch = patch_optim)
+var_scenars_df = map_dfr(
+    var_scenars,
+    ~.x %>%
+        set_names(nm = names(scenar_list)) %>%
+        tidy_simulation_list(used_traits, scenar_list,
+                             scenar_names = names(scenar_list)) %>%
+        mutate(R_scenar = "R(\\d+)A\\d+H\\d+" %>%
+                   gsub("\\1", scenario, perl = TRUE) %>%
+                   as.numeric(),
+               A_scenar = "R\\d+A(\\d+)H\\d+" %>%
+                   gsub("\\1", scenario, perl = TRUE) %>%
+                   as.numeric(),
+               H_scenar = "R\\d+A\\d+H(\\d+)" %>%
+                   gsub("\\1", scenario, perl = TRUE) %>%
+                   as.numeric()) %>%
+        select(scenario, R_scenar, A_scenar, H_scenar, patch_optim,
+               everything()) %>%
+        select(-growth_trait, -compet_dist, -optim_dist, -growth_trait_cwm,
+               -patch) %>%
+        rename(patch = patch_optim),
+    .id = "k_type")
 
 var_scenars_cwm = var_scenars_df %>%
-    group_by(scenario, R_scenar, A_scenar, H_scenar, patch) %>%
+    group_by(k_type, scenario, R_scenar, A_scenar, H_scenar, patch) %>%
     summarise(trait1_mwc = weighted.mean(trait1, N),
               trait2_mwc = weighted.mean(trait2, N),
               trait3_mwc = weighted.mean(trait3, N),
@@ -958,6 +981,31 @@ var_scenars_cwm = var_scenars_df %>%
               trait4_cwm = sum(trait4_cwm))
 ```
 
+```{r scenar_cwm}
+var_scenars_cwm %>%
+    filter(k_type == "fixed") %>%
+    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(size = 1) +
+    ggpmisc::stat_poly_eq(aes(label = ..eq.label..), formula = y ~ x,
+                          parse = TRUE, size = 4, label.y.npc = "bottom",
+                          label.x.npc = "right") +
+    facet_grid(vars(R_scenar), vars(A_scenar),
+               labeller = labeller(R_scenar = function(x) paste0("Trait 2 Contrib.\nto Growth : ", x, "%"),
+                                   A_scenar = function(x) paste0("Trait 2 Contrib.\nto Compet. : ", x, "%"))) +
+    ylim(0, 25) +
+    scale_color_manual(values = c("#b3cde3", "#8c96c6", "#88419d"),
+                       labels = function(x) paste0(x, "%")) +
+    labs(x = "Environmental Variable",
+         y = "CWM of Trait 2",
+         color = "Trait 2 Contrib.\nto Hierarch. Compet.",
+         subtitle = "Trait 2 CWM <-> Environment (Topt) relationship",
+         caption = paste0("No trait correlation; fixed k = ", fixed_k,
+                          "; A = ", fixed_A, "; B/A = ", fixed_B_over_A,
+                          "; additive H; H = ", fixed_H)) +
+    theme(aspect.ratio = 1,
+          legend.position = "top")
+```
 
 ```{r scenar_patch_dynamics}
 var_scenars_df %>%
