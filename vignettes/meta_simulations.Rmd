@@ -994,12 +994,12 @@ var_scenars_cwm %>%
                labeller = labeller(R_scenar = function(x) paste0("Trait 2 Contrib.\nto Growth : ", x, "%"),
                                    A_scenar = function(x) paste0("Trait 2 Contrib.\nto Compet. : ", x, "%"))) +
     ylim(0, 25) +
-    scale_color_manual(values = c("#b3cde3", "#8c96c6", "#88419d"),
+    scale_color_manual(values = RColorBrewer::brewer.pal(5, "BuPu")[3:5],
                        labels = function(x) paste0(x, "%")) +
     labs(x = "Environmental Variable",
          y = "CWM of Trait 2",
          color = "Trait 2 Contrib.\nto Hierarch. Compet.",
-         subtitle = "Trait 2 CWM <-> Environment (Topt) relationship",
+         subtitle = "Trait 2 CWM <-> Environment (topt) relationship",
          caption = paste0("No trait correlation; fixed k = ", fixed_k,
                           "; A = ", fixed_A, "; B/A = ", fixed_B_over_A,
                           "; additive H; H = ", fixed_H)) +
