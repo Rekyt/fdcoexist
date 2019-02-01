@@ -26,13 +26,41 @@ suppressPackageStartupMessages({
         library("ggplot2")
         library("stringr")
         library("tibble")
-        library("directlabels")
         library("furrr")
     })
 })
 # Functions --------------------------------------------------------------------
 # Compute a data.frame of number of individuals in function of optimal trait
 # for competition and growth
+extract_trait_contrib_from_scenar = function(scenario) {
+    R_scenar = as.numeric(sub("R(\\d+).*", "\\1", scenario, perl = TRUE))
+    A_scenar = as.numeric(sub(".*A(\\d+).*", "\\1", scenario, perl = TRUE))
+    H_scenar = as.numeric(sub(".*H(\\d+)", "\\1", scenario, perl = TRUE))
+    
+    list(R = R_scenar,
+         A = A_scenar,
+         H = H_scenar)
+}
+
+extract_simul_param = function(single_simul, time = 150) {
+    
+    scenario = single_simul$scenario
+    
+    contrib = extract_trait_contrib_from_scenar(scenario)
+    
+    population_df = single_simul$compo[[1]][,,time] %>%
+        as.data.frame() %>%
+        rownames_to_column("patch") %>%  # Add patch names as column
+        # Transform to tidy data.frame (define name of columns and column name
+        # for values)
+        gather("species", "N", -patch) %>%
+        mutate(patch = gsub("patches", "", patch) %>%
+                   as.numeric(),
+               R_scenar = contrib$R,
+               A_scenar = contrib$A,
+               H_scenar = contrib$H)
+}
+
 landscape_df = function(multiple_traits_scenario, trait_df, trait_weights,
                         time = n_gen) {
     
@@ -85,7 +113,7 @@ tidy_simulation_list = function(simulation_list, set_of_traits, trait_scenarios,
 
 tidy_simulation = function(scenario, given_simul, given_traits,
                            given_trait_scenar, time = n_gen) {
-    landscape_df(given_simul[[scenario]], given_traits,
+    extract_simul_param(given_simul[[scenario]], given_traits,
                  trait_scenarios[[scenario]], time = time) %>%
         inner_join(given_traits %>%
                        as.data.frame() %>%
