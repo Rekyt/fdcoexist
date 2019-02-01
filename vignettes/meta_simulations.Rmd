@@ -328,7 +328,8 @@ meta_simul_patch = function(seed_number, given_k = k, given_A = A) {
 meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                                   given_B_over_A = B/A,
                                   given_H = H, given_scenars = NULL,
-                                  given_traits = NULL) {
+                                  given_traits = NULL,
+                                  given_h_fun  = sum) {
     
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
     
@@ -359,21 +360,23 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                              scenario      = names(our_scenars))
     
     apply(all_facets, 1, function(given_row) {
-        simul = multigen(traits = all_cor[[given_row[["cor_level"]]]],
-                 trait_weights = our_scenars[[given_row[["scenario"]]]],
-                 env = env,
-                 time = n_gen,
-                 species = n_species,
-                 patches = n_patches,
-                 composition = composition,
-                 A = all_compet[[given_row[["compet_status"]]]][["A"]],
-                 B = all_compet[[given_row[["compet_status"]]]][["B"]],
-                 d = d,
-                 k = given_k,
-                 dist_power = dist_power,
-                 H = all_compet[[given_row[["compet_status"]]]][["H"]],
-                 th_max = th_max,
-                 width = all_env[[given_row[["env_width"]]]])
+        simul = multigen(
+            traits        = all_cor[[given_row[["cor_level"]]]],
+            trait_weights = our_scenars[[given_row[["scenario"]]]],
+            env           = env,
+            time          = n_gen,
+            species       = n_species,
+            patches       = n_patches,
+            composition   = composition,
+            A             = all_compet[[given_row[["compet_status"]]]][["A"]],
+            B             = all_compet[[given_row[["compet_status"]]]][["B"]],
+            d             = d,
+            k             = given_k,
+            dist_power    = dist_power,
+            H             = all_compet[[given_row[["compet_status"]]]][["H"]],
+            th_max        = th_max,
+            width         = all_env[[given_row[["env_width"]]]],
+            h_fun         = given_h_fun)
         
         return(
             list(
@@ -388,7 +391,8 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                 scenario      = given_row[["scenario"]],
                 compo         = list(simul$compo),
                 rmatrix       = simul$rmatrix,
-                rmatenv       = simul$rmatenv))
+                rmatenv       = simul$rmatenv,
+                h_fun         = given_h_fun))
     })
 }
 
@@ -927,7 +931,8 @@ var_scenars = list(seed     = seq(1),
                   k        = list(k_matrix, k),
                   A        = fixed_A,
                   B_over_A = fixed_B_over_A,
-                  H        = fixed_H) %>%
+                  H        = fixed_H,
+                  h_fun    = list(sum, prod)) %>%
     cross() %>%
     future_map(function(x){
         devtools::load_all()
@@ -938,9 +943,12 @@ var_scenars = list(seed     = seq(1),
             given_A        = x$A,
             given_B_over_A = x$B_over_A,
             given_H        = x$H,
-            given_scenars  = scenar_list)
+            given_scenars  = scenar_list,
+            given_h_fun    = x$h_fun)
     }) %>%
-    set_names(nm = c("gaussian", "fixed"))
+    set_names(nm = list(c("gaussian", "fixed"), c("sum", "prod")) %>%
+                  cross() %>%
+                  map_chr(~paste(.x, collapse = "_")))
 tictoc::toc()
 
 set.seed(1)
@@ -978,7 +986,8 @@ var_scenars_cwm = var_scenars_df %>%
               trait1_cwm = sum(trait1_cwm),
               trait2_cwm = sum(trait2_cwm),
               trait3_cwm = sum(trait3_cwm),
-              trait4_cwm = sum(trait4_cwm))
+              trait4_cwm = sum(trait4_cwm)) %>%
+    separate(k_type, c("k_type", "h_fun"), sep = "_")
 ```
 
 ```{r scenar_cwm}
@@ -988,18 +997,19 @@ var_scenars_cwm %>%
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
     geom_line(size = 1) +
     ggpmisc::stat_poly_eq(aes(label = ..eq.label..), formula = y ~ x,
-                          parse = TRUE, size = 4, label.y.npc = "bottom",
+                          parse = TRUE, size = 3, label.y.npc = "bottom",
                           label.x.npc = "right") +
-    facet_grid(vars(R_scenar), vars(A_scenar),
+    facet_grid(vars(R_scenar), vars(h_fun, A_scenar),
                labeller = labeller(R_scenar = function(x) paste0("Trait 2 Contrib.\nto Growth : ", x, "%"),
                                    A_scenar = function(x) paste0("Trait 2 Contrib.\nto Compet. : ", x, "%"))) +
     ylim(0, 25) +
-    scale_color_manual(values = RColorBrewer::brewer.pal(5, "BuPu")[3:5],
+    scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
                        labels = function(x) paste0(x, "%")) +
     labs(x = "Environmental Variable",
          y = "CWM of Trait 2",
          color = "Trait 2 Contrib.\nto Hierarch. Compet.",
-         subtitle = "Trait 2 CWM <-> Environment (topt) relationship",
+         subtitle = expression("Trait 2 CWM <-> Environment (t"["opt"] *
+                                   ") relationship"),
          caption = paste0("No trait correlation; fixed k = ", fixed_k,
                           "; A = ", fixed_A, "; B/A = ", fixed_B_over_A,
                           "; additive H; H = ", fixed_H)) +

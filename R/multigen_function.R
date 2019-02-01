@@ -82,10 +82,12 @@ bevHoltFct <- function(R, N, alpha){
 #' @param H      a numeric for hierarchical competition such as H/k <= 1
 #' @param th_max a numeric for the hierarchical trait value maximizing
 #'               hierarchical competiton
+#' @param h_fun  a function that describes how hierarchical is combined to
+#'               environmental-based growth (default: `sum()`)
 #'
 #' @export
 env_curve <- function(trait_values, env_value, trait_weights, k = 2,
-                      width = 0.5, H = 0, th_max = 25) {
+                      width = 0.5, H = 0, th_max = 25, h_fun = sum) {
 
     if (length(width) != 1 & length(width) != length(env_value)) {
         stop("There are either too many or not enough values for width")
@@ -121,8 +123,9 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
         # Weigh each trait function of contribution to competition
         R_h <- weighted.mean(R_h, hierarchical_trait$hierarchy_weight)
 
-        # Final sum
-        R <- sum(R, R_h, na.rm = TRUE)
+        # Combining environmental-based growth and additional growth due to
+        # hierarchical competition
+        R <- h_fun(R, R_h, na.rm = TRUE)
     }
 }
 
@@ -150,12 +153,13 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param H           a numeric for hierarchical competition such as H/k <= 1
 #' @param th_max      a numeric for the hierarchical trait value maximizing
 #'                    hierarchical competition
-#'
+#' @param h_fun       a function that describes how hierarchical is combined to
+#'                    environmental-based growth (default: `sum()`)
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max,
-                     dist_power = dist_power) {
+                     dist_power = dist_power, h_fun = sum) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -181,7 +185,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                       k             = x[length(x) - 1],
                       width         = y[2],
                       H             = x[length(x)],
-                      th_max = y[3])
+                      th_max = y[3],
+                      h_fun  = h_fun)
         })
     })
 
@@ -194,7 +199,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                       k             = x[length(x) - 1],
                       width         = y[2],
                       H             = 0,
-                      th_max = y[3])
+                      th_max        = y[3],
+                      h_fun         = h_fun)
         })
     })
 
