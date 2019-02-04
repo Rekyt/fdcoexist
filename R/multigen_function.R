@@ -82,12 +82,12 @@ bevHoltFct <- function(R, N, alpha){
 #' @param H      a numeric for hierarchical competition such as H/k <= 1
 #' @param th_max a numeric for the hierarchical trait value maximizing
 #'               hierarchical competiton
-#' @param h_fun  a function that describes how hierarchical is combined to
-#'               environmental-based growth (default: `sum()`)
+#' @param h_fun  a character name of a function that describes how hierarchical
+#'               is combined to environmental-based growth (default: `"sum"`)
 #'
 #' @export
 env_curve <- function(trait_values, env_value, trait_weights, k = 2,
-                      width = 0.5, H = 0, th_max = 25, h_fun = sum) {
+                      width = 0.5, H = 0, th_max = 25, h_fun = "sum") {
 
     if (length(width) != 1 & length(width) != length(env_value)) {
         stop("There are either too many or not enough values for width")
@@ -125,7 +125,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         # Combining environmental-based growth and additional growth due to
         # hierarchical competition
-        R <- h_fun(R, R_h, na.rm = TRUE)
+        R <- get(h_fun)(R, R_h, na.rm = TRUE)
     }
 }
 
@@ -159,7 +159,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max,
-                     dist_power = dist_power, h_fun = sum) {
+                     dist_power = dist_power, h_fun = "sum") {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
