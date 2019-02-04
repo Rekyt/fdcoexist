@@ -120,6 +120,8 @@ extract_performances_from_simul = function(simul, trait_df,
     
     given_compo = simul$compo[[1]]
     
+    contrib = extract_trait_contrib_from_scenar(simul$scenario)
+    
     given_k = simul$k
     
     if (length(given_k) == 1) {
@@ -198,11 +200,16 @@ extract_performances_from_simul = function(simul, trait_df,
         bind_rows() %>%
         inner_join(th_growth_rate, by = c("patch", "species")) %>%
         inner_join(env_growth_rate, by = c("patch", "species")) %>%
-        mutate(A         = simul$A,
+        mutate(seed      = simul$seed,
+               trait_cor = simul$traits,
+               k         = given_k,
+               A         = simul$A,
                B_over_A  = simul$B_over_A,
                H         = simul$H,
-               k         = given_k,
-               trait_cor = simul$traits)
+               R_scenar  = contrib$R,
+               A_scenar  = contrib$A,
+               H_scenar  = contrib$H) %>%
+        mutate_at(vars(contains("growth_rate")), funs(per_capita = . / N150))
 }
 # Initial parameters -----------------------------------------------------------
 suppressMessages(devtools::load_all())
@@ -870,7 +877,7 @@ trait_list = list(
 # Actual simulation
 tictoc::tic()
 multi_traits_fixed = list(seed     = seq(1),
-                          k        = list(k_matrix, k),
+                          k        = list(k_matrix, mean_k),
                           A        = fixed_A,
                           B_over_A = fixed_B_over_A,
                           H        = fixed_H) %>%
@@ -933,9 +940,11 @@ plot_multi_growth_dist_ab
 ```
 
 ```{r growth_and_other_performance_indinces}
-multi_traits_triangle %>%
-    gather("growth_rate_type", "growth_rate_value", contains("growth_rate")) %>%
-    filter(patch %in% seq(1, 25, by = 6), growth_rate_value < 4, trait_cor == "uncor") %>%
+plot_growth_rate_perf = multi_traits_triangle %>%
+    gather("growth_rate_type", "growth_rate_value",
+           ends_with("growth_rate")) %>%
+    filter(patch %in% seq(1, 25, by = 6), growth_rate_value < 4,
+           trait_cor == "uncor") %>%
     mutate(growth_rate_type = as_factor(growth_rate_type)) %>%
     gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
     ggplot(aes(perf_value, growth_rate_value, color = growth_rate_type)) +
@@ -947,22 +956,71 @@ multi_traits_triangle %>%
                labeller = labeller(
                    perf_type = c(
                        N150 = triangle_labs[["N150"]],
-                       distance_to_optimum = triangle_labs[["distance_to_optimum"]]),
+                       distance_to_optimum =
+                           triangle_labs[["distance_to_optimum"]]),
                    k         = c(
-                       fixed    = "k = 1.5",
+                       "fixed = 1.5" = "k = 1.5",
                        gaussian = "k ~> N(1.5, 0.3)"))) +
-    scale_color_brewer(labels = c(env_growth_rate = "Environmental Growth Rate\n (Growth only)",
-                                  max_growth_rate = "Realized Growth Rate",
-                                  th_growth_rate  = "Theoretical Growth Rate\n(Growth + Hierarch. Compet.)"),
-                       palette = "Dark2") +
+    scale_color_brewer(
+        labels = c(
+            env_growth_rate = "Environmental Growth Rate\n (Growth only)",
+            max_growth_rate = "Realized Growth Rate",
+            th_growth_rate  = paste0("Theoretical Growth Rate\n",
+                                     "(Growth + Hierarch. Compet.)")),
+        palette = "Dark2") +
     labs(x = "Performance Value", y = "Growth Rate", color = NULL,
-         subtitle = "Growth Estimates vs. other Performance Indices – All patches",
+         subtitle = "Growth Rates Estimates vs. other Performance Indices",
          caption = paste0("No trait correlation; ",
                           "A = ", fixed_A,
                           "; B/A = ", fixed_B_over_A,
                           "; H = ", fixed_H)) +
     theme(legend.position = "top",
-          panel.grid = element_blank())
+          panel.grid = element_blank(),
+          aspect.ratio = 1)
+plot_growth_rate_perf
+
+plot_growth_rate_percapita_perf = multi_traits_triangle %>%
+    gather("growth_rate_type", "growth_rate_value",
+           ends_with("growth_rate_per_capita")) %>%
+    filter(patch %in% seq(1, 25, by = 6), growth_rate_value < 4,
+           trait_cor == "uncor") %>%
+    mutate(growth_rate_type = as_factor(growth_rate_type)) %>%
+    gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
+    ggplot(aes(perf_value, growth_rate_value, color = growth_rate_type)) +
+    geom_point(alpha = 1/6) +
+    geom_smooth(formula = y ~ log(x), se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ log(x), parse = TRUE,
+                          label.x.npc = "left", aes(label = ..rr.label..),
+                          size = 3) +
+    facet_grid(vars(k), vars(perf_type), scales = "free_x",
+               labeller = labeller(
+                   perf_type = c(
+                       N150 = triangle_labs[["N150"]],
+                       distance_to_optimum =
+                           triangle_labs[["distance_to_optimum"]]),
+                   k         = c(
+                       "fixed = 1.5" = "k = 1.5",
+                       gaussian = "k ~> N(1.5, 0.3)"))) +
+    scale_color_brewer(
+        labels = c(
+            env_growth_rate_per_capita = paste0("Env. Growth Rate per Capita\n",
+                                                "(Growth only)"),
+            max_growth_rate_per_capita = "Realized Growth Rate\nper Capita",
+            th_growth_rate_per_capita  = paste0("Theoretical Growth Rate\n",
+                                                "per Capita \n(Growth + ",
+                                                "Hierarch. Compet.)")),
+        palette = "Set2") +
+    scale_y_log10() +
+    labs(x = "Performance Value", y = "Growth Rate per Capita", color = NULL,
+         subtitle = "Growth Rates per Capita vs. other Performance Indices",
+         caption = paste0("No trait correlation; ",
+                          "A = ", fixed_A,
+                          "; B/A = ", fixed_B_over_A,
+                          "; H = ", fixed_H)) +
+    theme(legend.position = "top",
+          panel.grid = element_blank(),
+          aspect.ratio = 1)
+plot_growth_rate_percapita_perf
 ```
 
 ```{r testing_more_parameters}
