@@ -5,7 +5,7 @@
 \title{Generate correlated traits}
 \usage{
 generate_cor_traits(number_patches, number_species, number_other = 9,
-  cor_coef = 0.7)
+  cor_coef = 0.7, min_value = 1)
 }
 \arguments{
 \item{number_patches}{a numeric value giving the total number of patches}
@@ -19,6 +19,8 @@ number of patches}
 
 \item{cor_coef}{a numeric value giving the correlation coefficient
 between the first trait and the other ones}
+
+\item{min_value}{a minimum trait value}
 }
 \value{
 a matrix of traits with species in rows and traits in columns

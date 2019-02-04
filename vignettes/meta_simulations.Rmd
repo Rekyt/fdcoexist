@@ -221,7 +221,6 @@ initpop   <- 50   # initial population size
 n_traits  <- 4    # number of traits
 k         <- 1.15 # Maximum growth rate
 env_width <- rep(10, length.out = n_patches)  # Envtal filter strength
-var_width <- seq(10, 1, length.out = n_patches) # Varying envtal filter strength
 total_runs = 20  # Number of set of traits to test
 
 # Competition + Dispersion coefficients
@@ -231,7 +230,7 @@ d = 0.05       # Dispersal percentage
 dist_power = 2 # Power of trait dissimilarity
 
 # Hierarchical coefficients
-H = 1.01
+H = 1.5
 th_max = 25
 
 # Generate environment
@@ -283,6 +282,9 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
         all_cor = given_traits
     }
     
+    guessed_th_max = lapply(all_cor, max)
+    guessed_th_max = max(unlist(guessed_th_max))
+    
     all_env = list(constant = env_width)
     
     all_compet = list(compet = list(A        = given_A,
@@ -311,7 +313,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
             k             = given_k,
             dist_power    = dist_power,
             H             = all_compet[[given_row[["compet_status"]]]][["H"]],
-            th_max        = th_max,
+            th_max        = guessed_th_max,
             width         = all_env[[given_row[["env_width"]]]],
             h_fun         = given_h_fun)
         
@@ -337,40 +339,20 @@ trait_seed = 5
 # Make traits with different correlations
 set.seed(trait_seed)
 uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                   cor_coef = 0)
+                                   cor_coef = 0, min_value = 1)
 set.seed(trait_seed)
 low_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                     cor_coef = 0.3)
+                                     cor_coef = 0.3, min_value = 1)
 
 set.seed(trait_seed)
 high_cor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                      cor_coef = 0.7)
+                                      cor_coef = 0.7, min_value = 1)
 
 
 # Graphical parameters ---------------------------------------------------------
 theme_set(theme_bw(12))
 
 # Graphical functions ----------------------------------------------------------
-label_scenar_facets = function(scenar_name) {
-    scenar_name %>%
-        as.character() %>%
-        str_remove("R") %>%
-        str_split("A") %>%
-        map_chr(~paste0("Growth = ",  .x[1], "%\n",
-                        "Compet. = ", .x[2], "%"))
-}
-
-facet_scenar = facet_wrap(vars(scenario),
-                          labeller = labeller(scenario = label_scenar_facets))
-
-lab_compet_env = labeller(
-    compet_status = c(compet    = "Intra + Inter competition",
-                      no_compet = "Intra Only"),
-    env_width     = c(constant          = "Constant\nWide Env. Filter",
-                      constant_strong   = "Constant\nStrong Env. Filter",
-                      constant_stronger = "Constant\nVery Strong Env. Filter",
-                      varying           = "Increasing\nFilter Strength"))
-
 lab_cor = c(uncor    = "r = 0",
             low_cor  = "r = 0.3",
             high_cor = "r = 0.7")
@@ -1098,4 +1080,55 @@ var_param_triangle %>%
                           aes(label = ..rr.label..), size = 3) +
     facet_grid(vars(A), vars(k, H, B_over_A)) +
     scale_x_log10()
+```
+
+
+## Testing a way bigger species pool
+
+To avoid functional truncation effect we can make our simulation with a much bigger species pool.
+
+```{r much_bigger_species_pool}
+# Simulation parameters
+fixed_A = 1e-6
+fixed_k = 1.5
+fixed_B_over_A = 100
+fixed_H = 1
+
+# Generate species pool
+max_value   = 75
+big_species = 500
+min_value   = -50
+set.seed(1)
+big_trait_list = list(
+    uncor   = generate_cor_traits(max_value, big_species, n_traits - 1,
+                                  cor_coef = 0, min_value)
+)
+
+# Initial composition
+composition <- array(NA, dim = c(n_patches, big_species, n_gen),
+                     dimnames = list(paste0("patches", seq(n_patches)),
+                                     paste0("species", seq(big_species)),
+                                     paste0("time", seq(n_gen))))
+
+
+plan(multiprocess, workers = 15)
+# Actual simulation
+tictoc::tic()
+big_species_simul = list(seed     = seq(1:5),
+                         k        = fixed_k,
+                         A        = fixed_A,
+                         B_over_A = fixed_B_over_A,
+                         H        = fixed_H) %>%
+    cross() %>%
+    future_map(function(x){
+        devtools::load_all()
+        meta_simul_A_B_k_and_H(
+            seed_number    = x$seed,
+            given_k        = x$k,
+            given_A        = x$A,
+            given_B_over_A = x$B_over_A,
+            given_H        = x$H,
+            given_traits   = big_trait_list)
+    }, .progress = TRUE)
+tictoc::toc()
 ```

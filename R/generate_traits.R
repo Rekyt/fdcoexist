@@ -14,6 +14,7 @@
 #'                       number of patches
 #' @param cor_coef       a numeric value giving the correlation coefficient
 #'                       between the first trait and the other ones
+#' @param min_value      a minimum trait value
 #'
 #' @return a matrix of traits with species in rows and traits in columns
 #' @export
@@ -21,10 +22,10 @@
 #' @examples
 #' traits <- generate_cor_traits(25, 100, 3, 0.3)
 generate_cor_traits = function(number_patches, number_species, number_other = 9,
-                               cor_coef = 0.7) {
+                               cor_coef = 0.7, min_value = 1) {
 
     # Initial Trait
-    x1 = seq(1, number_patches, length.out = number_species)
+    x1 = seq(min_value, number_patches, length.out = number_species)
 
 
     # Variance-covariance matrix between first and any other traits
