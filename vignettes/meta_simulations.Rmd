@@ -374,7 +374,7 @@ triangle_labs = c(N150                = "Abundance at time = 150",
 
 var_labs = c(k        = "k (maximum growth rate)",
              A        = "A (interspecific competition)",
-             B_over_A  = "B/A (ratio intra/inter)",
+             B_over_A = "B/A (ratio intra/inter)",
              H        = "H (advantage of hierarchical competition)")
 ```
 
@@ -904,7 +904,7 @@ fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
                               aes(label = paste(..eq.label.., ..rr.label..,
                                             sep = "~~~")),
                               label.x.npc = given_label_pos, size = 3) +
-        facet_grid(vars(patch), vars(k_type, trait_cor),
+        facet_grid(vars(patch), vars(k, trait_cor),
                    labeller = labeller(patch = label_both)) +
         labs(x     = given_labs[[x_var]],
              y     = given_labs[[y_var]],
@@ -943,11 +943,14 @@ multi_traits_triangle %>%
     geom_smooth(method = "lm", se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "left",
                           aes(label = ..rr.label..), size = 3) +
-    facet_grid(vars(k_type), vars(perf_type), scales = "free_x",
-               labeller = labeller(perf_type = c(N150 = "Abundance at t = 150",
-                                                 distance_to_optimum = "Distance to Environment Optimum"),
-                                   k_type = c(fixed    = "k = 1.5",
-                                              gaussian = "k ~> N(1.5, 0.3)"))) +
+    facet_grid(vars(k), vars(perf_type), scales = "free_x",
+               labeller = labeller(
+                   perf_type = c(
+                       N150 = triangle_labs[["N150"]],
+                       distance_to_optimum = triangle_labs[["distance_to_optimum"]]),
+                   k         = c(
+                       fixed    = "k = 1.5",
+                       gaussian = "k ~> N(1.5, 0.3)"))) +
     scale_color_brewer(labels = c(env_growth_rate = "Environmental Growth Rate\n (Growth only)",
                                   max_growth_rate = "Realized Growth Rate",
                                   th_growth_rate  = "Theoretical Growth Rate\n(Growth + Hierarch. Compet.)"),
