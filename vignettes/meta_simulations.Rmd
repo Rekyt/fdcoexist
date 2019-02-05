@@ -639,39 +639,40 @@ plot_var_scenars_cwm = function(var_scenars_cwm) {
     
     param_caption = paste0(given_n_seed, " simuls.; ",
                            cor_labs[[given_trait_cor]], "; ",
-                           given_k, "; ",
+                           gsub("fixed", "fixed k", given_k), "; ",
                            h_fun_labs[[given_h_fun]], "; ",
                            "A = ", given_A, "; ",
                            "B/A = ", given_B_over_A, "; ",
                            "H = ", given_H)
     
     var_scenars_cwm %>%
-    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar),
-               # specify interaction otherwise it messes with groups
-               group = interaction(as.factor(H_scenar), seed))) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_line(size = 1, alpha = 1/20) +
-    geom_smooth(size = 1, method = "lm", se = FALSE, aes(group = NULL)) +
-    ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
-                          formula = y ~ x, parse = TRUE, size = 3,
-                          label.y.npc = "bottom", label.x.npc = "right") +
-    facet_grid(vars(R_scenar), vars(A_scenar),
-               labeller = labeller(
-                   R_scenar = function(x) paste0("Trait 2 Contrib.\n",
-                                                 "to Growth : ", x, "%"),
-                   A_scenar = function(x) paste0("Trait 2 Contrib.\n",
-                                                 "to Compet. : ", x, "%"))) +
-    ylim(0, 25) +
-    scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
-                       labels = function(x) paste0(x, "%")) +
-    labs(x = "Environmental Variable",
-         y = "CWM of Trait 2",
-         color = "Trait 2 contrib. to Hierarch. Compet.",
-         subtitle = expression("Trait 2 CWM <-> Environment (t"["opt"] *
-                                   ") relationship"),
-         caption = param_caption) +
-    theme(aspect.ratio = 1,
-          legend.position = "top")
+        filter(patch >= 5, patch <= 20) %>%
+        ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar),
+                   # specify interaction otherwise it messes with groups
+                   group = interaction(as.factor(H_scenar), seed))) +
+        geom_abline(slope = 1, intercept = 0, linetype = 2) +
+        geom_line(size = 1, alpha = 1/20) +
+        geom_smooth(size = 1, method = "lm", se = FALSE, aes(group = NULL)) +
+        ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
+                              formula = y ~ x, parse = TRUE, size = 3,
+                              label.y.npc = "bottom", label.x.npc = "right") +
+        facet_grid(vars(R_scenar), vars(A_scenar),
+                   labeller = labeller(
+                       R_scenar = function(x) paste0("Trait 2 Contrib.\n",
+                                                     "to Growth : ", x, "%"),
+                       A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
+                                                     "Compet. : ", x, "%"))) +
+        ylim(0, 25) +
+        scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
+                           labels = function(x) paste0(x, "%")) +
+        labs(x = "Environmental Variable",
+             y = "CWM of Trait 2",
+             color = "Trait 2 contrib. to Hierarch. Compet.",
+             subtitle = expression("Trait 2 CWM <-> Environment (t"["opt"] *
+                                       ") relationship"),
+             caption = param_caption) +
+        theme(aspect.ratio = 1,
+              legend.position = "top")
 }
 
 plot_var_scenars_cwm(var_scenars_cwm)
