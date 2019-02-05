@@ -211,6 +211,24 @@ extract_performances_from_simul = function(simul, trait_df,
                H_scenar  = contrib$H) %>%
         mutate_at(vars(contains("growth_rate")), funs(per_capita = . / N150))
 }
+
+extract_caption = function(simul_df) {
+    given_n_seed    = length(unique(simul_df$seed))
+    given_trait_cor = unique(simul_df$trait_cor)
+    given_k         = unique(simul_df$k)
+    given_h_fun     = unique(simul_df$h_fun)
+    given_A         = unique(simul_df$A)
+    given_B_over_A  = unique(simul_df$B_over_A)
+    given_H         = unique(simul_df$H)
+    
+    param_caption = paste0(given_n_seed, " simuls.; ",
+                           cor_labs[[given_trait_cor]], "; ",
+                           gsub("fixed", "fixed k", given_k), "; ",
+                           h_fun_labs[[given_h_fun]], "; ",
+                           "A = ", given_A, "; ",
+                           "B/A = ", given_B_over_A, "; ",
+                           "H = ", given_H)
+}
 # Initial parameters -----------------------------------------------------------
 suppressMessages(devtools::load_all())
 
@@ -629,21 +647,8 @@ var_scenars_cwm = var_scenars_df %>%
 
 ```{r scenar_cwm}
 plot_var_scenars_cwm = function(var_scenars_cwm) {
-    given_n_seed    = length(unique(var_scenars_cwm$seed))
-    given_trait_cor = unique(var_scenars_cwm$trait_cor)
-    given_k         = unique(var_scenars_cwm$k)
-    given_h_fun     = unique(var_scenars_cwm$h_fun)
-    given_A         = unique(var_scenars_cwm$A)
-    given_B_over_A  = unique(var_scenars_cwm$B_over_A)
-    given_H         = unique(var_scenars_cwm$H)
     
-    param_caption = paste0(given_n_seed, " simuls.; ",
-                           cor_labs[[given_trait_cor]], "; ",
-                           gsub("fixed", "fixed k", given_k), "; ",
-                           h_fun_labs[[given_h_fun]], "; ",
-                           "A = ", given_A, "; ",
-                           "B/A = ", given_B_over_A, "; ",
-                           "H = ", given_H)
+    param_caption = extract_caption(var_scenars_cwm)
     
     var_scenars_cwm %>%
         filter(patch >= 5, patch <= 20) %>%
@@ -662,7 +667,7 @@ plot_var_scenars_cwm = function(var_scenars_cwm) {
                                                      "to Growth : ", x, "%"),
                        A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
                                                      "Compet. : ", x, "%"))) +
-        ylim(0, 25) +
+        ylim(5, 20) +
         scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
                            labels = function(x) paste0(x, "%")) +
         labs(x = "Environmental Variable",
@@ -681,34 +686,40 @@ plot_var_scenars_cwm(var_scenars_cwm)
 We want to see the trait value of species in function of environment colored by local abundances with a line representing the CWM in function of the environment. Facets are different scenarios
 
 ```{r trait_abund_scenarios}
-ggplot(var_scenars_df %>%
-               filter(N > 0, grepl("fixed", k), h_fun == "sum"),
+plot_trait_abund_scenarios = function(var_scenars_df) {
+    
+    param_caption = extract_caption(var_scenars_df)
+
+    ggplot(var_scenars_df %>%
+               filter(N > 0, patch >= 5, patch <= 20),
            aes(patch, trait2)) +
-        stat_summary_2d(aes(z = N), geom = "raster", bins = 22,
+        stat_summary_2d(aes(z = N), geom = "raster", bins = 14,
                         interpolate = TRUE) +
-    geom_line(data = var_scenars_cwm %>%
-                  semi_join(var_scenars_df %>%
-                                filter(N > 0, grepl("fixed", k), h_fun == "sum"),
-                            by = c("patch", "k", "h_fun")),
-              aes(y = trait2_cwm, color = "firebrick"),
-                  size = 1) +
+        geom_line(data = var_scenars_cwm %>%
+                      filter(patch >= 5, patch <= 20),
+                  aes(y = trait2_cwm, color = "firebrick", group = seed),
+                  size = 1, alpha = 1/10) +
+        geom_smooth(data = var_scenars_cwm %>%
+                      filter(patch >= 5, patch <= 20),
+                    aes(y = trait2_cwm, color = "firebrick"),
+                    size = 1, method = "lm", se = FALSE) +
         facet_grid(vars(R_scenar), vars(A_scenar, H_scenar),
                    labeller = label_both) +
-        scale_fill_viridis_c(option = "E") +
+        scale_fill_viridis_c(option = "E", trans = "sqrt") +
         scale_color_manual(name = "CWM", values = c(firebrick = "grey80"),
                            labels = "") +
-        labs(x = "Environment",
-             y = "Trait Value",
-             fill = "Species Abundance",
-             subtitle = paste0("Patch 13 Dynamics – ",
-                           "A = ", fixed_A,
-                           " ; k = ", fixed_k,
-                           " ; B_over_A = ", fixed_B_over_A,
-                           " ; additive H; H = ", fixed_H)) +
+        labs(x        = "Environment",
+             y        = "Trait Value",
+             fill     = "Species Abundance",
+             subtitle = "Trait Environment and Abundance",
+             caption  = param_caption) +
         guides(colour = guide_legend(override.aes = list(size = 1,
                                                          color = "grey50"))) +
         theme(legend.position = "top",
               aspect.ratio = 1)
+}
+
+plot_trait_abund_scenarios(var_scenars_df)
 ```
 
 ### Higher Initial population
