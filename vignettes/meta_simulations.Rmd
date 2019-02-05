@@ -357,6 +357,10 @@ lab_cor = c(uncor    = "r = 0",
             low_cor  = "r = 0.3",
             high_cor = "r = 0.7")
 
+cor_labs = c(uncor   = "No trait correlation",
+            low_cor  = "Medium trait correlation",
+            high_cor = "High trait correlation")
+
 triangle_labs = c(N150                = "Abundance at time = 150",
                   max_growth_rate     = "Maximum Growth Rate",
                   distance_to_optimum = "Distance to Optimum")
@@ -365,6 +369,9 @@ var_labs = c(k        = "k (maximum growth rate)",
              A        = "A (interspecific competition)",
              B_over_A = "B/A (ratio intra/inter)",
              H        = "H (advantage of hierarchical competition)")
+
+h_fun_labs = c(sum  = "additive H",
+               prod = "multiplicative H")
 ```
 
 ## Number of coexisting species depending on A, B/A, k and H
@@ -556,10 +563,10 @@ If we want to be exhaustive in terms of scenario we can use the following:
 ```{r all_scenars}
 # Simulation parameters = median parameters
 fixed_A        = 1e-6
-fixed_k        = 1.5
+fixed_k        = 1.15
 fixed_B_over_A = 100
-fixed_H        = 0.5
-n_seed         = 20
+fixed_H        = 1.25
+n_seed         = 50
 
 # Not fixed k
 mean_k = 1.5
@@ -621,17 +628,39 @@ var_scenars_cwm = var_scenars_df %>%
 ```
 
 ```{r scenar_cwm}
-var_scenars_cwm %>%
-    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar), group = seed)) +
+plot_var_scenars_cwm = function(var_scenars_cwm) {
+    given_n_seed    = length(unique(var_scenars_cwm$seed))
+    given_trait_cor = unique(var_scenars_cwm$trait_cor)
+    given_k         = unique(var_scenars_cwm$k)
+    given_h_fun     = unique(var_scenars_cwm$h_fun)
+    given_A         = unique(var_scenars_cwm$A)
+    given_B_over_A  = unique(var_scenars_cwm$B_over_A)
+    given_H         = unique(var_scenars_cwm$H)
+    
+    param_caption = paste0(given_n_seed, " simuls.; ",
+                           cor_labs[[given_trait_cor]], "; ",
+                           given_k, "; ",
+                           h_fun_labs[[given_h_fun]], "; ",
+                           "A = ", given_A, "; ",
+                           "B/A = ", given_B_over_A, "; ",
+                           "H = ", given_H)
+    
+    var_scenars_cwm %>%
+    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar),
+               # specify interaction otherwise it messes with groups
+               group = interaction(as.factor(H_scenar), seed))) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_line(size = 1, alpha = 1/10) +
-    geom_smooth(size = 1, method = "lm", aes(group = NULL)) +
+    geom_line(size = 1, alpha = 1/20) +
+    geom_smooth(size = 1, method = "lm", se = FALSE, aes(group = NULL)) +
     ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
                           formula = y ~ x, parse = TRUE, size = 3,
                           label.y.npc = "bottom", label.x.npc = "right") +
     facet_grid(vars(R_scenar), vars(A_scenar),
-               labeller = labeller(R_scenar = function(x) paste0("Trait 2 Contrib.\nto Growth : ", x, "%"),
-                                   A_scenar = function(x) paste0("Trait 2 Contrib.\nto Compet. : ", x, "%"))) +
+               labeller = labeller(
+                   R_scenar = function(x) paste0("Trait 2 Contrib.\n",
+                                                 "to Growth : ", x, "%"),
+                   A_scenar = function(x) paste0("Trait 2 Contrib.\n",
+                                                 "to Compet. : ", x, "%"))) +
     ylim(0, 25) +
     scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
                        labels = function(x) paste0(x, "%")) +
@@ -640,11 +669,12 @@ var_scenars_cwm %>%
          color = "Trait 2 contrib. to Hierarch. Compet.",
          subtitle = expression("Trait 2 CWM <-> Environment (t"["opt"] *
                                    ") relationship"),
-         caption = paste0("No trait correlation; fixed k = ", fixed_k,
-                          "; A = ", fixed_A, "; B/A = ", fixed_B_over_A,
-                          "; H = ", fixed_H)) +
+         caption = param_caption) +
     theme(aspect.ratio = 1,
           legend.position = "top")
+}
+
+plot_var_scenars_cwm(var_scenars_cwm)
 ```
 
 We want to see the trait value of species in function of environment colored by local abundances with a line representing the CWM in function of the environment. Facets are different scenarios
