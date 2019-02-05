@@ -202,6 +202,7 @@ extract_performances_from_simul = function(simul, trait_df,
         inner_join(env_growth_rate, by = c("patch", "species")) %>%
         mutate(seed      = simul$seed,
                trait_cor = simul$traits,
+               h_fun     = simul$h_fun,
                k         = given_k,
                A         = simul$A,
                B_over_A  = simul$B_over_A,
@@ -875,12 +876,15 @@ We want to explore the relationship between fitness, optimality and local abunda
 
 ```{r optimality_different_trait_corr}
 # Simulation parameters
-fixed_A = 1e-6
+fixed_A        = 1e-6
+fixed_k        = 1.15
+fixed_B_over_A = 100
+fixed_H        = 1.25
+n_seed         = 50
+
 mean_k = 1.5
 var_k  = 0.3
-fixed_B_over_A = 100
-fixed_H = 1
-
+    
 # Matrix of species maximum growth rates
 set.seed(20190129)
 k_matrix = matrix(rnorm(n_species, mean_k, var_k))
@@ -888,39 +892,47 @@ rownames(k_matrix) = paste0("species", seq(n_species))
 colnames(k_matrix) = "k"
 
 # Generate trait list
-set.seed(1)
+uncor_list = lapply(seq(n_seed), function(given_seed) {
+    set.seed(given_seed)
+    
+    given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                  cor_coef = 0)
+    
+    return(list(uncor = given_traits))
+})
 trait_list = list(
     uncor   = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                  cor_coef = 0),
-    negcor  = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                  cor_coef = -0.7),
-    highcor = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                  cor_coef = 0.7)
+                                  cor_coef = 0)
+    # negcor  = generate_cor_traits(n_patches, n_species, n_traits - 1,
+    #                               cor_coef = -0.7),
+    # highcor = generate_cor_traits(n_patches, n_species, n_traits - 1,
+    #                               cor_coef = 0.7)
 )
 
 
 # Actual simulation
 tictoc::tic()
-multi_traits_fixed = list(seed     = seq(1),
-                          k        = list(k_matrix, mean_k),
+multi_traits_fixed = list(seed     = seq(n_seed),
+                          k        = list(k_matrix, fixed_k),
                           A        = fixed_A,
                           B_over_A = fixed_B_over_A,
                           H        = fixed_H) %>%
     cross() %>%
-    future_map(function(x){
+    future_map(function(x) {
         meta_simul_A_B_k_and_H(
             seed_number    = x$seed,
             given_k        = x$k,
             given_A        = x$A,
             given_B_over_A = x$B_over_A,
-            given_H        = x$H,
-            given_traits   = trait_list)
-    }) %>%
-    set_names(nm = c("gaussian", "fixed"))
+            given_H        = x$H)
+            # given_traits   = trait_list)
+    }, .progress = TRUE)
 tictoc::toc()
 
-multi_traits_triangle = map_dfr(multi_traits_fixed, function(simul_given_k) {
-    map2_dfr(simul_given_k, trait_list, extract_performances_from_simul)})
+plan(multiprocess, workers = availableCores() - 1)
+multi_traits_triangle = future_map2_dfr(
+    multi_traits_fixed, flatten(c(uncor_list, uncor_list)),
+    ~extract_performances_from_simul(.x[[1]], .y, TRUE))
 ```
 
 ```{r plot_optimality_diff_trait_cor, fig.height=9.5}
@@ -965,6 +977,8 @@ plot_multi_growth_dist_ab
 ```
 
 ```{r growth_and_other_performance_indinces}
+param_caption = extract_caption(multi_traits_triangle)
+
 plot_growth_rate_perf = multi_traits_triangle %>%
     gather("growth_rate_type", "growth_rate_value",
            ends_with("growth_rate")) %>%
@@ -973,7 +987,7 @@ plot_growth_rate_perf = multi_traits_triangle %>%
     mutate(growth_rate_type = as_factor(growth_rate_type)) %>%
     gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
     ggplot(aes(perf_value, growth_rate_value, color = growth_rate_type)) +
-    geom_point(alpha = 1/6) +
+    geom_point(alpha = 1/50, shape = ".") +
     geom_smooth(method = "lm", se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "left",
                           aes(label = ..rr.label..), size = 3) +
@@ -984,7 +998,7 @@ plot_growth_rate_perf = multi_traits_triangle %>%
                        distance_to_optimum =
                            triangle_labs[["distance_to_optimum"]]),
                    k         = c(
-                       "fixed = 1.5" = "k = 1.5",
+                       "fixed = 1.15" = "k = 1.15",
                        gaussian = "k ~> N(1.5, 0.3)"))) +
     scale_color_brewer(
         labels = c(
@@ -995,10 +1009,7 @@ plot_growth_rate_perf = multi_traits_triangle %>%
         palette = "Dark2") +
     labs(x = "Performance Value", y = "Growth Rate", color = NULL,
          subtitle = "Growth Rates Estimates vs. other Performance Indices",
-         caption = paste0("No trait correlation; ",
-                          "A = ", fixed_A,
-                          "; B/A = ", fixed_B_over_A,
-                          "; H = ", fixed_H)) +
+         caption = param_caption) +
     theme(legend.position = "top",
           panel.grid = element_blank(),
           aspect.ratio = 1)
@@ -1012,7 +1023,7 @@ plot_growth_rate_percapita_perf = multi_traits_triangle %>%
     mutate(growth_rate_type = as_factor(growth_rate_type)) %>%
     gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
     ggplot(aes(perf_value, growth_rate_value, color = growth_rate_type)) +
-    geom_point(alpha = 1/6) +
+    geom_point(alpha = 1/50, shape = ".") +
     geom_smooth(formula = y ~ log(x), se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ log(x), parse = TRUE,
                           label.x.npc = "left", aes(label = ..rr.label..),
@@ -1024,7 +1035,7 @@ plot_growth_rate_percapita_perf = multi_traits_triangle %>%
                        distance_to_optimum =
                            triangle_labs[["distance_to_optimum"]]),
                    k         = c(
-                       "fixed = 1.5" = "k = 1.5",
+                       "fixed = 1.15" = "k = 1.15",
                        gaussian = "k ~> N(1.5, 0.3)"))) +
     scale_color_brewer(
         labels = c(
@@ -1038,10 +1049,7 @@ plot_growth_rate_percapita_perf = multi_traits_triangle %>%
     scale_y_log10() +
     labs(x = "Performance Value", y = "Growth Rate per Capita", color = NULL,
          subtitle = "Growth Rates per Capita vs. other Performance Indices",
-         caption = paste0("No trait correlation; ",
-                          "A = ", fixed_A,
-                          "; B/A = ", fixed_B_over_A,
-                          "; H = ", fixed_H)) +
+         caption = param_caption) +
     theme(legend.position = "top",
           panel.grid = element_blank(),
           aspect.ratio = 1)
