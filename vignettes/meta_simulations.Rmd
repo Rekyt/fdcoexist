@@ -105,12 +105,12 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
                  H_scenar, patch)
     
     rich_df = group_site %>%
-        summarise(species_rich = sum(N > 0))
+        summarise(species_rich = sum(N > 0, na.rm = TRUE))
     
     group_site %>%
         summarise_at(vars(tidyselect::matches("trait\\d")),
-                     funs(cwm = weighted.mean(., N),
-                          cwv = Hmisc::wtd.var(., N))) %>%
+                     funs(cwm = weighted.mean(., N, na.rm = TRUE),
+                          cwv = Hmisc::wtd.var(., N, na.rm = TRUE))) %>%
         inner_join(rich_df) %>%
         ungroup()
 }
@@ -220,7 +220,7 @@ n_gen     <- 150  # Length of model run (generations)
 initpop   <- 50   # initial population size
 n_traits  <- 4    # number of traits
 k         <- 1.15 # Maximum growth rate
-env_width <- rep(10, length.out = n_patches)  # Envtal filter strength
+env_width <- rep(5, length.out = n_patches)  # Envtal filter strength
 total_runs = 20  # Number of set of traits to test
 
 # Competition + Dispersion coefficients
@@ -555,10 +555,11 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A = 1e-6
-fixed_k = 1.5
+fixed_A        = 1e-6
+fixed_k        = 1.5
 fixed_B_over_A = 100
-fixed_H = 1
+fixed_H        = 0.5
+n_seed         = 20
 
 # Not fixed k
 mean_k = 1.5
@@ -582,12 +583,12 @@ names(scenar_list) = scenar_df$scenar_name
 # Actual simulation
 plan(multiprocess, workers = 15)
 tictoc::tic()
-var_scenars = list(seed     = seq(1),
-                  k        = list(k_matrix, k),
-                  A        = fixed_A,
-                  B_over_A = fixed_B_over_A,
-                  H        = fixed_H,
-                  h_fun    = list("sum", "prod")) %>%
+var_scenars = list(seed     = seq(n_seed),
+                   k        = k,
+                   A        = fixed_A,
+                   B_over_A = fixed_B_over_A,
+                   H        = fixed_H,
+                   h_fun    = "sum") %>%
     cross() %>%
     future_map(function(x){
         devtools::load_all()
@@ -600,20 +601,20 @@ var_scenars = list(seed     = seq(1),
             given_H        = x$H,
             given_scenars  = scenar_list,
             given_h_fun    = x$h_fun)
-    }) %>%
-    set_names(nm = list(c("gaussian", "fixed"), c("sum", "prod")) %>%
-                  cross() %>%
-                  map_chr(~paste(.x, collapse = "_")))
+    }, .progress = TRUE)
 tictoc::toc()
 
-set.seed(1)
-used_traits = list(
-    uncor = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                cor_coef = 0)
-)
+
+used_trait_list = map(seq(n_seed), function(given_seed) {
+    set.seed(given_seed)
+    given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                       cor_coef = 0)
+    
+    list(uncor = given_traits)
+})
 
 var_scenars_df = var_scenars %>%
-    map_dfr(~tidy_simulation_list(.x, used_traits))
+    map2_dfr(used_trait_list, ~tidy_simulation_list(.x, .y, 150))
 
 var_scenars_cwm = var_scenars_df %>%
     compute_site_cwm_cwv_sr()
@@ -621,14 +622,14 @@ var_scenars_cwm = var_scenars_df %>%
 
 ```{r scenar_cwm}
 var_scenars_cwm %>%
-    filter(grepl("fixed", k)) %>%
-    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar))) +
+    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar), group = seed)) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_line(size = 1) +
-    ggpmisc::stat_poly_eq(aes(label = ..eq.label..), formula = y ~ x,
-                          parse = TRUE, size = 3, label.y.npc = "bottom",
-                          label.x.npc = "right") +
-    facet_grid(vars(R_scenar), vars(h_fun, A_scenar),
+    geom_line(size = 1, alpha = 1/10) +
+    geom_smooth(size = 1, method = "lm", aes(group = NULL)) +
+    ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
+                          formula = y ~ x, parse = TRUE, size = 3,
+                          label.y.npc = "bottom", label.x.npc = "right") +
+    facet_grid(vars(R_scenar), vars(A_scenar),
                labeller = labeller(R_scenar = function(x) paste0("Trait 2 Contrib.\nto Growth : ", x, "%"),
                                    A_scenar = function(x) paste0("Trait 2 Contrib.\nto Compet. : ", x, "%"))) +
     ylim(0, 25) +
@@ -1092,29 +1093,33 @@ To avoid functional truncation effect we can make our simulation with a much big
 fixed_A = 1e-6
 fixed_k = 1.5
 fixed_B_over_A = 100
-fixed_H = 1
+fixed_H = 0.5
 
 # Generate species pool
-max_value   = 75
+max_value   =  75
 big_species = 500
 min_value   = -50
-set.seed(1)
-big_trait_list = list(
-    uncor   = generate_cor_traits(max_value, big_species, n_traits - 1,
-                                  cor_coef = 0, min_value)
-)
+n_seed = 20
+big_trait_list = map(seq(n_seed), function(given_seed) {
+    set.seed(given_seed)
+    given_traits = generate_cor_traits(max_value, big_species, n_traits - 1,
+                                       cor_coef = 0, min_value)
+    
+    list(uncor = given_traits)
+})
 
 # Initial composition
 composition <- array(NA, dim = c(n_patches, big_species, n_gen),
                      dimnames = list(paste0("patches", seq(n_patches)),
                                      paste0("species", seq(big_species)),
                                      paste0("time", seq(n_gen))))
+composition[,,"time1"] <- 50
 
 
 plan(multiprocess, workers = 15)
 # Actual simulation
 tictoc::tic()
-big_species_simul = list(seed     = seq(1:5),
+big_species_simul = list(seed     = seq(n_seed),
                          k        = fixed_k,
                          A        = fixed_A,
                          B_over_A = fixed_B_over_A,
@@ -1128,7 +1133,12 @@ big_species_simul = list(seed     = seq(1:5),
             given_A        = x$A,
             given_B_over_A = x$B_over_A,
             given_H        = x$H,
-            given_traits   = big_trait_list)
+            given_traits   = big_trait_list[[x$seed]])
     }, .progress = TRUE)
 tictoc::toc()
+
+big_species_df = map2_dfr(big_species_simul, big_trait_list,
+                          ~tidy_simulation_list(.x, .y, 150))
+
+big_species_cwm = compute_site_cwm_cwv_sr(big_species_df)
 ```
