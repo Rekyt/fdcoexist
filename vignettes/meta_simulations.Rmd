@@ -34,6 +34,28 @@ suppressPackageStartupMessages({
 
 plan(sequential)
 # Functions --------------------------------------------------------------------
+wtd_skewness = function(x, w, na.rm = TRUE) {
+    
+    if (na.rm) {
+        s <- !is.na(x + w)
+        x <- x[s]
+        w <- w[s]
+    }
+    
+    Weighted.Desc.Stat::w.skewness(x, w)
+}
+
+wtd_kurtosis = function(x, w, na.rm = TRUE) {
+    
+    if (na.rm) {
+        s <- !is.na(x + w)
+        x <- x[s]
+        w <- w[s]
+    }
+    
+    Weighted.Desc.Stat::w.kurtosis(x, w)
+}
+
 extract_trait_contrib_from_scenar = function(scenario) {
     R_scenar = as.integer(sub("R(\\d+).*", "\\1", scenario, perl = TRUE))
     A_scenar = as.integer(sub(".*A(\\d+).*", "\\1", scenario, perl = TRUE))
@@ -110,7 +132,11 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
     group_site %>%
         summarise_at(vars(tidyselect::matches("trait\\d")),
                      funs(cwm = weighted.mean(., N, na.rm = TRUE),
-                          cwv = Hmisc::wtd.var(., N, na.rm = TRUE))) %>%
+                          cwv = Hmisc::wtd.var(., N, na.rm = TRUE),
+                          cws = wtd_skewness(., N, na.rm = TRUE),
+                          cwk = wtd_kurtosis(., N, na.rm = TRUE),
+                          trait_range = diff(range(ifelse(N > 0, ., NA),
+                                              na.rm = TRUE)))) %>%
         inner_join(rich_df) %>%
         ungroup()
 }
@@ -582,7 +608,7 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A        = 1e-6
+fixed_A        = 5e-5
 fixed_k        = 1.15
 fixed_B_over_A = 100
 fixed_H        = 1.25
@@ -662,7 +688,8 @@ plot_var_scenars_cwm = function(var_scenars_cwm) {
         geom_smooth(size = 1, method = "lm", se = FALSE, aes(group = NULL)) +
         ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
                               formula = y ~ x, parse = TRUE, size = 3,
-                              label.y.npc = "bottom", label.x.npc = "right") +
+                              label.y.npc = "bottom", label.x.npc = "right",
+                              coef.digits = 2) +
         facet_grid(vars(R_scenar), vars(A_scenar),
                    labeller = labeller(
                        R_scenar = function(x) paste0("Trait 2 Contrib.\n",
@@ -683,6 +710,43 @@ plot_var_scenars_cwm = function(var_scenars_cwm) {
 }
 
 plot_var_scenars_cwm(var_scenars_cwm)
+```
+
+```{r scenar_cwv}
+plot_var_scenars_cwv = function(var_scenars_cwm) {
+    
+    param_caption = extract_caption(var_scenars_cwm)
+    
+    var_scenars_cwm %>%
+        filter(patch >= 5, patch <= 20) %>%
+        ggplot(aes(patch, trait2_cwv, color = as.factor(H_scenar),
+                   # specify interaction otherwise it messes with groups
+                   group = interaction(as.factor(H_scenar), seed))) +
+        geom_line(size = 1, alpha = 1/20) +
+        geom_smooth(size = 1, se = FALSE, aes(group = NULL)) +
+        ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
+                              formula = y ~ x, parse = TRUE, size = 3,
+                              label.y.npc = 0.1, label.x.npc = "left",
+                              coef.digits = 2) +
+        facet_grid(vars(R_scenar), vars(A_scenar),
+                   labeller = labeller(
+                       R_scenar = function(x) paste0("Trait 2 Contrib.\n",
+                                                     "to Growth : ", x, "%"),
+                       A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
+                                                     "Compet. : ", x, "%"))) +
+        scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
+                           labels = function(x) paste0(x, "%")) +
+        labs(x = "Environmental Variable",
+             y = "CWV of Trait 2",
+             color = "Trait 2 contrib. to Hierarch. Compet.",
+             subtitle = expression("Trait 2 CWV <-> Environment (t"["opt"] *
+                                       ") relationship"),
+             caption = param_caption) +
+        theme(aspect.ratio = 1,
+              legend.position = "top")
+}
+
+plot_var_scenars_cwv(var_scenars_cwm)
 ```
 
 We want to see the trait value of species in function of environment colored by local abundances with a line representing the CWM in function of the environment. Facets are different scenarios
