@@ -180,7 +180,8 @@ extract_performances_from_simul = function(simul, trait_df,
         
         # Get optimality
         optim_dist = apply(trait_df, 1, function(given_traits) {
-            weighted.mean(abs(site_index - given_traits), c(0.5, 0.5, 0, 0))
+            weighted.mean(abs(site_index - given_traits), c(100 - contrib$R,
+                                                            contrib$R, 0, 0))
         }) %>%
             enframe("species", "distance_to_optimum")
         
