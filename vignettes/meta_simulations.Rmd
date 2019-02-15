@@ -95,12 +95,12 @@ extract_simul_param_and_abund = function(single_simul, time = 150) {
                seed      = single_simul$seed,
                k         = given_k,
                A         = single_simul$A,
-               B_over_A  = single_simul$B_over_A,
+               B         = single_simul$B,
                H         = single_simul$H,
                h_fun     = single_simul$h_fun,
                trait_cor = single_simul$traits) %>%
         ungroup() %>%
-        select(seed, trait_cor, k, h_fun, A, B_over_A, H, R_scenar, A_scenar,
+        select(seed, trait_cor, k, h_fun, A, B, H, R_scenar, A_scenar,
                H_scenar, everything())
 }
 
@@ -123,7 +123,7 @@ tidy_simulation_list = function(simulation_list, list_of_trait_df, time = 150) {
 compute_site_cwm_cwv_sr = function(simulation_df) {
     
     group_site = simulation_df %>%
-        group_by(seed, trait_cor, k, h_fun, A, B_over_A, H, R_scenar, A_scenar,
+        group_by(seed, trait_cor, k, h_fun, A, B, H, R_scenar, A_scenar,
                  H_scenar, patch)
     
     rich_df = group_site %>%
@@ -232,7 +232,7 @@ extract_performances_from_simul = function(simul, trait_df,
                h_fun     = simul$h_fun,
                k         = given_k,
                A         = simul$A,
-               B_over_A  = simul$B_over_A,
+               B         = simul$B,
                H         = simul$H,
                R_scenar  = contrib$R,
                A_scenar  = contrib$A,
@@ -246,7 +246,7 @@ extract_caption = function(simul_df) {
     given_k         = unique(simul_df$k)
     given_h_fun     = unique(simul_df$h_fun)
     given_A         = unique(simul_df$A)
-    given_B_over_A  = unique(simul_df$B_over_A)
+    given_B         = unique(simul_df$B)
     given_H         = unique(simul_df$H)
     
     param_caption = paste0(given_n_seed, " simuls.; ",
@@ -254,7 +254,7 @@ extract_caption = function(simul_df) {
                            gsub("fixed", "fixed k", given_k), "; ",
                            h_fun_labs[[given_h_fun]], "; ",
                            "A = ", given_A, "; ",
-                           "B/A = ", given_B_over_A, "; ",
+                           "B = ", given_B, "; ",
                            "H = ", given_H)
 }
 # Initial parameters -----------------------------------------------------------
@@ -308,7 +308,7 @@ trait_scenarios = lapply(trait_scenarios, function(scenar_name) {
 # Define meta-function to run all analyses with many trait levels --------------
 
 meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
-                                  given_B_over_A = B/A,
+                                  given_B = B,
                                   given_H = H, given_scenars = NULL,
                                   given_traits = NULL,
                                   given_h_fun  = "sum") {
@@ -334,9 +334,9 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     all_env = list(constant = env_width)
     
     all_compet = list(compet = list(A        = given_A,
-                                    B        = given_A * given_B_over_A,
+                                    B        = given_B,
                                     H        = given_H,
-                                    B_over_A = given_B_over_A))
+                                    B_over_A = given_B/given_A))
 
     
     all_facets = expand.grid(compet_status = names(all_compet),
@@ -367,6 +367,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
             list(
                 k             = given_k,
                 A             = all_compet[[given_row[["compet_status"]]]][["A"]],
+                B             = all_compet[[given_row[["compet_status"]]]][["B"]],
                 B_over_A      = all_compet[[given_row[["compet_status"]]]][["B_over_A"]],
                 H             = all_compet[[given_row[["compet_status"]]]][["H"]],
                 seed          = seed_number,
@@ -407,12 +408,14 @@ cor_labs = c(uncor   = "No trait correlation",
             low_cor  = "Medium trait correlation",
             high_cor = "High trait correlation")
 
-triangle_labs = c(N150                = "Abundance at time = 150",
-                  max_growth_rate     = "Maximum Growth Rate",
-                  distance_to_optimum = "Distance to Optimum")
+triangle_labs = c(N150                   = "Abundance at time = 150",
+                  max_growth_rate        = "Maximum Growth Rate",
+                  distance_to_optimum    = "Distance to Optimum",
+                  null_max_gr_per_capita = "Max. Growth Rate in Monoculture")
 
 var_labs = c(k        = "k (maximum growth rate)",
              A        = "A (interspecific competition)",
+             B        = "B (intraspecific competition)",
              B_over_A = "B/A (ratio intra/inter)",
              H        = "H (advantage of hierarchical competition)")
 
@@ -425,23 +428,23 @@ h_fun_labs = c(sum  = "additive H",
 ```{r param_space_simuls}
 list_A = 10^-(seq(2, 6, length.out = 5))
 list_k = seq(1, 1.5, length.out = 5)
-list_B_over_A = 10^seq(0, 4, length.out = 5)
+list_B = list_A
 list_H = seq(0, 2, length.out = 5)
 
 plan(multiprocess, workers = 15)
 tictoc::tic()
 
 var_a_var_k_var_ba = list(
-    run_n    = seq(1),
-    A        = list_A,
-    k        = list_k,
-    B_over_A = list_B_over_A,
-    H        = list_H) %>%
+    run_n = seq(1),
+    A     = list_A,
+    k     = list_k,
+    B     = list_B,
+    H     = list_H) %>%
     cross() %>%
     future_map(function(x) {
     devtools::load_all()
     
-    meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B_over_A,
+    meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B,
                            given_H = x$H)
 }, .progress = TRUE)
 tictoc::toc()
@@ -485,15 +488,15 @@ plot_k_A = var_ba_cwm_sr_df %>%
     plot_species_richness("k", "A") +
     scale_y_log10()
 
-plot_A_BA = var_ba_cwm_sr_df %>%
+plot_A_B = var_ba_cwm_sr_df %>%
     filter(patch %in% c(1, 13)) %>%
-    plot_species_richness("A", "B_over_A") +
+    plot_species_richness("A", "B") +
     scale_x_log10() +
     scale_y_log10()
 
-plot_k_BA = var_ba_cwm_sr_df %>%
+plot_k_B = var_ba_cwm_sr_df %>%
     filter(patch %in% c(1, 13)) %>%
-    plot_species_richness("k", "B_over_A") +
+    plot_species_richness("k", "B") +
     scale_y_log10()
 
 plot_k_H = var_ba_cwm_sr_df %>%
@@ -505,17 +508,17 @@ plot_A_H = var_ba_cwm_sr_df %>%
     plot_species_richness("A", "H") +
     scale_x_log10()
 
-plot_BA_H = var_ba_cwm_sr_df %>%
+plot_B_H = var_ba_cwm_sr_df %>%
     filter(patch %in% c(1, 13)) %>%
-    plot_species_richness("B_over_A", "H") +
+    plot_species_richness("B", "H") +
     scale_x_log10()
 
 sr_grid = plot_grid(plot_k_A,
           plot_k_H,
-          plot_A_BA,
+          plot_A_B,
           plot_A_H,
-          plot_k_BA,
-          plot_BA_H,
+          plot_k_B,
+          plot_B_H,
           ncol = 2)
 sr_grid
 ```
@@ -524,7 +527,7 @@ sr_grid
 var_ba_slope = var_ba_cwm_sr_df %>%
     ungroup() %>%
     filter(!is.nan(trait2_cwm)) %>%
-    nest(-seed, -trait_cor, -k, -A,-B_over_A, -H, -R_scenar, -A_scenar,
+    nest(-seed, -trait_cor, -k, -A,-B, -H, -R_scenar, -A_scenar,
          -H_scenar) %>%
     mutate(data = data %>%
                map(~.x %>%
@@ -560,11 +563,11 @@ plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
 plot_k_A_slope = plot_average_slope(var_ba_slope, "k", "A") +
     scale_y_log10()
 
-plot_A_BA_slope = plot_average_slope(var_ba_slope, "A", "B_over_A") +
+plot_A_B_slope = plot_average_slope(var_ba_slope, "A", "B") +
     scale_x_log10() +
     scale_y_log10()
 
-plot_k_BA_slope = plot_average_slope(var_ba_slope, "k", "B_over_A") +
+plot_k_B_slope = plot_average_slope(var_ba_slope, "k", "B") +
     scale_y_log10()
 
 plot_k_H_slope = plot_average_slope(var_ba_slope, "k", "H")
@@ -572,15 +575,15 @@ plot_k_H_slope = plot_average_slope(var_ba_slope, "k", "H")
 plot_A_H_slope = plot_average_slope(var_ba_slope, "A", "H") +
     scale_x_log10()
 
-plot_BA_H_slope = plot_average_slope(var_ba_slope, "B_over_A", "H") +
+plot_B_H_slope = plot_average_slope(var_ba_slope, "B", "H") +
     scale_x_log10()
 
 slope_grid = plot_grid(plot_k_A_slope,
           plot_k_H_slope,
-          plot_A_BA_slope,
+          plot_A_B_slope,
           plot_A_H_slope,
-          plot_k_BA_slope,
-          plot_BA_H_slope,
+          plot_k_B_slope,
+          plot_B_H_slope,
           nrow = 3)
 
 slope_grid
@@ -589,15 +592,15 @@ slope_grid
 
 ```{r cwm_env_param}
 var_ba_cwm_sr_df %>%
-    filter(k %in% c(1.125, 1.5), H %in% c(0, 1, 2), A <= 1e-3, A >= 1e-5, B_over_A >= 10, B_over_A <= 1e4) %>%
-    ggplot(aes(patch, trait2_cwm, color = as.factor(B_over_A))) +
+    filter(k %in% c(1.125, 1.5), H %in% c(0, 1, 2), A <= 1e-3, A >= 1e-5) %>%
+    ggplot(aes(patch, trait2_cwm, color = as.factor(B))) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
     geom_line(size = 1) +
     facet_grid(vars(A), vars(k, H), labeller = label_both) +
     scale_color_viridis_d() +
     labs(x = "Environment",
          y = "Trait 2 CWM",
-         colour = "B/A") +
+         colour = "B") +
     theme(aspect.ratio = 1,
           legend.position = "top")
 ```
@@ -608,11 +611,11 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A        = 5e-5
-fixed_k        = 1.15
-fixed_B_over_A = 100
-fixed_H        = 1.25
-n_seed         = 50
+fixed_A = 5e-5
+fixed_k = 1.15
+fixed_B = 5e-3
+fixed_H = 1.25
+n_seed  = 50
 
 # Not fixed k
 mean_k = 1.5
@@ -636,24 +639,24 @@ names(scenar_list) = scenar_df$scenar_name
 # Actual simulation
 plan(multiprocess, workers = 15)
 tictoc::tic()
-var_scenars = list(seed     = seq(n_seed),
-                   k        = k,
-                   A        = fixed_A,
-                   B_over_A = fixed_B_over_A,
-                   H        = fixed_H,
-                   h_fun    = "sum") %>%
+var_scenars = list(seed  = seq(n_seed),
+                   k     = k,
+                   A     = fixed_A,
+                   B     = fixed_B,
+                   H     = fixed_H,
+                   h_fun = "sum") %>%
     cross() %>%
     future_map(function(x){
         devtools::load_all()
         
         meta_simul_A_B_k_and_H(
-            seed_number    = x$seed,
-            given_k        = x$k,
-            given_A        = x$A,
-            given_B_over_A = x$B_over_A,
-            given_H        = x$H,
-            given_scenars  = scenar_list,
-            given_h_fun    = x$h_fun)
+            seed_number   = x$seed,
+            given_k       = x$k,
+            given_A       = x$A,
+            given_B       = x$B,
+            given_H       = x$H,
+            given_scenars = scenar_list,
+            given_h_fun   = x$h_fun)
     }, .progress = TRUE)
 tictoc::toc()
 
@@ -801,7 +804,7 @@ tictoc::tic()
 higher_init_pop = meta_simul_A_B_k_and_H(1,
                                          fixed_k,
                                          fixed_A,
-                                         fixed_B_over_A,
+                                         fixed_B,
                                          fixed_H_over_k,
                                          given_scenars = scenar_list) %>%
     map_dfr(as_tibble)
@@ -842,7 +845,7 @@ higher_init_pop_df  %>%
     labs(subtitle = paste0("Patch 1 Dynamics – ",
                            "A: ", fixed_A,
                            " ; k: ", fixed_k,
-                           " ; B_over_A: ", fixed_B_over_A,
+                           " ; B: ", fixed_B,
                            " ; H_over_k: ", fixed_H_over_k)) +
     theme(legend.position = "none")
 ```
@@ -941,13 +944,13 @@ We want to explore the relationship between fitness, optimality and local abunda
 
 ```{r optimality_different_trait_corr}
 # Simulation parameters
-fixed_A        = 1e-6
-fixed_k        = 1.15
-fixed_B_over_A = 100
-fixed_H        = 1.25
-n_seed         = 50
+fixed_A = 1e-6
+fixed_k = 1.15
+fixed_B = 1e-4
+fixed_H = 1.25
+n_seed  = 50
 
-mean_k = 1.5
+mean_k = fixed_k
 var_k  = 0.3
     
 # Matrix of species maximum growth rates
@@ -965,6 +968,7 @@ uncor_list = lapply(seq(n_seed), function(given_seed) {
     
     return(list(uncor = given_traits))
 })
+
 trait_list = list(
     uncor   = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                   cor_coef = 0)
@@ -977,26 +981,27 @@ trait_list = list(
 
 # Actual simulation
 tictoc::tic()
-multi_traits_fixed = list(seed     = seq(n_seed),
-                          k        = list(k_matrix, fixed_k),
-                          A        = fixed_A,
-                          B_over_A = fixed_B_over_A,
-                          H        = fixed_H) %>%
+multi_traits_fixed = list(seed = seq(n_seed),
+                          k    = fixed_k,
+                          A    = c(fixed_A, 0),
+                          B    = fixed_B,
+                          H    = c(fixed_H, 0)) %>%
     cross() %>%
     future_map(function(x) {
+        suppressMessages({devtools::load_all()})
         meta_simul_A_B_k_and_H(
-            seed_number    = x$seed,
-            given_k        = x$k,
-            given_A        = x$A,
-            given_B_over_A = x$B_over_A,
-            given_H        = x$H)
+            seed_number = x$seed,
+            given_k     = x$k,
+            given_A     = x$A,
+            given_B     = x$B,
+            given_H     = x$H)
             # given_traits   = trait_list)
     }, .progress = TRUE)
 tictoc::toc()
 
 plan(multiprocess, workers = availableCores() - 1)
 multi_traits_triangle = future_map2_dfr(
-    multi_traits_fixed, flatten(c(uncor_list, uncor_list)),
+    multi_traits_fixed, flatten(c(uncor_list, uncor_list, uncor_list, uncor_list)),
     ~extract_performances_from_simul(.x[[1]], .y, TRUE))
 ```
 
@@ -1121,12 +1126,32 @@ plot_growth_rate_percapita_perf = multi_traits_triangle %>%
 plot_growth_rate_percapita_perf
 ```
 
+### Compute Null Maximum Growth Rate per Capita
+
+```{r compute_null_growth_rate}
+null_gr = multi_traits_triangle %>%
+    filter(A == 0, H == 0) %>%
+    select(seed, patch, species, max_growth_rate,
+           max_growth_rate_per_capita) %>%
+    rename(null_max_gr = max_growth_rate,
+           null_max_gr_per_capita = max_growth_rate_per_capita)
+
+multi_traits_triangle = multi_traits_triangle %>%
+    inner_join(null_gr, by = c("seed", "patch", "species"))
+
+multi_traits_triangle %>%
+    filter(A != 0, H != 0) %>%
+    fig_double_facet("N150", "null_max_gr_per_capita", "distance_to_optimum",
+                     triangle_labs, "right")
+```
+
+
 ```{r testing_more_parameters}
 # Simulation parameters
 fixed_A = 10^seq(-6, -2)
-mean_k = 1.5
-var_k  = 0.3
-fixed_B_over_A = 10^seq(1, 3)
+mean_k  = 1.5
+var_k   = 0.3
+fixed_B = fixed_A
 fixed_H = c(0, 1, 2)
 
 # Matrix of species maximum growth rates
@@ -1149,21 +1174,21 @@ trait_list = list(
 plan(multiprocess, workers = 15)
 # Actual simulation
 tictoc::tic()
-var_param = list(seed     = seq(1),
-                 k        = list(k_matrix, mean_k),
-                 A        = fixed_A,
-                 B_over_A = fixed_B_over_A,
-                 H        = fixed_H) %>%
+var_param = list(seed = seq(1),
+                 k    = list(k_matrix, mean_k),
+                 A    = fixed_A,
+                 B    = fixed_B,
+                 H    = fixed_H) %>%
     cross() %>%
     future_map(function(x){
         devtools::load_all()
         meta_simul_A_B_k_and_H(
-            seed_number    = x$seed,
-            given_k        = x$k,
-            given_A        = x$A,
-            given_B_over_A = x$B_over_A,
-            given_H        = x$H,
-            given_traits   = trait_list)
+            seed_number  = x$seed,
+            given_k      = x$k,
+            given_A      = x$A,
+            given_B      = x$B,
+            given_H      = x$H,
+            given_traits = trait_list)
     }, .progress = TRUE)
 tictoc::toc()
 
@@ -1174,13 +1199,13 @@ var_param_triangle = map_dfr(var_param, function(simul_given_k) {
 tictoc::toc()
 
 var_param_triangle %>%
-    filter(trait_cor == "uncor", H != 1, B_over_A == 100, A <= 1e-4, N150 > 0) %>%
+    filter(trait_cor == "uncor", H != 1, B == 1e-2, A <= 1e-4, N150 > 0) %>%
     ggplot(aes(distance_to_optimum, N150, color = k)) +
     geom_point(shape = ".") +
     geom_smooth(method = "lm", se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "right",
                           aes(label = ..rr.label..), size = 3) +
-    facet_grid(vars(A), vars(H, B_over_A), labeller = label_both) +
+    facet_grid(vars(A), vars(H, B), labeller = label_both) +
     theme(aspect.ratio = 1) +
     labs(x = triangle_labs[["distance_to_optimum"]],
          y = triangle_labs[["N150"]],
@@ -1188,13 +1213,13 @@ var_param_triangle %>%
          caption = "No trait correlation; k ~~> N(1.5, 0.3)")
 
 var_param_triangle %>%
-    filter(trait_cor == "uncor", H != 1, B_over_A == 100, A <= 1e-4, N150 > 0) %>%
+    filter(trait_cor == "uncor", H != 1, B == 1e-2, A <= 1e-4, N150 > 0) %>%
     ggplot(aes(N150, env_growth_rate)) +
     geom_point(alpha = 1/6) +
     geom_smooth(method = "lm", se = FALSE) +
     ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "right",
                           aes(label = ..rr.label..), size = 3) +
-    facet_grid(vars(A), vars(k, H, B_over_A)) +
+    facet_grid(vars(A), vars(k, H, B)) +
     scale_x_log10()
 ```
 
@@ -1207,7 +1232,7 @@ To avoid functional truncation effect we can make our simulation with a much big
 # Simulation parameters
 fixed_A = 1e-6
 fixed_k = 1.5
-fixed_B_over_A = 100
+fixed_B = 1e-4
 fixed_H = 0.5
 
 # Generate species pool
@@ -1234,21 +1259,21 @@ composition[,,"time1"] <- 50
 plan(multiprocess, workers = 15)
 # Actual simulation
 tictoc::tic()
-big_species_simul = list(seed     = seq(n_seed),
-                         k        = fixed_k,
-                         A        = fixed_A,
-                         B_over_A = fixed_B_over_A,
-                         H        = fixed_H) %>%
+big_species_simul = list(seed = seq(n_seed),
+                         k    = fixed_k,
+                         A    = fixed_A,
+                         B    = fixed_B,
+                         H    = fixed_H) %>%
     cross() %>%
     future_map(function(x){
         devtools::load_all()
         meta_simul_A_B_k_and_H(
-            seed_number    = x$seed,
-            given_k        = x$k,
-            given_A        = x$A,
-            given_B_over_A = x$B_over_A,
-            given_H        = x$H,
-            given_traits   = big_trait_list[[x$seed]])
+            seed_number  = x$seed,
+            given_k      = x$k,
+            given_A      = x$A,
+            given_B      = x$B,
+            given_H      = x$H,
+            given_traits = big_trait_list[[x$seed]])
     }, .progress = TRUE)
 tictoc::toc()
 
