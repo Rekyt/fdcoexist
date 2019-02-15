@@ -1,0 +1,76 @@
+---
+title: "fdcoexist equation only"
+author:
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{Full equation of the model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Full Model Equation
+
+\begin{equation}
+N_{t+1, i, x} = \frac{
+    \left[ k \displaystyle
+        \sum_{g = 1}^{T_g} w_g \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) +
+        H \sum_{h = 1}^{T_h} w_h \frac{\text{trait}_{i, h}}{\text{max}(\text{trait}_{i, h})} \right] \times N_{t, i, x}}{
+    1 + A \left[ \displaystyle
+        \sum_{j = 1, ~j \neq i}^{S} N_{t, j, x}  \left(1 - \sqrt{\sum_{c = 1}^{T_c} w_c \times (\text{trait}_{i, c} - \text{trait}_{j, c})^2} \right) +
+        \frac{B}{A} \times N_{t,i,x} \right]
+},
+\end{equation}
+
+with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T_g$, $T_h$ and $T_c$ the number of traits respectively contributing to growth, hierarchical competition and limiting similarity.
+
+## Number of individuals in the special case of equilibrium in the optimal patch and without competition
+
+We are here interested in solving analytically the number of individuals of a species in its optimal patch in a situation without any interspecific competition (limiting similarity and hierarchy).
+Intraspecific competition $B$ is still acting.
+
+When $A = H = 0$, the equation of the model becomes:
+\begin{equation}
+N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1+B \times N_{t, i, x}}
+\end{equation}
+
+When a species is in its optimal patch, we get $t_i - t_{opt} = 0$ and thus the
+exponential term equals 1. Therefore we get:
+
+\begin{equation}
+R_{i, x} = k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right)
+         = \exp(0)
+         = 1
+\end{equation}
+
+and:
+\begin{equation}
+N_{t+1, i, x} = \frac{k \times N_{t, i, x}}{1+B \times N_{t, i, x}}
+\end{equation}
+
+At the equilibrium state we have:
+\begin{equation}
+N_{t+1, i, x} = N_{t, i, x}
+\end{equation}
+
+Thus we derive:
+\begin{equation}
+N_{t+1, i, x} = \frac{k \times N_{t, i, x}}{1+B \times N_{t, i, x}}
+=> 1 = \frac{k}{1 + B \times N_{t, i, x}}
+=> k = 1 + B \times N_{t, i, x}
+\end{equation}
+
+In the end, we obtain:
+\begin{equation}
+N_{t, i, x} = \frac{k-1}{B}
+\end{equation}
+
+With example values of $k=1.15$ and $B=10e-4$, the number of individuals of a
+species in its optimal patch should therefore be:
+
+\begin{equation}
+N_{eq, i, x} = \frac{0.15}{10e-4} = 1500
+\end{equation}
+
+

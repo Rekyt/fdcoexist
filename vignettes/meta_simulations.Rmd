@@ -5,10 +5,10 @@ author:
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 vignette: >
-  %\VignetteIndexEntry{Full equation of the model}
+%\VignetteIndexEntry{Full equation of the model}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-editor_options: 
+  editor_options: 
   chunk_output_type: console
 ---
 
@@ -136,7 +136,7 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
                           cws = wtd_skewness(., N, na.rm = TRUE),
                           cwk = wtd_kurtosis(., N, na.rm = TRUE),
                           trait_range = diff(range(ifelse(N > 0, ., NA),
-                                              na.rm = TRUE)))) %>%
+                                                   na.rm = TRUE)))) %>%
         inner_join(rich_df) %>%
         ungroup()
 }
@@ -337,7 +337,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                                     B        = given_B,
                                     H        = given_H,
                                     B_over_A = given_B/given_A))
-
+    
     
     all_facets = expand.grid(compet_status = names(all_compet),
                              env_width     = names(all_env),
@@ -405,8 +405,8 @@ lab_cor = c(uncor    = "r = 0",
             high_cor = "r = 0.7")
 
 cor_labs = c(uncor   = "No trait correlation",
-            low_cor  = "Medium trait correlation",
-            high_cor = "High trait correlation")
+             low_cor  = "Medium trait correlation",
+             high_cor = "High trait correlation")
 
 triangle_labs = c(N150                   = "Abundance at time = 150",
                   max_growth_rate        = "Maximum Growth Rate",
@@ -442,11 +442,11 @@ var_a_var_k_var_ba = list(
     H     = list_H) %>%
     cross() %>%
     future_map(function(x) {
-    devtools::load_all()
-    
-    meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B,
-                           given_H = x$H)
-}, .progress = TRUE)
+        devtools::load_all()
+        
+        meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B,
+                               given_H = x$H)
+    }, .progress = TRUE)
 tictoc::toc()
 ```
 
@@ -454,7 +454,7 @@ tictoc::toc()
 set.seed(1)
 used_traits = list(
     uncor = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                  cor_coef = 0))
+                                cor_coef = 0))
 
 var_ba_df = var_a_var_k_var_ba %>%
     map_dfr(~tidy_simulation_list(.x, used_traits))
@@ -514,12 +514,12 @@ plot_B_H = var_ba_cwm_sr_df %>%
     scale_x_log10()
 
 sr_grid = plot_grid(plot_k_A,
-          plot_k_H,
-          plot_A_B,
-          plot_A_H,
-          plot_k_B,
-          plot_B_H,
-          ncol = 2)
+                    plot_k_H,
+                    plot_A_B,
+                    plot_A_H,
+                    plot_k_B,
+                    plot_B_H,
+                    ncol = 2)
 sr_grid
 ```
 
@@ -579,12 +579,12 @@ plot_B_H_slope = plot_average_slope(var_ba_slope, "B", "H") +
     scale_x_log10()
 
 slope_grid = plot_grid(plot_k_A_slope,
-          plot_k_H_slope,
-          plot_A_B_slope,
-          plot_A_H_slope,
-          plot_k_B_slope,
-          plot_B_H_slope,
-          nrow = 3)
+                       plot_k_H_slope,
+                       plot_A_B_slope,
+                       plot_A_H_slope,
+                       plot_k_B_slope,
+                       plot_B_H_slope,
+                       nrow = 3)
 
 slope_grid
 ```
@@ -758,7 +758,7 @@ We want to see the trait value of species in function of environment colored by 
 plot_trait_abund_scenarios = function(var_scenars_df) {
     
     param_caption = extract_caption(var_scenars_df)
-
+    
     ggplot(var_scenars_df %>%
                filter(N > 0, patch >= 5, patch <= 20),
            aes(patch, trait2)) +
@@ -769,7 +769,7 @@ plot_trait_abund_scenarios = function(var_scenars_df) {
                   aes(y = trait2_cwm, color = "firebrick", group = seed),
                   size = 1, alpha = 1/10) +
         geom_smooth(data = var_scenars_cwm %>%
-                      filter(patch >= 5, patch <= 20),
+                        filter(patch >= 5, patch <= 20),
                     aes(y = trait2_cwm, color = "firebrick"),
                     size = 1, method = "lm", se = FALSE) +
         facet_grid(vars(R_scenar), vars(A_scenar, H_scenar),
@@ -918,12 +918,12 @@ From a single simulation we can compute the realized growth rate. Then we can co
 # Compute realized growth rates
 real_gr = plyr::aaply(var_a_var_k_var_ba[[325]][[1]]$compo[[1]], 1,
                       function(species_time) {
-    
-  real_gr = (species_time[,-1] - species_time[, -ncol(species_time)]) /
-               species_time[,-ncol(species_time)]
-  
-  return(real_gr)
-})
+                          
+                          real_gr = (species_time[,-1] - species_time[, -ncol(species_time)]) /
+                              species_time[,-ncol(species_time)]
+                          
+                          return(real_gr)
+                      })
 
 real_gr_df = as.data.frame.table(real_gr) %>%
     rename(patch = X1, species = Var2, time = Var3, growth_rate = Freq) %>%
@@ -952,7 +952,7 @@ n_seed  = 50
 
 mean_k = fixed_k
 var_k  = 0.3
-    
+
 # Matrix of species maximum growth rates
 set.seed(20190129)
 k_matrix = matrix(rnorm(n_species, mean_k, var_k))
@@ -964,7 +964,7 @@ uncor_list = lapply(seq(n_seed), function(given_seed) {
     set.seed(given_seed)
     
     given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                  cor_coef = 0)
+                                       cor_coef = 0)
     
     return(list(uncor = given_traits))
 })
@@ -995,7 +995,7 @@ multi_traits_fixed = list(seed = seq(n_seed),
             given_A     = x$A,
             given_B     = x$B,
             given_H     = x$H)
-            # given_traits   = trait_list)
+        # given_traits   = trait_list)
     }, .progress = TRUE)
 tictoc::toc()
 
@@ -1010,13 +1010,13 @@ fig_double_facet = function(given_df, x_var, y_var, col_var, given_labs,
                             given_label_pos = "left", trans_col = "identity") {
     given_df %>%
         filter(patch %in% seq(1, 25, by = 6)) %>%
-    ggplot(aes_string(x_var, y_var, color = col_var)) +
+        ggplot(aes_string(x_var, y_var, color = col_var)) +
         geom_hline(yintercept = 0, linetype = 2) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
         ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE,
                               aes(label = paste(..eq.label.., ..rr.label..,
-                                            sep = "~~~")),
+                                                sep = "~~~")),
                               label.x.npc = given_label_pos, size = 3) +
         facet_grid(vars(patch), vars(k, trait_cor),
                    labeller = labeller(patch = label_both)) +
@@ -1143,6 +1143,74 @@ multi_traits_triangle %>%
     filter(A != 0, H != 0) %>%
     fig_double_facet("N150", "null_max_gr_per_capita", "distance_to_optimum",
                      triangle_labs, "right")
+
+plot_growth_rate_perf = multi_traits_triangle %>%
+    gather("null_growth_rate_type", "null_growth_rate_value",
+           "null_max_gr") %>%
+    filter(patch %in% seq(1, 25, by = 6), A != 0 & H != 0,# null_growth_rate_value < 4,
+           trait_cor == "uncor") %>%
+    mutate(null_growth_rate_type = as_factor(null_growth_rate_type)) %>%
+    gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
+    ggplot(aes(perf_value, null_growth_rate_value, color = null_growth_rate_type)) +
+    geom_point(alpha = 0.5, shape = ".") +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "left",
+                          aes(label = ..rr.label..), size = 3) +
+    facet_grid(vars(k), vars(perf_type), scales = "free_x",
+               labeller = labeller(
+                   perf_type = c(
+                       N150 = triangle_labs[["N150"]],
+                       distance_to_optimum =
+                           triangle_labs[["distance_to_optimum"]]),
+                   k         = c(
+                       "fixed = 1.15" = "k = 1.15",
+                       gaussian = "k ~> N(1.5, 0.3)"))) +
+    scale_color_brewer(
+        labels = c(
+            env_growth_rate = "Environmental Growth Rate\n (Growth only)",
+            max_growth_rate = "Realized Growth Rate",
+            th_growth_rate  = paste0("Theoretical Growth Rate\n",
+                                     "(Growth + Hierarch. Compet.)")),
+        palette = "Dark2") +
+    labs(x = "Performance Value", y = "Growth Rate", color = NULL,
+         subtitle = "Growth Rates Estimates vs. other Performance Indices",
+         caption = param_caption) +
+    theme(legend.position = "top",
+          panel.grid = element_blank(),
+          aspect.ratio = 1)
+plot_growth_rate_perf
+
+plot_growth_rate_perf_percapita = multi_traits_triangle %>%
+    gather("null_growth_rate_type", "null_growth_rate_value",
+           "null_max_gr_per_capita") %>%
+    filter(patch %in% seq(1, 25, by = 6), A != 0 & H != 0,# null_growth_rate_value < 4,
+           trait_cor == "uncor") %>%
+    mutate(null_growth_rate_type = as_factor(null_growth_rate_type)) %>%
+    gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
+    ggplot(aes(perf_value, null_growth_rate_value, color = null_growth_rate_type)) +
+    geom_point(alpha = 0.99, shape = ".") +
+    geom_smooth(method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, label.x.npc = "left",
+                          aes(label = ..rr.label..), size = 3) +
+    facet_grid(vars(k), vars(perf_type), scales = "free_x",
+               labeller = labeller(
+                   perf_type = c(
+                       N150 = triangle_labs[["N150"]],
+                       distance_to_optimum =
+                           triangle_labs[["distance_to_optimum"]]),
+                   k         = c(
+                       "fixed = 1.15" = "k = 1.15",
+                       gaussian = "k ~> N(1.5, 0.3)"))) +
+    scale_color_manual(values = RColorBrewer::brewer.pal(3, "Dark2")[2],
+                       labels = c(null_max_gr = "Null growth rate")) +
+    labs(x = "Performance Value", y = "Growth Rate", color = NULL,
+         subtitle = "Growth Rates Estimates vs. other Performance Indices",
+         caption = param_caption) +
+    theme(legend.position = "top",
+          panel.grid = element_blank(),
+          aspect.ratio = 1)
+plot_growth_rate_perf_percapita
+
 ```
 
 
