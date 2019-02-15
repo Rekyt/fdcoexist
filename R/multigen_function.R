@@ -27,7 +27,7 @@
 #' @param B        scalar for the intra-specific competition
 #' @export
 alphaterm <- function(distance, Nts, A, B) {
-   A * ((Nts %*% (1 - distance)) + B/A * (Nts))
+    A * (Nts %*% (1 - distance)) + B * (Nts)
 }
 
 #' Beverton-Holt function
