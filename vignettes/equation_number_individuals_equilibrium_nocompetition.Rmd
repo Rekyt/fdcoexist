@@ -35,14 +35,14 @@ When $A = H = 0$, the equation of the model becomes:
 N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1+B \times N_{t, i, x}}
 \end{equation}
 
-When a species is in its optimal patch, we get $t_i - t_{opt} = 0$ and thus the
+When a species is in its optimal patch, we get $\text{trait}_{i, g} - \text{env}_x) = 0$ and thus the
 exponential term equals 1. Therefore we get:
 
-\begin{equation}
-R_{i, x} = k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right)
-         = \exp(0)
-         = 1
-\end{equation}
+\begin{align}
+R_{i, x} &= k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) \\
+         &= \exp(0) \\
+         &= 1
+\end{align}
 
 and:
 \begin{equation}
@@ -55,22 +55,51 @@ N_{t+1, i, x} = N_{t, i, x}
 \end{equation}
 
 Thus we derive:
-\begin{equation}
-N_{t+1, i, x} = \frac{k \times N_{t, i, x}}{1+B \times N_{t, i, x}}
-=> 1 = \frac{k}{1 + B \times N_{t, i, x}}
-=> k = 1 + B \times N_{t, i, x}
-\end{equation}
+\begin{align}
+N_{t+1, i, x} &= \frac{k \times N_{t, i, x}}{1+B \times N_{t, i, x}}\\
+\Leftrightarrow 1 &= \frac{k}{1 + B \times N_{t, i, x}}\\
+\Leftrightarrow k &= 1 + B \times N_{t, i, x}
+\end{align}
 
 In the end, we obtain:
 \begin{equation}
-N_{t, i, x} = \frac{k-1}{B}
+    \boxed{N_{t, i, x} = \frac{k-1}{B}}
 \end{equation}
 
 With example values of $k=1.15$ and $B=10e-4$, the number of individuals of a
 species in its optimal patch should therefore be:
 
 \begin{equation}
-N_{eq, i, x} = \frac{0.15}{10e-4} = 1500
+    \boxed{N_{eq, i, x} = \frac{0.15}{10e-4} = 1500}
 \end{equation}
 
+## Number of individuals when there is no competition but trait is not optimal
 
+As shown above hen $A = 0$ and $H = 0$ we get:
+
+\begin{equation}
+R_{i, x} = k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right)
+\end{equation}
+
+Thus:
+
+\begin{equation}
+N_{t+1, i, x} = \frac{k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) \times N_{t, i, x}}{1+B \times N_{t, i, x}}
+\end{equation}
+
+When equilibrium is reached we have $N_{t+1, i, x} = N_{t, i, x}$ and the above equation becomes:
+
+\begin{align}
+N_{t, i, x} &= \frac{k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) \times N_{t, i, x}}{1+B \times N_{t, i, x}}\\
+\Leftrightarrow 1 &= \frac{k \times \exp\left(
+-\displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right)}{1 + B \times N_{t, i, x}}\\
+\Leftrightarrow 1 + B \times N_{t, i, x} &= k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right)
+\end{align}
+
+In the end we get:
+
+\begin{equation}
+N_{t, i, x} = \frac{k \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) - 1}{B}
+\end{equation}
+
+The equilibrium population only depends on the distance between species trait and environmental condition
