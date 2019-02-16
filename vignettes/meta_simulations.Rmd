@@ -131,7 +131,7 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
     
     group_site %>%
         summarise_at(vars(tidyselect::matches("trait\\d")),
-                     funs(cwm = weighted.mean(., N, na.rm = TRUE),
+                     list(cwm = weighted.mean(., N, na.rm = TRUE),
                           cwv = Hmisc::wtd.var(., N, na.rm = TRUE),
                           cws = wtd_skewness(., N, na.rm = TRUE),
                           cwk = wtd_kurtosis(., N, na.rm = TRUE),
@@ -237,7 +237,7 @@ extract_performances_from_simul = function(simul, trait_df,
                R_scenar  = contrib$R,
                A_scenar  = contrib$A,
                H_scenar  = contrib$H) %>%
-        mutate_at(vars(contains("growth_rate")), funs(per_capita = . / N150))
+        mutate_at(vars(contains("growth_rate")), list(per_capita = . / N150))
 }
 
 extract_caption = function(simul_df) {
