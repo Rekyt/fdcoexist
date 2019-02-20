@@ -5,16 +5,17 @@ author:
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output: pdf_document
 vignette: >
-%\VignetteIndexEntry{Full equation of the model}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
-  editor_options: 
-  chunk_output_type: console
+    %\VignetteIndexEntry{Full equation of the model}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+editor_options: 
+    chunk_output_type: console
 ---
 
 ```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
-                      fig.width = 8, fig.height = 10.5, cache = TRUE)
+                      fig.width = 8, fig.height = 10.5, cache = TRUE,
+                      cache.lazy = FALSE)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -131,11 +132,11 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
     
     group_site %>%
         summarise_at(vars(tidyselect::matches("trait\\d")),
-                     list(cwm = weighted.mean(., N, na.rm = TRUE),
-                          cwv = Hmisc::wtd.var(., N, na.rm = TRUE),
-                          cws = wtd_skewness(., N, na.rm = TRUE),
-                          cwk = wtd_kurtosis(., N, na.rm = TRUE),
-                          trait_range = diff(range(ifelse(N > 0, ., NA),
+                     list(cwm = ~weighted.mean(., N, na.rm = TRUE),
+                          cwv = ~Hmisc::wtd.var(., N, na.rm = TRUE),
+                          cws = ~wtd_skewness(., N, na.rm = TRUE),
+                          cwk = ~wtd_kurtosis(., N, na.rm = TRUE),
+                          trait_range = ~diff(range(ifelse(N > 0, ., NA),
                                                    na.rm = TRUE)))) %>%
         inner_join(rich_df) %>%
         ungroup()
@@ -190,8 +191,9 @@ extract_performances_from_simul = function(simul, trait_df,
                 if (time_before_extinct > 10) {
                     given_time = 1:time_before_extinct
                     
-                    growth_model = growthrates::fit_spline(given_time,
-                                                           given_abund[given_time])
+                    growth_model = growthrates::fit_spline(
+                        given_time,
+                        given_abund[given_time])
                     
                     growth_rate = growth_model@par[["mumax"]]
                 }
@@ -210,7 +212,6 @@ extract_performances_from_simul = function(simul, trait_df,
                                                             contrib$R, 0, 0))
         }) %>%
             enframe("species", "distance_to_optimum")
-        
         
         # Abundance
         sp_abund = site_abund[, 150] %>%
@@ -237,7 +238,7 @@ extract_performances_from_simul = function(simul, trait_df,
                R_scenar  = contrib$R,
                A_scenar  = contrib$A,
                H_scenar  = contrib$H) %>%
-        mutate_at(vars(contains("growth_rate")), list(per_capita = . / N150))
+        mutate_at(vars(contains("growth_rate")), list(per_capita = ~ . / N150))
 }
 
 extract_caption = function(simul_df) {
