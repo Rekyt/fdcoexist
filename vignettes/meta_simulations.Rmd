@@ -173,38 +173,33 @@ extract_performances_from_simul = function(simul, trait_df,
         
         site_abund = given_compo[site_index,,]
         
-        if (compute_realized_growth_rate) {
+        # Manual derivative to get growth rate
+        max_growth = apply(site_abund, 1, function(given_abund) {
             
-            # Estimate maximum growth rate
-            max_growth = apply(site_abund, 1, function(given_abund) {
+            # Get first moment where species goes extinct
+            time_before_extinct = which(given_abund == 0)[1] - 1
+            
+            # When species doesn't go extinct consider maximum time
+            if (is.na(time_before_extinct)) {
+                time_before_extinct = length(given_abund)
+            }
+            
+            growth_rate = NA_real_
+            
+            if (time_before_extinct > 10) {
+                given_time = 1:time_before_extinct
                 
-                # Get first moment where species goes extinct
-                time_before_extinct = which(given_abund == 0)[1] - 1
+                growth_num = given_abund[seq(2, time_before_extinct)] -
+                    given_abund[seq(time_before_extinct - 1)]
                 
-                # When species doesn't go extinct consider maximum time
-                if (is.na(time_before_extinct)) {
-                    time_before_extinct = length(given_abund)
-                }
-                
-                growth_rate = NA_real_
-                
-                if (time_before_extinct > 10) {
-                    given_time = 1:time_before_extinct
-                    
-                    growth_model = growthrates::fit_spline(
-                        given_time,
-                        given_abund[given_time])
-                    
-                    growth_rate = growth_model@par[["mumax"]]
-                }
-                
-                ifelse(is.null(growth_rate), NA_real_, growth_rate)
-            }) %>%
-                enframe("species", "max_growth_rate")
-        } else {
-            max_growth = data.frame(species = rownames(site_abund),
-                                    max_growth_rate = NA)
-        }
+                growth_denom = given_abund[seq(time_before_extinct - 1)]
+                growth_rate = max(growth_num/growth_denom, na.rm = TRUE)
+            }
+            
+            ifelse(is.null(growth_rate) | is.infinite(growth_rate),
+                   NA_real_, growth_rate)
+        }) %>%
+            enframe("species", "max_growth_rate")
         
         # Get optimality
         optim_dist = apply(trait_df, 1, function(given_traits) {
@@ -979,6 +974,7 @@ trait_list = list(
     #                               cor_coef = 0.7)
 )
 
+plan(multiprocess, workers = availableCores() - 1)
 
 # Actual simulation
 tictoc::tic()
@@ -1000,7 +996,6 @@ multi_traits_fixed = list(seed = seq(n_seed),
     }, .progress = TRUE)
 tictoc::toc()
 
-plan(multiprocess, workers = availableCores() - 1)
 multi_traits_triangle = future_map2_dfr(
     multi_traits_fixed, flatten(c(uncor_list, uncor_list, uncor_list, uncor_list)),
     ~extract_performances_from_simul(.x[[1]], .y, TRUE))
@@ -1145,11 +1140,15 @@ multi_traits_triangle %>%
     fig_double_facet("N150", "null_max_gr_per_capita", "distance_to_optimum",
                      triangle_labs, "right")
 
+given_caption = multi_traits_triangle %>%
+    filter(A != 0, H != 0) %>%
+    extract_caption()
+
 plot_growth_rate_perf = multi_traits_triangle %>%
     gather("null_growth_rate_type", "null_growth_rate_value",
-           "null_max_gr") %>%
-    filter(patch %in% seq(1, 25, by = 6), A != 0 & H != 0,# null_growth_rate_value < 4,
-           trait_cor == "uncor") %>%
+           null_max_gr) %>%
+    filter(A != 0 & H != 0,
+           !is.na(null_growth_rate_value), trait_cor == "uncor") %>%
     mutate(null_growth_rate_type = as_factor(null_growth_rate_type)) %>%
     gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
     ggplot(aes(perf_value, null_growth_rate_value, color = null_growth_rate_type)) +
@@ -1175,7 +1174,7 @@ plot_growth_rate_perf = multi_traits_triangle %>%
         palette = "Dark2") +
     labs(x = "Performance Value", y = "Growth Rate", color = NULL,
          subtitle = "Growth Rates Estimates vs. other Performance Indices",
-         caption = param_caption) +
+         caption = given_caption) +
     theme(legend.position = "top",
           panel.grid = element_blank(),
           aspect.ratio = 1)
@@ -1206,7 +1205,7 @@ plot_growth_rate_perf_percapita = multi_traits_triangle %>%
                        labels = c(null_max_gr = "Null growth rate")) +
     labs(x = "Performance Value", y = "Growth Rate", color = NULL,
          subtitle = "Growth Rates Estimates vs. other Performance Indices",
-         caption = param_caption) +
+         caption = given_caption) +
     theme(legend.position = "top",
           panel.grid = element_blank(),
           aspect.ratio = 1)
