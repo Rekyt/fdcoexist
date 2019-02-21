@@ -269,7 +269,7 @@ total_runs = 20  # Number of set of traits to test
 B = 2e-4       # Scalar for intraspecific competition
 A = 2e-4       # Alpha scalar
 d = 0.05       # Dispersal percentage
-dist_power = 2 # Power of trait dissimilarity
+dist_power = 5 # Power of trait dissimilarity
 
 # Hierarchical coefficients
 H = 1.5
@@ -374,6 +374,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                 compo         = list(simul$compo),
                 rmatrix       = simul$rmatrix,
                 rmatenv       = simul$rmatenv,
+                alphaterm     = simul$alpha,
                 h_fun         = given_h_fun))
     })
 }
@@ -997,8 +998,9 @@ multi_traits_fixed = list(seed = seq(n_seed),
 tictoc::toc()
 
 multi_traits_triangle = future_map2_dfr(
-    multi_traits_fixed, flatten(c(uncor_list, uncor_list, uncor_list, uncor_list)),
-    ~extract_performances_from_simul(.x[[1]], .y, TRUE))
+    multi_traits_fixed, flatten(c(uncor_list, uncor_list, uncor_list,
+                                  uncor_list)),
+    ~extract_performances_from_simul(.x[[1]], .y, TRUE), .progress = TRUE)
 ```
 
 ```{r plot_optimality_diff_trait_cor, fig.height=9.5}
@@ -1183,8 +1185,9 @@ plot_growth_rate_perf
 plot_growth_rate_perf_percapita = multi_traits_triangle %>%
     gather("null_growth_rate_type", "null_growth_rate_value",
            "null_max_gr_per_capita") %>%
-    filter(patch %in% seq(1, 25, by = 6), A != 0 & H != 0,# null_growth_rate_value < 4,
-           trait_cor == "uncor") %>%
+    filter(A != 0 & H != 0,# null_growth_rate_value < 4,
+           trait_cor == "uncor", !is.na(null_growth_rate_value),
+           !is.infinite(null_growth_rate_value)) %>%
     mutate(null_growth_rate_type = as_factor(null_growth_rate_type)) %>%
     gather("perf_type", "perf_value", N150, distance_to_optimum) %>%
     ggplot(aes(perf_value, null_growth_rate_value, color = null_growth_rate_type)) +
