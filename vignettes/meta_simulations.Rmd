@@ -269,7 +269,6 @@ total_runs = 20  # Number of set of traits to test
 B = 2e-4       # Scalar for intraspecific competition
 A = 2e-4       # Alpha scalar
 d = 0.05       # Dispersal percentage
-dist_power = 5 # Power of trait dissimilarity
 
 # Hierarchical coefficients
 H = 1.5
@@ -286,20 +285,6 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
 names(env) <- dimnames(composition)[[1]]
 
 composition[,, "time1"] <- initpop
-
-# Define scenarios -------------------------------------------------------------
-# Scenarios on traits affecting growth and competition
-trait_scenarios = c("R0A0", "R0A100", "R10A90", "R25A75", "R50A50", "R75A25",
-                    "R90A10", "R100A0", "R100A100")
-
-names(trait_scenarios) = trait_scenarios
-
-trait_scenarios = lapply(trait_scenarios, function(scenar_name) {
-    growth = as.numeric(gsub("R(\\d+)A\\d+", "\\1", scenar_name, perl = TRUE))
-    compet = as.numeric(gsub("R\\d+A(\\d+)", "\\1", scenar_name, perl = TRUE))
-    
-    create_trait_weights(growth, compet, 0)
-})
 
 # Define meta-function to run all analyses with many trait levels --------------
 
@@ -353,7 +338,6 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
             B             = all_compet[[given_row[["compet_status"]]]][["B"]],
             d             = d,
             k             = given_k,
-            dist_power    = dist_power,
             H             = all_compet[[given_row[["compet_status"]]]][["H"]],
             th_max        = guessed_th_max,
             width         = all_env[[given_row[["env_width"]]]],
@@ -413,7 +397,6 @@ triangle_labs = c(N150                   = "Abundance at time = 150",
 var_labs = c(k        = "k (maximum growth rate)",
              A        = "A (interspecific competition)",
              B        = "B (intraspecific competition)",
-             B_over_A = "B/A (ratio intra/inter)",
              H        = "H (advantage of hierarchical competition)")
 
 h_fun_labs = c(sum  = "additive H",
@@ -423,8 +406,8 @@ h_fun_labs = c(sum  = "additive H",
 ## Number of coexisting species depending on A, B/A, k and H
 
 ```{r param_space_simuls}
-list_A = 10^-(seq(2, 6, length.out = 5))
-list_k = seq(1, 1.5, length.out = 5)
+list_A = 10^-(seq(0, 6, length.out = 5))
+list_k = seq(1, 1.5, length.out = 8)
 list_B = list_A
 list_H = seq(0, 2, length.out = 5)
 
@@ -469,7 +452,7 @@ plot_species_richness = function(var_df, x_var, y_var, given_labs = var_labs) {
         ggplot(aes_string(x_var, y_var)) +
         stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
         facet_wrap(~patch) +
-        scale_fill_viridis_c(limits = c(0, 100)) +
+        scale_fill_viridis_c(limits = c(0, 75)) +
         labs(x = var_labs[[x_var]],
              y = var_labs[[y_var]],
              fill = "Species Richness\n(at t = 150)",
@@ -549,7 +532,7 @@ plot_average_slope = function(var_df, x_var, y_var, given_labs = var_labs) {
         labs(x = var_labs[[x_var]],
              y = var_labs[[y_var]],
              fill = "CWM <-> Env. Slope",
-             subtitle = paste0("Avg. R² over values of ",
+             subtitle = paste0("Avg. slope over values of ",
                                paste(not_used_vars, collapse = " and "))) +
         theme(legend.position = "top",
               legend.text = element_text(angle = 45),
@@ -608,9 +591,9 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A = 5e-5
+fixed_A = 1e-4
 fixed_k = 1.15
-fixed_B = 5e-3
+fixed_B = 1e-2
 fixed_H = 1.25
 n_seed  = 50
 
@@ -747,6 +730,44 @@ plot_var_scenars_cwv = function(var_scenars_cwm) {
 }
 
 plot_var_scenars_cwv(var_scenars_cwm)
+```
+
+```{r scenar_richness}
+plot_var_scenars_richness = function(var_scenars_cwm) {
+    
+    param_caption = extract_caption(var_scenars_cwm)
+    
+    var_scenars_cwm %>%
+        filter(patch >= 5, patch <= 20) %>%
+        ggplot(aes(patch, species_rich, color = as.factor(H_scenar),
+                   # specify interaction otherwise it messes with groups
+                   group = interaction(as.factor(H_scenar), seed))) +
+        geom_line(size = 1, alpha = 1/20) +
+        geom_smooth(size = 1, se = FALSE, aes(group = NULL),
+                    formula = y ~ x + I(x^2), method = "lm") +
+        ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
+                              formula = y ~ x + I(x^2), parse = TRUE, size = 3,
+                              label.y.npc = "top", label.x.npc = "left",
+                              coef.digits = 2) +
+        facet_grid(vars(R_scenar), vars(A_scenar),
+                   labeller = labeller(
+                       R_scenar = function(x) paste0("Trait 2 Contrib.\n",
+                                                     "to Growth : ", x, "%"),
+                       A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
+                                                     "Compet. : ", x, "%"))) +
+        scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
+                           labels = function(x) paste0(x, "%")) +
+        labs(x = "Environmental Variable",
+             y = "Species Richness",
+             color = "Trait 2 contrib. to Hierarch. Compet.",
+             subtitle = expression("Trait 2 CWV <-> Environment (t"["opt"] *
+                                       ") relationship"),
+             caption = param_caption) +
+        theme(aspect.ratio = 1,
+              legend.position = "top")
+}
+
+plot_var_scenars_richness(var_scenars_cwm)
 ```
 
 We want to see the trait value of species in function of environment colored by local abundances with a line representing the CWM in function of the environment. Facets are different scenarios
