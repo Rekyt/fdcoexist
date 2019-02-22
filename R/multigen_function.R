@@ -87,12 +87,14 @@ bevHoltFct <- function(R, N, alpha){
 #' @param H      a numeric for hierarchical competition such as H/k <= 1
 #' @param th_max a numeric for the hierarchical trait value maximizing
 #'               hierarchical competiton
+#' @param th_min a numeric for the hierarchical trait value minimizing
+#'               hierarchical competition
 #' @param h_fun  a character name of a function that describes how hierarchical
 #'               is combined to environmental-based growth (default: `"sum"`)
 #'
 #' @export
 env_curve <- function(trait_values, env_value, trait_weights, k = 2,
-                      width = 0.5, H = 0, th_max = 25, h_fun = "sum") {
+                      width = 0.5, H = 0, th_max = 25, th_min = 1, h_fun = "sum") {
 
     if (length(width) != 1 & length(width) != length(env_value)) {
         stop("There are either too many or not enough values for width")
@@ -124,7 +126,11 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
                  " directional filter perspective")
         }
 
-        R_h <- H * (hierarchical_values/(th_max))
+        # Compute hierarchical competition contribution to growth
+        # R_h = H * h_i
+        # with h_i in [-1,1]
+        # see https://stats.stackexchange.com/a/281164
+        R_h <- H * (((hierarchical_values - th_min)/(th_max - th_min)) * 2 - 1)
         # Weigh each trait function of contribution to competition
         R_h <- weighted.mean(R_h, hierarchical_trait$hierarchy_weight)
 
@@ -158,12 +164,14 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #' @param H           a numeric for hierarchical competition such as H/k <= 1
 #' @param th_max      a numeric for the hierarchical trait value maximizing
 #'                    hierarchical competition
+#' @param th_min      a numeric for the hierarchical trait value minimizing
+#'                    hierarchical competition
 #' @param h_fun       a function that describes how hierarchical is combined to
 #'                    environmental-based growth (default: `sum()`)
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A = A, B = B, d, k, width, H, th_max,
+                     composition, A = A, B = B, d, k, width, H, th_max, th_min,
                      h_fun = "sum") {
 
     # Check k dimensions
@@ -181,7 +189,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     traits_k_and_H <- cbind(traits, k, H)
 
     # Calculate fitness term (R = growth)
-    env_param <- cbind(env, width, th_max)
+    env_param <- cbind(env, width, th_max, th_min)
     Rmatrix <- apply(traits_k_and_H, 1, function(x) { # Loop over the species
         apply(env_param, 1, function(y){ # Loop over env, k, width combinations
             env_curve(trait_values  = x[-c(length(x) - 1, length(x))],
@@ -191,6 +199,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                       width         = y[2],
                       H             = x[length(x)],
                       th_max = y[3],
+                      th_min = y[4],
                       h_fun  = h_fun)
         })
     })
@@ -205,6 +214,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                       width         = y[2],
                       H             = 0,
                       th_max        = y[3],
+                      th_min        = y[4],
                       h_fun         = h_fun)
         })
     })

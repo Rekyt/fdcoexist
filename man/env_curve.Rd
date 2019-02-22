@@ -5,7 +5,7 @@
 \title{Species growth rate for a given trait and environment}
 \usage{
 env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5,
-  H = 0, th_max = 25, h_fun = "sum")
+  H = 0, th_max = 25, th_min = 1, h_fun = "sum")
 }
 \arguments{
 \item{trait_values}{a numeric vector of species trait values}
@@ -27,6 +27,9 @@ limiting similarity.}
 
 \item{th_max}{a numeric for the hierarchical trait value maximizing
 hierarchical competiton}
+
+\item{th_min}{a numeric for the hierarchical trait value minimizing
+hierarchical competition}
 
 \item{h_fun}{a character name of a function that describes how hierarchical
 is combined to environmental-based growth (default: \code{"sum"})}

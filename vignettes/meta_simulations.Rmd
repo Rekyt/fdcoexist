@@ -311,6 +311,8 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
     
     guessed_th_max = lapply(all_cor, max)
     guessed_th_max = max(unlist(guessed_th_max))
+    guessed_th_min = lapply(all_cor, min)
+    guessed_th_min = max(unlist(guessed_th_min))
     
     all_env = list(constant = env_width)
     
@@ -340,6 +342,7 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
             k             = given_k,
             H             = all_compet[[given_row[["compet_status"]]]][["H"]],
             th_max        = guessed_th_max,
+            th_min        = guessed_th_min,
             width         = all_env[[given_row[["env_width"]]]],
             h_fun         = given_h_fun)
         
@@ -407,9 +410,9 @@ h_fun_labs = c(sum  = "additive H",
 
 ```{r param_space_simuls}
 list_A = 10^-(seq(0, 6, length.out = 5))
-list_k = seq(1, 1.5, length.out = 8)
+list_k = seq(1, 1.5, length.out = 5)
 list_B = list_A
-list_H = seq(0, 2, length.out = 5)
+list_H = seq(0, 1, length.out = 5)
 
 plan(multiprocess, workers = 15)
 tictoc::tic()
@@ -452,7 +455,7 @@ plot_species_richness = function(var_df, x_var, y_var, given_labs = var_labs) {
         ggplot(aes_string(x_var, y_var)) +
         stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
         facet_wrap(~patch) +
-        scale_fill_viridis_c(limits = c(0, 75)) +
+        scale_fill_viridis_c(limits = c(0, 53)) +
         labs(x = var_labs[[x_var]],
              y = var_labs[[y_var]],
              fill = "Species Richness\n(at t = 150)",
@@ -591,10 +594,10 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A = 1e-4
-fixed_k = 1.15
-fixed_B = 1e-2
-fixed_H = 1.25
+fixed_A = 1e-6
+fixed_k = 1.25
+fixed_B = 1e-3
+fixed_H = 0.2
 n_seed  = 50
 
 # Not fixed k
@@ -709,7 +712,7 @@ plot_var_scenars_cwv = function(var_scenars_cwm) {
         geom_smooth(size = 1, se = FALSE, aes(group = NULL)) +
         ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
                               formula = y ~ x, parse = TRUE, size = 3,
-                              label.y.npc = 0.1, label.x.npc = "left",
+                              label.y.npc = "top", label.x.npc = "right",
                               coef.digits = 2) +
         facet_grid(vars(R_scenar), vars(A_scenar),
                    labeller = labeller(
