@@ -5,8 +5,7 @@
 \title{Function to run the simulation}
 \usage{
 multigen(traits, trait_weights, env, time, species, patches, composition,
-  A = A, B = B, d, k, width, H, th_max, dist_power = dist_power,
-  h_fun = "sum")
+  A = A, B = B, d, k, width, H, th_max, h_fun = "sum")
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
@@ -48,9 +47,6 @@ environment}
 
 \item{th_max}{a numeric for the hierarchical trait value maximizing
 hierarchical competition}
-
-\item{dist_power}{power used when weighting distance exponentially
-(\code{NULL} by default = euclidean distance)}
 
 \item{h_fun}{a function that describes how hierarchical is combined to
 environmental-based growth (default: \code{sum()})}
