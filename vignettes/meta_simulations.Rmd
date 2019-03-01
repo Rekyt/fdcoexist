@@ -128,7 +128,8 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
                  H_scenar, patch)
     
     rich_df = group_site %>%
-        summarise(species_rich = sum(N > 0, na.rm = TRUE))
+        summarise(species_rich = sum(N > 0, na.rm = TRUE),
+                  num_indiv    = sum(N, na.rm = TRUE))
     
     group_site %>%
         summarise_at(vars(tidyselect::matches("trait\\d")),
@@ -409,10 +410,10 @@ h_fun_labs = c(sum  = "additive H",
 ## Number of coexisting species depending on A, B/A, k and H
 
 ```{r param_space_simuls}
-list_A = 10^-(seq(0, 6, length.out = 5))
-list_k = seq(1, 1.5, length.out = 5)
+list_A = 10^-(seq(1, 8, length.out = 6))
+list_k = seq(1, 1.5, length.out = 6)
 list_B = list_A
-list_H = seq(0, 1, length.out = 5)
+list_H = seq(0, 1, length.out = 6)
 
 plan(multiprocess, workers = 15)
 tictoc::tic()
@@ -423,9 +424,11 @@ var_a_var_k_var_ba = list(
     k     = list_k,
     B     = list_B,
     H     = list_H) %>%
-    cross() %>%
+    cross() %>%  # the filter EXCLUDE combinations
     future_map(function(x) {
-        devtools::load_all()
+        suppressMessages({
+            devtools::load_all()
+        })
         
         meta_simul_A_B_k_and_H(x$run_n, x$k, x$A, x$B,
                                given_H = x$H)
@@ -594,19 +597,11 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A = 1e-6
-fixed_k = 1.25
-fixed_B = 1e-3
-fixed_H = 0.2
-n_seed  = 50
-
-# Not fixed k
-mean_k = 1.5
-var_k  = 0.3
-set.seed(20190129)
-k_matrix = matrix(rnorm(n_species, mean_k, var_k))
-rownames(k_matrix) = paste0("species", seq(n_species))
-colnames(k_matrix) = "k"
+fixed_A = c(2.5e-7, 1e-4)
+fixed_k = c(1.3, 1.1)
+fixed_B = 1.5e-4
+fixed_H = c(0.4, 1.0)
+n_seed  = 15
 
 # Generate all scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
@@ -623,7 +618,7 @@ names(scenar_list) = scenar_df$scenar_name
 plan(multiprocess, workers = 15)
 tictoc::tic()
 var_scenars = list(seed  = seq(n_seed),
-                   k     = k,
+                   k     = fixed_k,
                    A     = fixed_A,
                    B     = fixed_B,
                    H     = fixed_H,
@@ -652,11 +647,26 @@ used_trait_list = map(seq(n_seed), function(given_seed) {
     list(uncor = given_traits)
 })
 
+
+n_simul = list(seed  = seq(n_seed),
+                   k     = fixed_k,
+                   A     = fixed_A,
+                   B     = fixed_B,
+                   H     = fixed_H,
+                   h_fun = "sum") %>%
+    cross() %>%
+    length()
+
 var_scenars_df = var_scenars %>%
-    map2_dfr(used_trait_list, ~tidy_simulation_list(.x, .y, 150))
+    map2_dfr(rep(used_trait_list, n_simul/n_seed),
+             ~tidy_simulation_list(.x, .y, 150))
 
 var_scenars_cwm = var_scenars_df %>%
     compute_site_cwm_cwv_sr()
+
+var_scenars_perf = future_map2_dfr(
+    flatten(var_scenars), flatten(rep(rep(used_trait_list, 27, each = TRUE), 8)),
+    ~extract_performances_from_simul(.x, .y, TRUE), .progress = TRUE)
 ```
 
 ```{r scenar_cwm}
