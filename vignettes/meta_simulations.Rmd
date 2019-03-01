@@ -143,10 +143,13 @@ compute_site_cwm_cwv_sr = function(simulation_df) {
         ungroup()
 }
 
-extract_performances_from_simul = function(simul, trait_df,
+extract_performances_from_simul = function(simul, trait_list,
+                                           cor_scenar = "uncor",
                                            compute_realized_growth_rate = TRUE) {
     
     given_compo = simul$compo[[1]]
+    
+    trait_df = trait_list[[simul$seed]][[cor_scenar]]
     
     contrib = extract_trait_contrib_from_scenar(simul$scenario)
     
@@ -664,9 +667,10 @@ var_scenars_df = var_scenars %>%
 var_scenars_cwm = var_scenars_df %>%
     compute_site_cwm_cwv_sr()
 
-var_scenars_perf = future_map2_dfr(
-    flatten(var_scenars), flatten(rep(rep(used_trait_list, 27, each = TRUE), 8)),
-    ~extract_performances_from_simul(.x, .y, TRUE), .progress = TRUE)
+var_scenars_perf = future_map_dfr(
+    unlist(var_scenars, recursive = FALSE),
+    ~extract_performances_from_simul(.x, used_trait_list, TRUE),
+    .progress = TRUE)
 ```
 
 ```{r scenar_cwm}
