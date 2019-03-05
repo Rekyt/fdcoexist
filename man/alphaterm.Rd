@@ -5,7 +5,7 @@
 \title{Function definition for deterministic model run with global dispersal
 Compute alpha term in Beverton-Holt function}
 \usage{
-alphaterm(distance, Nts, A, B)
+alphaterm(distance, Nts, A, B, di_thresh)
 }
 \arguments{
 \item{distance}{dissimilarity matrix between species}
@@ -15,6 +15,9 @@ alphaterm(distance, Nts, A, B)
 \item{A}{scalar for the inter-specific competition}
 
 \item{B}{scalar for the intra-specific competition}
+
+\item{di_thresh}{dissimilary threshold above which species are considered
+maximally dissimilar}
 }
 \description{
 From a competition matrix (for the moment the distance between species

@@ -21,13 +21,23 @@
 #' species j, at time t, in patch x and delta_ij the functional distance between
 #' species i and species j.
 #'
-#' @param distance dissimilarity matrix between species
-#' @param Nts      vector of abundances of species at time t
-#' @param A        scalar for the inter-specific competition
-#' @param B        scalar for the intra-specific competition
+#' @param distance  dissimilarity matrix between species
+#' @param Nts       vector of abundances of species at time t
+#' @param A         scalar for the inter-specific competition
+#' @param B         scalar for the intra-specific competition
+#' @param di_thresh dissimilary threshold above which species are considered
+#'                  maximally dissimilar
 #' @export
-alphaterm <- function(distance, Nts, A, B) {
+alphaterm <- function(distance, Nts, A, B, di_thresh) {
 
+    # From a certain distance, di_thresh, species are considered maximally
+    # dissimilar
+    # if di_thresh = max(distance) then only true maximally dissimilar are
+    # considered maximally dissimilar
+    distance[distance >= di_thresh] = max(distance)
+
+    # We compute similarity matrix: when species are not distant they
+    # are maximally similar (similarity = max(distance))
     similarity = max(distance) - distance
     # Similarity is for Inter-specific competition only
     diag(similarity) = 0
@@ -168,11 +178,13 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 #'                    hierarchical competition
 #' @param h_fun       a function that describes how hierarchical is combined to
 #'                    environmental-based growth (default: `sum()`)
+#' @param di_thresh   dissimilary threshold above which species are considered
+#'                    maximally dissimilar
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max, th_min,
-                     h_fun = "sum") {
+                     h_fun = "sum", di_thresh = th_max - th_min) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -225,7 +237,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     for (m in seq(1, time - 1)) {
 
         # Calculate niche term (alpha) including carrying capacity
-        alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B)
+        alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B,
+                           di_thresh = di_thresh)
 
         alphalist[[m]] <- alpha
 
