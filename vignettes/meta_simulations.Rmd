@@ -99,7 +99,8 @@ extract_simul_param_and_abund = function(single_simul, time = 150) {
                B         = single_simul$B,
                H         = single_simul$H,
                h_fun     = single_simul$h_fun,
-               trait_cor = single_simul$traits) %>%
+               trait_cor = single_simul$traits,
+               di_thresh = single_simul$di_thresh) %>%
         ungroup() %>%
         select(seed, trait_cor, k, h_fun, A, B, H, R_scenar, A_scenar,
                H_scenar, everything())
@@ -124,8 +125,8 @@ tidy_simulation_list = function(simulation_list, list_of_trait_df, time = 150) {
 compute_site_cwm_cwv_sr = function(simulation_df) {
     
     group_site = simulation_df %>%
-        group_by(seed, trait_cor, k, h_fun, A, B, H, R_scenar, A_scenar,
-                 H_scenar, patch)
+        group_by(seed, trait_cor, k, h_fun, A, B, H, di_thresh, R_scenar,
+                 A_scenar, H_scenar, patch)
     
     rich_df = group_site %>%
         summarise(species_rich = sum(N > 0, na.rm = TRUE),
@@ -207,8 +208,10 @@ extract_performances_from_simul = function(simul, trait_list,
         
         # Get optimality
         optim_dist = apply(trait_df, 1, function(given_traits) {
-            weighted.mean(abs(site_index - given_traits), c(100 - contrib$R,
-                                                            contrib$R, 0, 0))
+            opt_dist = weighted.mean(abs(site_index - given_traits),
+                                     c(100 - contrib$R, contrib$R, 0, 0))
+            
+            return(opt_dist)
         }) %>%
             enframe("species", "distance_to_optimum")
         
@@ -230,6 +233,7 @@ extract_performances_from_simul = function(simul, trait_list,
         mutate(seed      = simul$seed,
                trait_cor = simul$traits,
                h_fun     = simul$h_fun,
+               di_thresh = simul$di_thresh,
                k         = given_k,
                A         = simul$A,
                B         = simul$B,
@@ -296,7 +300,8 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                                   given_B = B,
                                   given_H = H, given_scenars = NULL,
                                   given_traits = NULL,
-                                  given_h_fun  = "sum") {
+                                  given_h_fun  = "sum",
+                                  given_di_thresh = 24) {
     
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
     
@@ -348,7 +353,8 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
             th_max        = guessed_th_max,
             th_min        = guessed_th_min,
             width         = all_env[[given_row[["env_width"]]]],
-            h_fun         = given_h_fun)
+            h_fun         = given_h_fun,
+            di_thresh     = given_di_thresh)
         
         return(
             list(
@@ -366,7 +372,8 @@ meta_simul_A_B_k_and_H = function(seed_number, given_k = k, given_A = A,
                 rmatrix       = simul$rmatrix,
                 rmatenv       = simul$rmatenv,
                 alphaterm     = simul$alpha,
-                h_fun         = given_h_fun))
+                h_fun         = given_h_fun,
+                di_thresh     = given_di_thresh))
     })
 }
 # Generate traits --------------------------------------------------------------
@@ -600,10 +607,11 @@ If we want to be exhaustive in terms of scenario we can use the following:
 
 ```{r all_scenars}
 # Simulation parameters = median parameters
-fixed_A = c(2.5e-7, 1e-4)
+fixed_A = c(1.5e-6, 1e-5)
 fixed_k = c(1.3, 1.1)
 fixed_B = 1.5e-4
 fixed_H = c(0.4, 1.0)
+fixed_di_thresh = c(2, 8, 25)
 n_seed  = 15
 
 # Generate all scenarios
@@ -620,24 +628,26 @@ names(scenar_list) = scenar_df$scenar_name
 # Actual simulation
 plan(multiprocess, workers = 15)
 tictoc::tic()
-var_scenars = list(seed  = seq(n_seed),
-                   k     = fixed_k,
-                   A     = fixed_A,
-                   B     = fixed_B,
-                   H     = fixed_H,
-                   h_fun = "sum") %>%
+var_scenars = list(seed      = seq(n_seed),
+                   k         = fixed_k,
+                   A         = fixed_A,
+                   B         = fixed_B,
+                   H         = fixed_H,
+                   h_fun     = "sum",
+                   di_thresh = fixed_di_thresh) %>%
     cross() %>%
     future_map(function(x){
         devtools::load_all()
         
         meta_simul_A_B_k_and_H(
-            seed_number   = x$seed,
-            given_k       = x$k,
-            given_A       = x$A,
-            given_B       = x$B,
-            given_H       = x$H,
-            given_scenars = scenar_list,
-            given_h_fun   = x$h_fun)
+            seed_number     = x$seed,
+            given_k         = x$k,
+            given_A         = x$A,
+            given_B         = x$B,
+            given_H         = x$H,
+            given_scenars   = scenar_list,
+            given_h_fun     = x$h_fun,
+            given_di_thresh = x$di_thresh)
     }, .progress = TRUE)
 tictoc::toc()
 
@@ -648,7 +658,13 @@ used_trait_list = map(seq(n_seed), function(given_seed) {
                                        cor_coef = 0)
     
     list(uncor = given_traits)
-})
+}) %>%
+    set_names(nm = seq(n_seed))
+
+full_trait_df = map_dfr(used_trait_list, ~.x$uncor %>%
+            as.data.frame() %>%
+            rownames_to_column("species"),
+            .id = "seed")
 
 
 n_simul = list(seed  = seq(n_seed),
@@ -656,7 +672,8 @@ n_simul = list(seed  = seq(n_seed),
                    A     = fixed_A,
                    B     = fixed_B,
                    H     = fixed_H,
-                   h_fun = "sum") %>%
+                   h_fun = "sum",
+                   di_thresh = fixed_di_thresh) %>%
     cross() %>%
     length()
 
@@ -690,12 +707,13 @@ plot_var_scenars_cwm = function(var_scenars_cwm) {
                               formula = y ~ x, parse = TRUE, size = 3,
                               label.y.npc = "bottom", label.x.npc = "right",
                               coef.digits = 2) +
-        facet_grid(vars(R_scenar), vars(A_scenar),
+        facet_grid(vars(di_thresh, R_scenar), vars(A, A_scenar),
                    labeller = labeller(
                        R_scenar = function(x) paste0("Trait 2 Contrib.\n",
                                                      "to Growth : ", x, "%"),
                        A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
-                                                     "Compet. : ", x, "%"))) +
+                                                     "Compet. : ", x, "%"),
+                       .default = label_both)) +
         ylim(5, 20) +
         scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
                            labels = function(x) paste0(x, "%")) +
@@ -728,12 +746,13 @@ plot_var_scenars_cwv = function(var_scenars_cwm) {
                               formula = y ~ x, parse = TRUE, size = 3,
                               label.y.npc = "top", label.x.npc = "right",
                               coef.digits = 2) +
-        facet_grid(vars(R_scenar), vars(A_scenar),
+        facet_grid(vars(di_thresh, R_scenar), vars(A, A_scenar),
                    labeller = labeller(
                        R_scenar = function(x) paste0("Trait 2 Contrib.\n",
                                                      "to Growth : ", x, "%"),
                        A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
-                                                     "Compet. : ", x, "%"))) +
+                                                     "Compet. : ", x, "%"),
+                       .default = label_both)) +
         scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
                            labels = function(x) paste0(x, "%")) +
         labs(x = "Environmental Variable",
@@ -766,18 +785,19 @@ plot_var_scenars_richness = function(var_scenars_cwm) {
                               formula = y ~ x + I(x^2), parse = TRUE, size = 3,
                               label.y.npc = "top", label.x.npc = "left",
                               coef.digits = 2) +
-        facet_grid(vars(R_scenar), vars(A_scenar),
+        facet_grid(vars(di_thresh, R_scenar), vars(A, A_scenar),
                    labeller = labeller(
                        R_scenar = function(x) paste0("Trait 2 Contrib.\n",
                                                      "to Growth : ", x, "%"),
                        A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
-                                                     "Compet. : ", x, "%"))) +
+                                                     "Compet. : ", x, "%"),
+                       .default = label_both)) +
         scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
                            labels = function(x) paste0(x, "%")) +
         labs(x = "Environmental Variable",
              y = "Species Richness",
              color = "Trait 2 contrib. to Hierarch. Compet.",
-             subtitle = expression("Trait 2 CWV <-> Environment (t"["opt"] *
+             subtitle = expression("Species Richness <-> Environment (t"["opt"] *
                                        ") relationship"),
              caption = param_caption) +
         theme(aspect.ratio = 1,
