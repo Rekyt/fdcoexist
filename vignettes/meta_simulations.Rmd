@@ -637,7 +637,7 @@ var_scenars = list(seed      = seq(n_seed),
                    di_thresh = fixed_di_thresh) %>%
     cross() %>%
     future_map(function(x){
-        devtools::load_all()
+        suppressMessages({devtools::load_all()})
         
         meta_simul_A_B_k_and_H(
             seed_number     = x$seed,

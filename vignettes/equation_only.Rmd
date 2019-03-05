@@ -53,15 +53,11 @@ with $T_c$ the number of traits contributing to competition, $\text{trait}_{i, c
 \end{gather}
 with $w_c$ the contribution of trait $c$ in limiting similarity.
 
-However, we here consider linear dissimilarity, the influence of species is directly proportional to their distance. There are some evidence in the literature that closer species have disproportionately more impact that species further way. This suggest an exponential shape of the competition as follow:
+We use $1 - \delta_{ij}$ in above-mentioned equations to consider limiting similarity (closer species experience higher inter-specific competition) thus we can use a similarity term:
 
 \begin{gather}
-\delta_{ij}' = \exp \left[ \left(
-    \frac{\delta_{ij} - \text{min}(\delta_{ij})}{
-        \text{max}(\delta_{ij}) - \text{min}(\delta_{ij})} \right)^d \right],
+\sigma_{ij} = \max(\delta_{ij}) - \delta_{ij},\quad \sigma_{ii} = 0 ~\forall~i \in [1, S] \\
 \end{gather}
-
-with $d$ the power to which we should scale the exponential relationship
 
 ## Adding intra-specific competition
 
@@ -75,8 +71,8 @@ Thus the equation becomes:
 \begin{equation}
 N_{t+1, i, x} = \frac{
 k \times \exp\left(- \displaystyle\frac{(\text{trait}_i - \text{env}_x)^2}{2\times \text{width}^2}\right) \times N_{t, i, x}}{
-1 + A \left( \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
-\frac{B}{A} \times N_{t,i,x} \right)
+1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} \sigma_{ij} +
+B \times N_{t,i,x}
 }
 \end{equation}
 
@@ -109,8 +105,8 @@ So the final equation looks like the following:
 N_{t+1, i, x} = \frac{
     \left[ k \displaystyle\sum_{g = 1}^T w_g \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) +
     H \sum_{h = 1}^{T_h} w_h \frac{\text{trait}_{i, h}}{\text{max}(\text{trait}_{i, h})} \right] \times N_{t, i, x}}{
-1 + A \left( \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x}  (1 - \delta_{ij}) +
-\frac{B}{A} \times N_{t,i,x} \right)
+1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} (\max(\delta_{ij}) - \delta_{ij}) +
+B \times N_{t,i,x}
 }
 \end{equation}
 
@@ -121,9 +117,9 @@ N_{t+1, i, x} = \frac{
     \left[ k \displaystyle
         \sum_{g = 1}^{T_g} w_g \times \exp\left(- \displaystyle\frac{(\text{trait}_{i, g} - \text{env}_x)^2}{2\times \text{width}^2} \right) +
         H \sum_{h = 1}^{T_h} w_h \frac{\text{trait}_{i, h}}{\text{max}(\text{trait}_{i, h})} \right] \times N_{t, i, x}}{
-    1 + A \left[ \displaystyle
-        \sum_{j = 1, ~j \neq i}^{S} N_{t, j, x}  \left(1 - \sqrt{\sum_{c = 1}^{T_c} w_c \times (\text{trait}_{i, c} - \text{trait}_{j, c})^2} \right) +
-        \frac{B}{A} \times N_{t,i,x} \right]
+    1 + A \displaystyle
+        \sum_{j = 1, ~j \neq i}^{S} N_{t, j, x} (\max(\delta_{ij}) - \delta_{ij}) +
+        B \times N_{t,i,x} 
 },
 \end{equation}
 
