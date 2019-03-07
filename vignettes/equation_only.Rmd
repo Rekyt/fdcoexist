@@ -103,11 +103,11 @@ with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of trai
 \begin{gather}
 f_H(t_{i, h}) = \frac{t_{i, h} - \min(t_h)}{\max(t_h) - \min(t_h)} \times
                 [1 - (-1)] + (-1) \\
-f_H(t_{i, h}) = \frac{t_{i, h} - \min(t_i)}{ \max(t_h) - \min(t_h)} \times
+f_H(t_{i, h}) = \underbrace{\frac{t_{i, h} - \min(t_i)}{ \max(t_h) - \min(t_h)}}_{\in [0, 1]} \times
                 2 - 1
 \end{gather}
 
-The fraction gets scaled is in $[0, 1]$, it gets multiplied by 2 so it is in $[0, 2]$ minus one which gets to $[-1, 1]$.
+The fraction gets scaled in $[0, 1]$, it gets multiplied by 2 so it is in $[0, 2]$ minus one which gets to $[-1, 1]$.
 So the fully developed hierarchical growth term is:
 
 \begin{equation}
@@ -147,7 +147,9 @@ Finally the number of inviduals in the patch after dispersal becomes:
 \begin{gather}
 N_{t, i, x} = N_{t, i, x, \text{sedentaries}} + \frac{N_{t, i, \text{migrants}}}{25} \\
 N_{t, i, x} = (1 - d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}\\
-N_{t, i, x} = (1 - \frac{24}{25}d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1, k \neq x}^{k = 25} N_{t, i, k}}{25}
+N_{t, i, x} = (1 - \frac{24}{25}d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1, k \neq x}^{k = 25} N_{t, i, k}}{25} \\
+N_{t, i, x} = N_{t, i, x} \underbrace{- d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}}_{D_{t,i,x}} \\
+D_{t, i, x} = - d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}
 \end{gather}
 
 ## Final equation
@@ -160,9 +162,9 @@ N_{t+1, i, x} = \frac{
     H \sum_{h = 1}^{T_h} w_h \times
         \frac{t_{i, h} - \min(t_h)}{
         \max(t_h) - \min(t_h)} \times 2 - 1 \right] \times N_{t, i, x}}{
-    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} [\max(\delta_{ij}) - \delta_{ij}] +
+    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} [\max(\delta_{ij}) - \sqrt{\sum_{c = 1}^{T_c} w_c \times (t_{i, c} - t_{j, c})^2}] +
 B \times N_{t,i,x}
-}
+} + D_{t, i, x}
 \end{equation}
 
 with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T_g$, $T_h$ and $T_c$ the number of traits respectively contributing to growth, hierarchical competition and limiting similarity.
