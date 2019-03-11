@@ -329,8 +329,9 @@ fig_param_polycultures = param_patch_optim %>%
                          species = NA_character_)) %>%
     ungroup() %>%
     # Reorder trait categories for easier reading
-    mutate(trait_name = fct_relevel(trait_name, "trait2", after = 3L) %>%
-               fct_relevel("trait2_monocult", after = 1L)) %>%
+    mutate(trait_name = fct_relevel(trait_name, "growth_trait",
+                                    "trait2_monocult", "trait2",
+                                    "trait2_cwm")) %>%
     # Actual plot
     ggplot(aes(patch_optim, trait_value, group = interaction(seed, trait_name),
                linetype = trait_name, color = trait_name)) +
