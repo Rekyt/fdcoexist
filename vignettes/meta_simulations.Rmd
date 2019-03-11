@@ -715,8 +715,7 @@ plot_var_scenars_cwm = function(var_scenars_cwm) {
                                                      "Compet. : ", x, "%"),
                        .default = label_both)) +
         ylim(5, 20) +
-        scale_color_manual(values = RColorBrewer::brewer.pal(7, "Purples")[5:7],
-                           labels = function(x) paste0(x, "%")) +
+        scale_color_viridis_d() +
         labs(x = "Environmental Variable",
              y = "CWM of Trait 2",
              color = "Trait 2 contrib. to Hierarch. Compet.",
