@@ -50,12 +50,11 @@ test_that("testing check_trait_weights()", {
 test_that("compute_compet_distance() works", {
     # Consider distances using a single trait
     expect_equal(compute_compet_distance(trait_weights, sp_traits),
-                 matrix(c(0, 1/2, 1/2, 1/2, 0, 1, 1/2, 1, 0), ncol = 3,
+                 matrix(c(0, 1, 1, 1, 0, 2, 1, 2, 0), ncol = 3,
                         dimnames = list(paste0("sp", 1:3), paste0("sp", 1:3))))
 
 
     # When no trait contribute to competition there is no competition
-
     expect_equal(compute_compet_distance(data.frame(trait = paste0("trait", 1:2),
                                                     growth_weight = c(1, 0),
                                                     compet_weight = c(0, 0)),
@@ -66,48 +65,23 @@ test_that("compute_compet_distance() works", {
 
     # Multitrait distance
     multi_trait_dist = as.matrix(dist(sp_traits))
-    multi_trait_dist = multi_trait_dist/(diff(range(multi_trait_dist)))
 
     expect_equal(compute_compet_distance(data.frame(trait = paste0("trait", 1:2),
                                                     growth_weight = c(1, 0),
                                                     compet_weight = c(0.5, 0.5)),
                                          sp_traits),
-                 multi_trait_dist)
+                 multi_trait_dist * sqrt(0.5))
 
     expect_equal(compute_compet_distance(data.frame(trait = paste0("trait", 1:2),
                                                     growth_weight = c(1, 0),
                                                     compet_weight = c(0.3, 0.3)),
                                          sp_traits),
-                 multi_trait_dist)
+                 multi_trait_dist * sqrt(0.3))
     expect_equal(compute_compet_distance(data.frame(trait = paste0("trait", 1:2),
                                                     growth_weight = c(1, 0),
                                                     compet_weight = c(1, 1)),
                                          sp_traits),
                  multi_trait_dist)
-})
-
-test_that("Computing trait distance with exponents", {
-    expect_equal(compute_compet_distance(trait_weights, sp_traits,
-                                         dist_power = 0),
-                 matrix(rep(0, 9), ncol = 3,
-                        dimnames = list(rownames(sp_traits),
-                                        rownames(sp_traits))))
-
-    exp05 = (exp(0.5) - 1) / (exp(1) - 1)
-
-    expect_equal(compute_compet_distance(trait_weights, sp_traits,
-                                         dist_power = 1),
-                 matrix(c(0, exp05, exp05, exp05, 0, 1, exp05, 1, 0), ncol = 3,
-                        dimnames = list(rownames(sp_traits),
-                                        rownames(sp_traits))))
-
-    exp025 = (exp(0.25) - 1) / (exp(1) - 1)
-
-    expect_equal(compute_compet_distance(trait_weights, sp_traits,
-                                         dist_power = 2),
-                 matrix(c(0, exp025, exp025, exp025, 0, 1, exp025, 1, 0),
-                        ncol = 3, dimnames = list(rownames(sp_traits),
-                                                  rownames(sp_traits))))
 })
 
 test_that("bevHoltFct() returns good result", {
@@ -209,11 +183,14 @@ test_that("alphaterm() works as expected", {
     N0 = matrix(c(10, 5, 10, 5), dimnames = list(c("p1", "p2"), c("s1", "s2")),
                 ncol = 2)
 
+    empty_mat = N0
+    empty_mat[empty_mat != 0] = 0
+
     # Species distance
     given_dist = matrix(c(0, 1, 1, 0), ncol = 2,
                         dimnames = list(c("s1", "s2"), c("s1", "s2")))
 
-    expect_equal(alphaterm(given_dist, N0, 1, 0), N0)
-    expect_equal(alphaterm(given_dist, N0, 1, 1), N0 * 2)
-    expect_equal(alphaterm(given_dist, N0, 1, 1/2), N0 * 3/2)
+    expect_equal(alphaterm(given_dist, N0, 1, 0, 1), empty_mat)
+    expect_equal(alphaterm(given_dist, N0, 1, 1, 1), N0)
+    expect_equal(alphaterm(given_dist, N0, 1, 1/2, 1), N0 * 1/2)
 })
