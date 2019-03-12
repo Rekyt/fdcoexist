@@ -1,6 +1,9 @@
 # The aim of this script is to be used on the cluster to make simulations
-library("furrr")
-devtools::load_all()
+library("purrr")
+library("snow")
+suppressMessages({
+    devtools::load_all()
+})
 
 # Parameters -------------------------------------------------------------------
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
@@ -17,8 +20,8 @@ n_gen = 75
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
 scenar_df = expand.grid(R = weights, A = weights, H = weights) %>%
-    as_tibble() %>%
-    mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
+    tibble::as_tibble() %>%
+    dplyr::mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
            trait_weights = purrr::pmap(list(R, A, H),
                                        ~create_trait_weights(..1, ..2, ..3)))
 scenar_list = scenar_df$trait_weights
@@ -31,34 +34,51 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
                                      paste0("time", seq(n_gen))))
 
 # Actual simulations -----------------------------------------------------------
-plan(multiprocess, workers = 32)
+
 tictoc::tic()
 
-var_param = list(
+param_sets = list(
     run_n = seq(n_seed),
     A     = list_A,
     k     = list_k,
     B     = list_B,
     H     = list_H) %>%
-    cross() %>%  # the filter EXCLUDE combinations
-    future_map(function(x) {
-        suppressMessages({
-            devtools::load_all()
-        })
+    cross()
 
-        meta_simul(seed_number = x$run_n,
-                   given_k = x$k,
-                   given_A = x$A,
-                   given_B = x$B,
-                   given_scenars = scenar_list,
-                   given_H = x$H,
-                   given_traits = NULL,
-                   given_h_fun = "sum",
-                   given_di_thresh = 24,
-                   given_env = 1:25,
-                   given_composition = composition,
-                   given_d = 0.05)
+#lecture du fichier contenant la liste des machines
+cli_arguments = commandArgs(TRUE)
+pe_file = cli_arguments[1]
+
+#construction de la liste des slots pour le "cluster"
+node_list = read.table(pe_file, sep = " ", header = FALSE,
+                       stringsAsFactors = FALSE)
+node_names = node_list[,1]
+slots_num  = node_list[,2]
+
+workers = rep(node_names, slots_nm)
+
+#We will run in parallel mode (socket) with
+cl = makeSOCKcluster(workers)
+
+var_param = parLapply(cl, param_sets, function(x) {
+    suppressMessages({
+        devtools::load_all()
     })
+
+    meta_simul(seed_number = x$run_n,
+               given_k = x$k,
+               given_A = x$A,
+               given_B = x$B,
+               given_scenars = scenar_list,
+               given_H = x$H,
+               given_traits = NULL,
+               given_h_fun = "sum",
+               given_di_thresh = 24,
+               given_env = 1:25,
+               given_composition = composition,
+               given_d = 0.05)
+})
+stopCluster(cl)
 tictoc::toc()
 
 # Trait data.frame -------------------------------------------------------------
@@ -73,7 +93,7 @@ used_trait_list = map(seq(n_seed), function(given_seed) {
 
 full_trait_df = map_dfr(used_trait_list, ~.x$uncor %>%
                             as.data.frame() %>%
-                            rownames_to_column("species"),
+                            tibble::rownames_to_column("species"),
                         .id = "seed")
 
 # Save files -------------------------------------------------------------------
