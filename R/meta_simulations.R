@@ -48,7 +48,12 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     guessed_th_min = lapply(all_cor, min)
     guessed_th_min = max(unlist(guessed_th_min))
 
-    all_env = list(constant = env_width)
+    compo_dim = dim(given_composition)
+    given_gen = compo_dim[3]
+    given_species = compo_dim[2]
+    given_patches = compo_dim[1]
+
+    all_env = list(constant = rep(given_patches, 5))
 
     all_compet = list(compet = list(A        = given_A,
                                     B        = given_B,
@@ -61,17 +66,14 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                              cor_level     = names(all_cor),
                              scenario      = names(our_scenars))
 
-    compo_dim = dim(given_composition)
-    given_gen = compo_dim[3]
-    given_species = compo_dim[2]
-    given_patches = compo_dim[1]
+
 
     apply(all_facets, 1, function(given_row) {
         simul = multigen(
             traits        = all_cor[[given_row[["cor_level"]]]],
             trait_weights = our_scenars[[given_row[["scenario"]]]],
             env           = given_env,
-            time          = given_time,
+            time          = given_gen,
             species       = given_species,
             patches       = given_patches,
             composition   = given_composition,
