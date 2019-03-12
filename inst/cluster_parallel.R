@@ -1,4 +1,5 @@
 # The aim of this script is to be used on the cluster to make simulations
+library("furrr")
 devtools::load_all()
 
 # Parameters -------------------------------------------------------------------
