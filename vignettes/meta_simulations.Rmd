@@ -35,38 +35,6 @@ suppressPackageStartupMessages({
 
 plan(sequential)
 # Functions --------------------------------------------------------------------
-wtd_skewness = function(x, w, na.rm = TRUE) {
-    
-    if (na.rm) {
-        s <- !is.na(x + w)
-        x <- x[s]
-        w <- w[s]
-    }
-    
-    Weighted.Desc.Stat::w.skewness(x, w)
-}
-
-wtd_kurtosis = function(x, w, na.rm = TRUE) {
-    
-    if (na.rm) {
-        s <- !is.na(x + w)
-        x <- x[s]
-        w <- w[s]
-    }
-    
-    Weighted.Desc.Stat::w.kurtosis(x, w)
-}
-
-extract_trait_contrib_from_scenar = function(scenario) {
-    R_scenar = as.integer(sub("R(\\d+).*", "\\1", scenario, perl = TRUE))
-    A_scenar = as.integer(sub(".*A(\\d+).*", "\\1", scenario, perl = TRUE))
-    H_scenar = as.integer(sub(".*H(\\d+)", "\\1", scenario, perl = TRUE))
-    
-    list(R = R_scenar,
-         A = A_scenar,
-         H = H_scenar)
-}
-
 extract_simul_param_and_abund = function(single_simul, time = 150) {
     
     scenario = single_simul$scenario

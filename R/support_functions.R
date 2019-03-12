@@ -28,3 +28,69 @@ landscape_df = function(given_composition, time = 150) {
 
     return(tidy_compo)
 }
+
+
+#' Weighted Skewness with na.rm
+#'
+#' Compute weighted Skewness using [`Weighted.Desc.Stat::w.skewness`] but add an
+#' option to remove `NA` values
+#'
+#' @param x the values to be weighted
+#' @param w the weighted
+#' @param na.rm should NA be removed?
+#'
+#' @export
+wtd_skewness = function(x, w, na.rm = TRUE) {
+
+    if (na.rm) {
+        s <- !is.na(x + w)
+        x <- x[s]
+        w <- w[s]
+    }
+
+    Weighted.Desc.Stat::w.skewness(x, w)
+}
+
+#' Weighted Kurtosis with na.rm
+#'
+#' Compute weighted kurtosis using [`Weighted.Desc.Stat::w.kurtosis`] but add an
+#' option to remove `NA` values
+#'
+#' @param x the values to be weighted
+#' @param w the weighted
+#' @param na.rm should NA be removed?
+#'
+#' @export
+wtd_kurtosis = function(x, w, na.rm = TRUE) {
+
+    if (na.rm) {
+        s <- !is.na(x + w)
+        x <- x[s]
+        w <- w[s]
+    }
+
+    Weighted.Desc.Stat::w.kurtosis(x, w)
+}
+
+#' Extract Contribution from Scenario Name
+#'
+#' All scenarios names are formatted the same way 'RXAYHZ' with X, Y and Z being
+#' integers between 0 and 100
+#' @param scenario a character of type `"R0A0H0"`
+#'
+#' @return a list with three elements:
+#' * `R` an integer giving the contribution of trait 2 to growth
+#' * `A` an integer giving the contribution of trait 2 to competition (limiting
+#'       similarity)
+#' * `H` an integer giving the contribution of trait 2 to hierarchical
+#'       competition
+#' @export
+extract_trait_contrib_from_scenar = function(scenario) {
+    R_scenar <- as.integer(sub("R(\\d+).*", "\\1", scenario, perl = TRUE))
+    A_scenar <- as.integer(sub(".*A(\\d+).*", "\\1", scenario, perl = TRUE))
+    H_scenar <- as.integer(sub(".*H(\\d+)", "\\1", scenario, perl = TRUE))
+
+    list(R = R_scenar,
+         A = A_scenar,
+         H = H_scenar)
+}
