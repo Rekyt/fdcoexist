@@ -36,7 +36,7 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
 # Actual simulations -----------------------------------------------------------
 
 cli_arguments = commandArgs(trailingOnly = TRUE)
-job_task_id = cli_arguments[1]
+job_task_id = as.numeric(cli_arguments[1])
 
 param_sets = list(
     run_n = seq(n_seed),

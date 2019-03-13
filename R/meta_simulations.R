@@ -33,9 +33,15 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     if (!is.null(given_scenars)) {
         our_scenars = given_scenars
     }
+    
+    compo_dim = dim(given_composition)
+    given_gen = compo_dim[3]
+    given_species = compo_dim[2]
+    given_patches = compo_dim[1]
+
 
     set.seed(seed_number)
-    uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+    uncor_traits = generate_cor_traits(given_patches, given_species, 3,
                                        cor_coef = 0)
     all_cor = list(uncor = uncor_traits)
 
@@ -48,12 +54,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     guessed_th_min = lapply(all_cor, min)
     guessed_th_min = max(unlist(guessed_th_min))
 
-    compo_dim = dim(given_composition)
-    given_gen = compo_dim[3]
-    given_species = compo_dim[2]
-    given_patches = compo_dim[1]
-
-    all_env = list(constant = rep(given_patches, 5))
+        all_env = list(constant = rep(given_patches, 5))
 
     all_compet = list(compet = list(A        = given_A,
                                     B        = given_B,
