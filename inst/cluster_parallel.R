@@ -1,6 +1,6 @@
 # The aim of this script is to be used on the cluster to make simulations
 library("purrr")
-library("snow")
+library("furrr")
 suppressMessages({
     devtools::load_all()
 })
@@ -35,7 +35,8 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
 
 # Actual simulations -----------------------------------------------------------
 
-tictoc::tic()
+cli_arguments = commandArgs(trailingOnly = TRUE)
+job_task_id = cli_arguments[1]
 
 param_sets = list(
     run_n = seq(n_seed),
@@ -45,22 +46,21 @@ param_sets = list(
     H     = list_H) %>%
     cross()
 
-#lecture du fichier contenant la liste des machines
-cli_arguments = commandArgs(TRUE)
-pe_file = cli_arguments[1]
+number_of_jobs_per_task = 32
 
-#construction de la liste des slots pour le "cluster"
-node_list = read.table(pe_file, sep = " ", header = FALSE,
-                       stringsAsFactors = FALSE)
-node_names = node_list[,1]
-slots_num  = node_list[,2]
+# Return split sequence for a giving number of
+f = function(a, b) {
+    seq((a - 1) * b + 1, a * b, by = 1)
+}
 
-workers = rep(node_names, slots_nm)
+param_used = f(job_task_id, number_of_jobs_per_task)
 
-#We will run in parallel mode (socket) with
-cl = makeSOCKcluster(workers)
 
-var_param = parLapply(cl, param_sets, function(x) {
+plan(multicore, workers = 8)
+
+tictoc::tic()
+
+var_param = future_map(param_sets, function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -78,27 +78,10 @@ var_param = parLapply(cl, param_sets, function(x) {
                given_composition = composition,
                given_d = 0.05)
 })
-stopCluster(cl)
 tictoc::toc()
-
-# Trait data.frame -------------------------------------------------------------
-used_trait_list = map(seq(n_seed), function(given_seed) {
-    set.seed(given_seed)
-    given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
-                                       cor_coef = 0)
-
-    list(uncor = given_traits)
-}) %>%
-    set_names(nm = seq(n_seed))
-
-full_trait_df = map_dfr(used_trait_list, ~.x$uncor %>%
-                            as.data.frame() %>%
-                            tibble::rownames_to_column("species"),
-                        .id = "seed")
 
 # Save files -------------------------------------------------------------------
 
-saveRDS(var_param, file = "~/projects/fdcoexist/var_param.Rds",
-        compress = TRUE)
-saveRDS(full_trait_df, file = "~/projects/fdcoexist/full_trait_df.Rds",
+saveRDS(var_param, file = paste0("~/projects/fdcoexist/inst/job_data/var_param_",
+                                 job_task_id, ".Rds"),
         compress = TRUE)
