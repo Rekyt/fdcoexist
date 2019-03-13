@@ -37,6 +37,7 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
 
 cli_arguments = commandArgs(trailingOnly = TRUE)
 job_task_id = as.numeric(cli_arguments[1])
+n_slots = as.numeric(cli_arguments[2])
 
 param_sets = list(
     run_n = seq(n_seed),
@@ -56,7 +57,7 @@ f = function(a, b) {
 param_used = f(job_task_id, number_of_jobs_per_task)
 
 
-plan(multicore, workers = 8)
+plan(multicore, workers = n_slots)
 
 tictoc::tic()
 
