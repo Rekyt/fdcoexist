@@ -1,6 +1,6 @@
 # The aim of this script is to be used on the cluster to make simulations
 library("purrr")
-library("furrr")
+library("future.apply")
 suppressMessages({
     devtools::load_all()
 })
@@ -62,7 +62,7 @@ plan(multicore, workers = n_slots)
 
 tictoc::tic()
 
-var_param = future_map(param_sets, function(x) {
+var_param = future_lapply(param_sets[param_used], function(x) {
     suppressMessages({
         devtools::load_all()
     })
