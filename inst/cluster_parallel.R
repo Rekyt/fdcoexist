@@ -10,10 +10,10 @@ list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
 list_k = seq(1, 1.5, length.out = 6)
 list_B = list_A
 list_H = seq(0, 1, length.out = 6)
-n_seed = 50
+n_seed = 30
 n_patches = 25
 n_species = 100
-n_gen = 75
+n_gen = 50
 
 
 # Generate all scenarios
@@ -45,16 +45,17 @@ param_sets = list(
     k     = list_k,
     B     = list_B,
     H     = list_H) %>%
-    cross()
+    # Make all combinations but exclude cases where B > A
+    cross(.filter = function(v, w, x, y, z) {y > w})
 
-number_of_jobs_per_task = 32
+number_of_sets_per_task = 152
 
 # Return split sequence for a giving number of
 f = function(a, b) {
     seq((a - 1) * b + 1, a * b, by = 1)
 }
 
-param_used = f(job_task_id, number_of_jobs_per_task)
+param_used = f(job_task_id, number_of_sets_per_task)
 
 
 plan(multicore, workers = n_slots)
@@ -84,5 +85,6 @@ tictoc::toc()
 # Save files -------------------------------------------------------------------
 
 saveRDS(var_param, file = paste0("~/projects/fdcoexist/inst/job_data/var_param_",
-                                 job_task_id, ".Rds"),
+                                 job_task_id, "_",
+                                 min(param_used), "_", max(param_used), ".Rds"),
         compress = TRUE)
