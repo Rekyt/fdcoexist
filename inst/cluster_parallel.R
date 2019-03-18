@@ -35,9 +35,9 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
 
 # Actual simulations -----------------------------------------------------------
 
-cli_arguments = commandArgs(trailingOnly = TRUE)
-job_task_id = as.numeric(cli_arguments[1])
-n_slots = as.numeric(cli_arguments[2])
+# cli_arguments = commandArgs(trailingOnly = TRUE)
+# job_task_id = as.numeric(cli_arguments[1])
+n_slots = 8
 
 param_sets = list(
     run_n = seq(n_seed),
@@ -85,6 +85,6 @@ tictoc::toc()
 # Save files -------------------------------------------------------------------
 
 saveRDS(var_param, file = paste0("~/projects/fdcoexist/inst/job_data/var_param_",
-                                 job_task_id, "_",
+                                 "local_data", job_task_id, "_",
                                  min(param_used), "_", max(param_used), ".Rds"),
         compress = TRUE)
