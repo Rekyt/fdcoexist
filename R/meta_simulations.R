@@ -33,7 +33,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     if (!is.null(given_scenars)) {
         our_scenars = given_scenars
     }
-    
+
     compo_dim = dim(given_composition)
     given_gen = compo_dim[3]
     given_species = compo_dim[2]
@@ -109,3 +109,104 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                 di_thresh     = given_di_thresh))
     })
 }
+
+#' @export
+extract_performances_from_simul = function(simul, trait_list,
+                                           realized_growth_rate = TRUE) {
+
+    given_compo = simul$compo[[1]]
+
+    n_gen = dim(given_compo)[3]
+
+    trait_df = trait_list[[simul$seed]][[simul$traits]]
+
+    contrib = extract_trait_contrib_from_scenar(simul$scenario)
+
+    given_k = simul$k
+
+    if (!length(given_k) == 1) {
+        given_k = "gaussian"
+    }
+
+    th_growth_rate = simul$rmatrix %>%
+        as_tibble() %>%
+        rownames_to_column("patch") %>%
+        mutate(patch = as.numeric(patch)) %>%
+        gather("species", "th_growth_rate", -patch)
+
+    env_growth_rate = simul$rmatenv %>%
+        as_tibble() %>%
+        rownames_to_column("patch") %>%
+        mutate(patch = as.numeric(patch)) %>%
+        gather("species", "env_growth_rate", -patch)
+
+    lapply(seq_len(nrow(given_compo)), function(site_index) {
+
+        site_abund = given_compo[site_index,,]
+
+        # Manual derivative to get growth rate
+        max_growth = apply(site_abund, 1, function(given_abund) {
+
+            # Get first moment where species goes extinct
+            time_before_extinct = which(given_abund == 0)[1] - 1
+
+            # When species doesn't go extinct consider maximum time
+            if (is.na(time_before_extinct)) {
+                time_before_extinct = length(given_abund)
+            }
+
+            growth_rate = NA_real_
+
+            if (time_before_extinct > 10) {
+                given_time = 1:time_before_extinct
+
+                growth_num = given_abund[seq(2, time_before_extinct)] -
+                    given_abund[seq(time_before_extinct - 1)]
+
+                growth_denom = given_abund[seq(time_before_extinct - 1)]
+                growth_rate = max(growth_num/growth_denom, na.rm = TRUE)
+            }
+
+            ifelse(is.null(growth_rate) | is.infinite(growth_rate),
+                   NA_real_, growth_rate)
+        }) %>%
+            enframe("species", "max_growth_rate")
+
+        # Get optimality
+        optim_dist = apply(trait_df, 1, function(given_traits) {
+            opt_dist = weighted.mean(abs(site_index - given_traits),
+                                     c(100 - contrib$R, contrib$R, 0, 0))
+
+            return(opt_dist)
+        }) %>%
+            enframe("species", "distance_to_optimum")
+
+        # Abundance
+        sp_abund = site_abund[, n_gen] %>%
+            enframe("species", "N150") %>%
+            mutate(patch = site_index) %>%
+            select(patch, everything())
+
+
+        # Combine all data
+        sp_abund %>%
+            inner_join(optim_dist, by = "species") %>%
+            inner_join(max_growth, by = "species")
+    }) %>%
+        bind_rows() %>%
+        inner_join(th_growth_rate, by = c("patch", "species")) %>%
+        inner_join(env_growth_rate, by = c("patch", "species")) %>%
+        mutate(seed      = simul$seed,
+               trait_cor = simul$traits,
+               h_fun     = simul$h_fun,
+               di_thresh = simul$di_thresh,
+               k         = given_k,
+               A         = simul$A,
+               B         = simul$B,
+               H         = simul$H,
+               R_scenar  = contrib$R,
+               A_scenar  = contrib$A,
+               H_scenar  = contrib$H) %>%
+        mutate_at(vars(contains("growth_rate")), list(per_capita = ~ . / N150))
+}
+
