@@ -120,6 +120,8 @@ extract_performances_from_simul = function(simul, trait_list,
 
     trait_df = trait_list[[simul$seed]][[simul$traits]]
 
+    n_other = ncol(trait_df) - 2
+
     contrib = extract_trait_contrib_from_scenar(simul$scenario)
 
     given_k = simul$k
@@ -175,7 +177,8 @@ extract_performances_from_simul = function(simul, trait_list,
         # Get optimality
         optim_dist = apply(trait_df, 1, function(given_traits) {
             opt_dist = weighted.mean(abs(site_index - given_traits),
-                                     c(100 - contrib$R, contrib$R, 0, 0))
+                                     c(c(100 - contrib$R, contrib$R,
+                                         rep(0, n_other)))
 
             return(opt_dist)
         }) %>%
