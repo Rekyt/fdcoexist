@@ -62,7 +62,7 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
 
 # Actual simulations -----------------------------------------------------------
 
-n_slots = 9
+n_slots = 64
 
 param_sets = list(
     run_n = seq(n_seed),
@@ -100,6 +100,7 @@ tictoc::toc()
 
 # Save files -------------------------------------------------------------------
 
-saveRDS(var_param, file = paste0("~/projects/fdcoexist/inst/job_data/",
+saveRDS(var_param, file = paste0("inst/job_data/",
                                  "caroline_scenars.Rds"),
         compress = TRUE)
+saveRDS(trait_seeds, file = paste0("inst/job_data/caroline_traits.Rds"))

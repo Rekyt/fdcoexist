@@ -178,7 +178,7 @@ extract_performances_from_simul = function(simul, trait_list,
         optim_dist = apply(trait_df, 1, function(given_traits) {
             opt_dist = weighted.mean(abs(site_index - given_traits),
                                      c(c(100 - contrib$R, contrib$R,
-                                         rep(0, n_other)))
+                                         rep(0, n_other))))
 
             return(opt_dist)
         }) %>%
