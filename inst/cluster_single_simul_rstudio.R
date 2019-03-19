@@ -1,6 +1,6 @@
 # The aim of this script is to be used on the cluster to make simulations
 library("purrr")
-library("future.apply")
+library("furrr")
 suppressMessages({
     devtools::load_all()
 })
@@ -42,8 +42,8 @@ param_sets = list(
     H     = list_H) %>%
     cross(.filter = function(v, w, x, y, z) {y > w})
 
-min_param = 1
-max_param = 1500
+min_param = 1501
+max_param = 3000
 
 future::availableCores()
 
@@ -55,7 +55,7 @@ tictoc::tic()
 
 # plan(sequential)
 
-var_param = future_lapply(param_sets[seq(min_param, max_param)], function(x) {
+var_param = future_map(param_sets[seq(min_param, max_param)], function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -72,7 +72,7 @@ var_param = future_lapply(param_sets[seq(min_param, max_param)], function(x) {
                given_env = 1:25,
                given_composition = composition,
                given_d = 0.05)
-})
+}, .progress = TRUE)
 tictoc::toc()
 
 # Save files -------------------------------------------------------------------
