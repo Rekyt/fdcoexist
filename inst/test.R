@@ -362,3 +362,25 @@ fig_param_polycultures = param_patch_optim %>%
     labs(x = "Environment",
          y = "Trait Value") +
     theme(aspect.ratio = 1)
+
+# Compare individual growth ----------------------------------------------------
+var_scenar_perfs %>%
+    filter(di_thresh == 25, H == 0.4, k == "fixed = 1.3", A == 1e-5, seed == 1)  %>%
+    filter(A_scenar == 0, H_scenar == 0) %>%
+    inner_join(full_trait_df %>%
+                   mutate(seed = as.integer(seed)),
+               by = c("seed", "species")) %>%
+    mutate(growth_trait = pmap_dbl(list(trait1, trait2, R_scenar),
+                                   ~weighted.mean(c(..1, ..2),
+                                                  c(100 - ..3, ..3))),
+           nona_growth = ifelse(is.na(max_growth_rate),
+                                0, max_growth_rate)) %>%
+    group_by(R_scenar, patch) %>%
+    summarise_at(vars(trait1, trait2, growth_trait),
+                 list(env_growth = ~weighted.mean(., env_growth_rate),
+                      max_growth = ~weighted.mean(., nona_growth))) %>%
+    gather("growth_type", "growth_value", ends_with("growth")) %>%
+    ggplot(aes(patch, growth_value, color = as.factor(R_scenar))) +
+    geom_line(size = 1) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    facet_wrap(~growth_type, scales = "free")
