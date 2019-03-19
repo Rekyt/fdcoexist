@@ -384,3 +384,14 @@ var_scenar_perfs %>%
     geom_line(size = 1) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
     facet_wrap(~growth_type, scales = "free")
+
+# Make figures as needed by CT -------------------------------------------------
+devtools::load_all()
+
+caro_scenars = readRDS("inst/job_data/caroline_scenars.Rds")
+caro_traits = readRDS("inst/job_data/caroline_traits.Rds")
+caro_perfs = readRDS("inst/job_data/caroline_perfs.Rds")
+
+caro_perfs = map_dfr(unlist(caro_scenars, recursive = FALSE),
+                     ~extract_performances_from_simul(.x, caro_traits, TRUE))
+

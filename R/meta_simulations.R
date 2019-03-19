@@ -116,7 +116,7 @@ extract_performances_from_simul = function(simul, trait_list,
 
     given_compo = simul$compo[[1]]
 
-    n_gen = dim(given_compo)[3]
+    max_time = dim(given_compo)[3]
 
     trait_df = trait_list[[simul$seed]][[simul$traits]]
 
@@ -185,7 +185,7 @@ extract_performances_from_simul = function(simul, trait_list,
             enframe("species", "distance_to_optimum")
 
         # Abundance
-        sp_abund = site_abund[, n_gen] %>%
+        sp_abund = site_abund[, max_time] %>%
             enframe("species", "N150") %>%
             mutate(patch = site_index) %>%
             select(patch, everything())

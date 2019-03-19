@@ -118,7 +118,7 @@ extract_performances_from_simul = function(simul, trait_list,
     
     given_compo = simul$compo[[1]]
     
-    trait_df = trait_list[[simul$seed]][[cor_scenar]]
+    trait_df = trait_list[[simul$seed]][[simul$traits]]
     
     contrib = extract_trait_contrib_from_scenar(simul$scenario)
     
