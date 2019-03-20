@@ -71,7 +71,9 @@ full_trait_df = map_dfr(used_trait_list,~.x %>%
 # Actual simulations -----------------------------------------------------------
 
 n_slots = 64
-job_task_id = 1
+
+cli_args = commandArgs(TRUE)
+job_task_id = as.numeric(cli_args[1])
 
 param_sets = list(
     run_n = seq(n_seed),
