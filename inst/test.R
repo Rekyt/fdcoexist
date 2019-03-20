@@ -386,9 +386,10 @@ var_scenar_perfs %>%
     facet_wrap(~growth_type, scales = "free")
 
 # Make figures as needed by CT -------------------------------------------------
-devtools::load_all()
+pkgload::load_all()
+library("tidyverse")
 
-caro_scenars = readRDS("inst/job_data/caroline_scenars.Rds")
+# caro_scenars = readRDS("inst/job_data/caroline_scenars.Rds")
 caro_traits = readRDS("inst/job_data/caroline_traits.Rds")
 caro_perfs = readRDS("inst/job_data/caroline_perfs.Rds")
 
@@ -406,11 +407,63 @@ caro_full = caro_perfs %>%
                                                            "trait_cor"))
 
 caro_sum = caro_full %>%
-    group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, seed, patch) %>%
-    summarise_at(vars(matches("trait[12]")),
-                 .funs = list(w_th  = ~weighted.mean(., th_growth_rate,
-                                                     na.rm = TRUE),
-                             w_max = ~weighted.mean(., max_growth_rate,
-                                                    na.rm = TRUE),
-                             w_env = ~weighted.mean(., env_growth_rate,
-                                                    na.rm = TRUE)))
+    group_by(k, A, B, H, trait_cor, R_scenar, A_scenar, H_scenar, seed,
+             patch) %>%
+    summarise_at(
+        vars(matches("trait[12]")),
+        .funs = list(cwm       = ~weighted.mean(., N150,
+                                                na.rm = TRUE),
+                     w_max     = ~weighted.mean(., max_growth_rate,
+                                                na.rm = TRUE),
+                     w_max_cap = ~weighted.mean(., max_growth_rate_per_capita,
+                                                na.rm = TRUE)))
+# median scenar & no trait correlation
+caro_med = caro_sum %>%
+    filter(R_scenar == 50, A_scenar == 505, H_scenar == 0,
+           trait_cor == "uncor") %>%
+    ungroup()
+
+
+# gather("trait_type", "trait_value", matches("trait[12].*")) %>%
+#     separate("trait_type", c("trait_name", "measure_type"), sep = "_", extra = "merge") %>%
+
+caro_indiv = caro_med %>%
+    filter(B == 0, A == 0, H == 0) %>%
+    select(k, seed, patch,
+           trait1_w_max, trait2_w_max,
+           trait1_w_max_cap, trait2_w_max_cap) %>%
+    rename_at(vars(contains("w_max")), .funs = list(~gsub("w_max", "indiv", .)))
+
+caro_mono = caro_med %>%
+    filter(B != 0, A == 0, H == 0)
+
+caro_poly = caro_med %>%
+    filter(B != 0, A != 0) %>%
+    inner_join(caro_indiv, by = c("k", "seed", "patch"))
+
+caro_perf_env_plot = caro_poly %>%
+    gather("trait_type", "measure_value", matches("trait[12].*")) %>%
+    separate("trait_type", c("trait_name", "measure_type"),
+             sep = "_", extra = "merge") %>%
+    filter(trait_name == "trait2", B == 1e-6, A %in% c(1e-6, 1e-4),
+           H %in% c(0, 1), !grepl("cap", measure_type, fixed = TRUE)) %>%
+    ggplot(aes(patch, measure_value, color = measure_type,
+               group = interaction(seed, measure_type))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(alpha = 1/5) +
+    geom_smooth(method = "lm", se = FALSE, aes(group = measure_type)) +
+    facet_grid(vars(k), vars(A, H), labeller = labeller(
+        A = function(x) paste0("Limiting Sim. = ", x),
+        H = function(x) paste0("Hierarch. Compet. = ", x),
+        k = function(x) paste0("Max Growth = ", x)
+    )) +
+    scale_color_discrete(labels = c(cwm = "Trait 2 CWM",
+                                    indiv = "Individual",
+                                    w_max = "Polyculture Growth Rate")) +
+    labs(x = "Environment",
+         y = "Performance Measure",
+         caption = paste0("B = 1e-6; n = 10; Median scenario ",
+                          "(each trait contributing to all processes)"),
+         title = "Performance Estimates vs. Environment") +
+    theme(aspect.ratio = 1,
+          strip.background = element_blank())
