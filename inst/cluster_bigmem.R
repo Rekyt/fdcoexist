@@ -20,7 +20,7 @@ n_traits = 2
 # Generate all scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
-scenar_df = cross(list(R = weights, A = weights, H = weights),
+scenar_list = cross(list(R = weights, A = weights, H = weights),
                   .filter = ~(..2 != 0 & ..3 != 0)) %>%
     map(function(x) {
         data.frame(trait            = paste0("trait", 1:2),
