@@ -60,6 +60,8 @@ composition <- array(NA, dim = c(n_patches, n_species, n_gen),
                                      paste0("species", seq(n_species)),
                                      paste0("time", seq(n_gen))))
 
+composition[,,1] = 50
+
 # Actual simulations -----------------------------------------------------------
 
 n_slots = 64
@@ -98,9 +100,22 @@ var_param = future_lapply(param_sets, function(x) {
 })
 tictoc::toc()
 
+# Extract Performances & CWM ---------------------------------------------------
+
+cat("\nExtracting Performance from each simul\n")
+
+tictoc::tic()
+caro_perfs = map_dfr(unlist(var_param, recursive = FALSE),
+                          ~extract_performances_from_simul(.x, trait_seeds,
+                                                           TRUE))
+tictoc::toc()
+
 # Save files -------------------------------------------------------------------
 
 saveRDS(var_param, file = paste0("inst/job_data/",
                                  "caroline_scenars.Rds"),
         compress = TRUE)
 saveRDS(trait_seeds, file = paste0("inst/job_data/caroline_traits.Rds"))
+saveRDS(caro_perfs, file = "inst/job_data/caroline_perfs.Rds", compress = TRUE)
+
+
