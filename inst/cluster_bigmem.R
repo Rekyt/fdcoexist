@@ -14,6 +14,7 @@ n_seed = 30
 n_patches = 25
 n_species = 100
 n_gen = 50
+n_traits = 4
 
 
 # Generate all scenarios

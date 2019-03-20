@@ -131,16 +131,16 @@ extract_performances_from_simul = function(simul, trait_list,
     }
 
     th_growth_rate = simul$rmatrix %>%
-        as_tibble() %>%
-        rownames_to_column("patch") %>%
-        mutate(patch = as.numeric(patch)) %>%
-        gather("species", "th_growth_rate", -patch)
+        tibble::as_tibble() %>%
+        tibble::rownames_to_column("patch") %>%
+        dplyr::mutate(patch = as.numeric(patch)) %>%
+        tidyr::gather("species", "th_growth_rate", -patch)
 
     env_growth_rate = simul$rmatenv %>%
-        as_tibble() %>%
-        rownames_to_column("patch") %>%
-        mutate(patch = as.numeric(patch)) %>%
-        gather("species", "env_growth_rate", -patch)
+        tibble::as_tibble() %>%
+        tibble::rownames_to_column("patch") %>%
+        dplyr::mutate(patch = as.numeric(patch)) %>%
+        tidyr::gather("species", "env_growth_rate", -patch)
 
     lapply(seq_len(nrow(given_compo)), function(site_index) {
 
@@ -182,24 +182,24 @@ extract_performances_from_simul = function(simul, trait_list,
 
             return(opt_dist)
         }) %>%
-            enframe("species", "distance_to_optimum")
+        tibble::enframe("species", "distance_to_optimum")
 
         # Abundance
         sp_abund = site_abund[, max_time] %>%
-            enframe("species", "N150") %>%
-            mutate(patch = site_index) %>%
-            select(patch, everything())
+            tibble::enframe("species", "N150") %>%
+            dplyr::mutate(patch = site_index) %>%
+            dplyr::select(patch, dplyr::everything())
 
 
         # Combine all data
         sp_abund %>%
-            inner_join(optim_dist, by = "species") %>%
-            inner_join(max_growth, by = "species")
+            dplyr::inner_join(optim_dist, by = "species") %>%
+            dplyr::inner_join(max_growth, by = "species")
     }) %>%
-        bind_rows() %>%
-        inner_join(th_growth_rate, by = c("patch", "species")) %>%
-        inner_join(env_growth_rate, by = c("patch", "species")) %>%
-        mutate(seed      = simul$seed,
+        dplyr::bind_rows() %>%
+        dplyr::inner_join(th_growth_rate, by = c("patch", "species")) %>%
+        dplyr::inner_join(env_growth_rate, by = c("patch", "species")) %>%
+        dplyr::mutate(seed      = simul$seed,
                trait_cor = simul$traits,
                h_fun     = simul$h_fun,
                di_thresh = simul$di_thresh,
@@ -210,6 +210,6 @@ extract_performances_from_simul = function(simul, trait_list,
                R_scenar  = contrib$R,
                A_scenar  = contrib$A,
                H_scenar  = contrib$H) %>%
-        mutate_at(vars(contains("growth_rate")), list(per_capita = ~ . / N150))
+        dplyr::mutate_at(dplyr::vars(dplyr::contains("growth_rate")), list(per_capita = ~ . / N150))
 }
 

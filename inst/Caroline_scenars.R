@@ -1,5 +1,5 @@
 # The aim of this script is to be used on the cluster to make simulations
-library("purrr")
+library("tidyverse")
 library("future.apply")
 suppressMessages({
     devtools::load_all()
