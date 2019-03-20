@@ -51,6 +51,7 @@ full_trait_df = map_dfr(used_trait_list, ~.x$uncor %>%
 # Actual simulations -----------------------------------------------------------
 
 n_slots = 64
+job_task_id = 1
 
 param_sets = list(
     run_n = seq(n_seed),
@@ -61,11 +62,20 @@ param_sets = list(
     # Make all combinations but exclude cases where B > A
     cross(.filter = function(v, w, x, y, z) {y > w})
 
+number_of_sets_per_task = 10010
+
+# Return split sequence for a giving number of
+f = function(a, b) {
+    seq((a - 1) * b + 1, a * b, by = 1)
+}
+
+param_used = f(job_task_id, number_of_sets_per_task)
+
 plan(multicore, workers = n_slots)
 
 tictoc::tic()
 
-var_param = future_lapply(param_sets, function(x) {
+var_param = future_lapply(param_sets[param_used], function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -97,7 +107,10 @@ tictoc::toc()
 
 # Save files -------------------------------------------------------------------
 
-saveRDS(var_param, file = paste0("inst/job_data/var_param_bigmem_data.Rds"),
+saveRDS(var_param, file = paste0("inst/job_data/var_param_bigmem_",
+                                 min(param_used), "_", max(param_used),
+                                 "_data.Rds"),
         compress = TRUE)
 saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
-saveRDS(var_param_perfs, file = "inst/job_data/bigmem_perfs.Rds")
+saveRDS(var_param_perfs, file = paste0("inst/job_data/bigmem_", min(param_used),
+                                       "_", max(param_used),"perfs.Rds"))
