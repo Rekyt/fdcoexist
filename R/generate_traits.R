@@ -81,7 +81,7 @@ generate_cor_traits = function(number_patches, number_species, number_other = 9,
 #' @export
 #'
 #' @examples create_trait_weights(50, 50, 0)
-create_trait_weights = function(R, A, H) {
+create_trait_weights = function(R, A, H, n_traits) {
     if (any(!is.numeric(R), !is.numeric(A), !is.numeric(H))) {
         stop("All provided weights should be integer")
     }

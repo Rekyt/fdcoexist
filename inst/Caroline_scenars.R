@@ -1,5 +1,6 @@
 # The aim of this script is to be used on the cluster to make simulations
 library("tidyverse")
+library("furrr")
 library("future.apply")
 suppressMessages({
     devtools::load_all()
@@ -39,7 +40,7 @@ two_traits_all  = data.frame(trait = paste0("trait", 1:2),
 scenar_list = list(R0A0H0     = single_trait,
                    R50A0H0    = two_traits_R,
                    R0A100H100 = two_traits_each,
-                   R50A505H0  = two_traits_all)
+                   R50A50H50  = two_traits_all)
 
 # Generate trait matrices for each seed
 fixed_coef = 0.3
@@ -105,7 +106,7 @@ tictoc::toc()
 cat("\nExtracting Performance from each simul\n")
 
 tictoc::tic()
-caro_perfs = map_dfr(unlist(var_param, recursive = FALSE),
+caro_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
                           ~extract_performances_from_simul(.x, trait_seeds,
                                                            TRUE))
 tictoc::toc()

@@ -392,6 +392,25 @@ caro_scenars = readRDS("inst/job_data/caroline_scenars.Rds")
 caro_traits = readRDS("inst/job_data/caroline_traits.Rds")
 caro_perfs = readRDS("inst/job_data/caroline_perfs.Rds")
 
-caro_perfs = map_dfr(unlist(caro_scenars, recursive = FALSE),
-                     ~extract_performances_from_simul(.x, caro_traits, TRUE))
 
+full_trait_df = caro_traits %>%
+    map_dfr(~map_dfr(.x, function(x) {
+        x %>%
+            as.data.frame() %>%
+            rownames_to_column("species")
+    }, .id = "trait_cor"), .id = "seed")
+
+caro_full = caro_perfs %>%
+    inner_join(full_trait_df %>%
+                   mutate(seed = as.integer(seed)), by = c("species", "seed",
+                                                           "trait_cor"))
+
+caro_sum = caro_full %>%
+    group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, seed, patch) %>%
+    summarise_at(vars(matches("trait[12]")),
+                 .funs = list(w_th  = ~weighted.mean(., th_growth_rate,
+                                                     na.rm = TRUE),
+                             w_max = ~weighted.mean(., max_growth_rate,
+                                                    na.rm = TRUE),
+                             w_env = ~weighted.mean(., env_growth_rate,
+                                                    na.rm = TRUE)))

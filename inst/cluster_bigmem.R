@@ -14,19 +14,24 @@ n_seed = 30
 n_patches = 25
 n_species = 100
 n_gen = 50
-n_traits = 4
+n_traits = 2
 
 
 # Generate all scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
-scenar_df = expand.grid(R = weights, A = weights, H = weights) %>%
-    tibble::as_tibble() %>%
-    dplyr::mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
-           trait_weights = purrr::pmap(list(R, A, H),
-                                       ~create_trait_weights(..1, ..2, ..3)))
-scenar_list = scenar_df$trait_weights
-names(scenar_list) = scenar_df$scenar_name
+scenar_df = cross(list(R = weights, A = weights, H = weights),
+                  .filter = ~(..2 != 0 & ..3 != 0)) %>%
+    map(function(x) {
+        data.frame(trait            = paste0("trait", 1:2),
+                    growth_weight    = c((100 - x$R)/100, x$R/100),
+                    compet_weight    = c((100 - x$A)/100, x$A/100),
+                    hierarchy_weight = c((100 - x$H)/100, x$H/100))
+        }) %>%
+    # Name scenarios
+    set_names(nm = cross(list(R = weights, A = weights, H = weights),
+                         .filter = ~(..2 != 0 & ..3 != 0)) %>%
+                  map_chr(~paste0("R", .x$R, "A", .x$A, "H", .x$H)))
 
 # multidimensional matrix
 composition <- array(NA, dim = c(n_patches, n_species, n_gen),
@@ -39,14 +44,28 @@ used_trait_list = map(seq(n_seed), function(given_seed) {
     set.seed(given_seed)
     given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
+    set.seed(given_seed)
+    cor_trait = given_traits = generate_cor_traits(n_patches, n_species,
+                                                   n_traits - 1,
+                                                   cor_coef = 0.3)
+    set.seed(given_seed)
+    negcor_trait = given_traits = generate_cor_traits(n_patches, n_species,
+                                                      n_traits - 1,
+                                                      cor_coef = -0.3)
 
-    list(uncor = given_traits)
+    list(uncor  = given_traits,
+         poscor = cor_trait,
+         negcor = negcor_trait)
 }) %>%
     set_names(nm = seq(n_seed))
 
-full_trait_df = map_dfr(used_trait_list, ~.x$uncor %>%
-                            as.data.frame() %>%
-                            tibble::rownames_to_column("species"),
+full_trait_df = map_dfr(used_trait_list,~.x %>%
+                            map_dfr(function(x) {
+                                x %>%
+                                    as.data.frame() %>%
+                                    tibble::rownames_to_column("species")
+                            },
+                            .id = "trait_cor"),
                         .id = "seed")
 
 # Actual simulations -----------------------------------------------------------
@@ -63,7 +82,7 @@ param_sets = list(
     # Make all combinations but exclude cases where B > A
     cross(.filter = function(v, w, x, y, z) {y > w})
 
-number_of_sets_per_task = 10010
+number_of_sets_per_task = 10100
 
 # Return split sequence for a giving number of
 f = function(a, b) {
