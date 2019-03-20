@@ -34,10 +34,10 @@ scenar_list = cross(list(R = weights, A = weights, H = weights),
                   map_chr(~paste0("R", .x$R, "A", .x$A, "H", .x$H)))
 
 # multidimensional matrix
-composition <- array(NA, dim = c(n_patches, n_species, n_gen),
-                     dimnames = list(paste0("patches", seq(n_patches)),
-                                     paste0("species", seq(n_species)),
-                                     paste0("time", seq(n_gen))))
+composition = array(NA, dim = c(n_patches, n_species, n_gen),
+                    dimnames = list(paste0("patches", seq(n_patches)),
+                                    paste0("species", seq(n_species)),
+                                    paste0("time", seq(n_gen))))
 
 # Get trait list
 used_trait_list = map(seq(n_seed), function(given_seed) {
@@ -79,8 +79,8 @@ param_sets = list(
     k     = list_k,
     B     = list_B,
     H     = list_H) %>%
-    # Make all combinations but exclude cases where B > A
-    cross(.filter = function(v, w, x, y, z) {y > w})
+    # Make all combinations but exclude cases where A > B
+    cross(.filter = ~..2 > ..4)
 
 number_of_sets_per_task = 10100
 
