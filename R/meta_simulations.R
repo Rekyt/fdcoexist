@@ -172,7 +172,7 @@ extract_performances_from_simul = function(simul, trait_list,
             ifelse(is.null(growth_rate) | is.infinite(growth_rate),
                    NA_real_, growth_rate)
         }) %>%
-            enframe("species", "max_growth_rate")
+            tibble::enframe("species", "max_growth_rate")
 
         # Get optimality
         optim_dist = apply(trait_df, 1, function(given_traits) {

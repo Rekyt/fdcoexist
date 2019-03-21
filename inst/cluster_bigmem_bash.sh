@@ -1,9 +1,10 @@
-echo "Begin all"
-Rscript --vanilla inst/cluster_bigmem.R 1 > big_mem_20190320_1.out
-wait
-echo "End first; begin second"
-Rscript --vanilla inst/cluster_bigmem.R 2 > big_mem_20190320_2.out
-wait
-echo "End second; begin third"
-Rscript --vanilla inst/cluster_bigmem.R 3 > big_mem_20190320_3.out
-echo "End all"
+#!/bin/bash
+
+
+for i in 1 2 3 4 5 6
+do
+    echo "Begin $i"
+    Rscript --vanilla inst/cluster_bigmem.R $i > big_mem_20190320_$i.out
+    wait
+    echo "End $i"
+done

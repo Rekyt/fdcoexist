@@ -84,7 +84,7 @@ param_sets = list(
     # Make all combinations but exclude cases where A > B
     cross(.filter = ~..2 > ..4)
 
-number_of_sets_per_task = 10100
+number_of_sets_per_task = 5050
 
 # Return split sequence for a giving number of
 f = function(a, b) {
@@ -117,6 +117,12 @@ var_param = future_lapply(param_sets[param_used], function(x) {
 })
 tictoc::toc()
 
+# Save simuls
+saveRDS(var_param, file = paste0("inst/job_data/var_param_bigmem_",
+                                 min(param_used), "_", max(param_used),
+                                 "_data.Rds"),
+        compress = TRUE)
+
 # Extract Performances & CWM ---------------------------------------------------
 
 cat("\nExtracting Performance from each simul\n")
@@ -129,10 +135,6 @@ tictoc::toc()
 
 # Save files -------------------------------------------------------------------
 
-saveRDS(var_param, file = paste0("inst/job_data/var_param_bigmem_",
-                                 min(param_used), "_", max(param_used),
-                                 "_data.Rds"),
-        compress = TRUE)
 saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
 saveRDS(var_param_perfs, file = paste0("inst/job_data/bigmem_", min(param_used),
                                        "_", max(param_used),"perfs.Rds"))
