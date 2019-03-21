@@ -128,13 +128,16 @@ saveRDS(var_param, file = paste0("inst/job_data/var_param_bigmem_",
 cat("\nExtracting Performance from each simul\n")
 
 tictoc::tic()
-var_param_perfs = map_dfr(unlist(var_param, recursive = FALSE),
-                          ~extract_performances_from_simul(.x, used_trait_list,
-                                                           TRUE))
+var_param_perfs = future_lapply(unlist(var_param, recursive = FALSE),
+                          function(x) {
+                              extract_performances_from_simul(x, used_trait_list,
+                                                           TRUE)
+                          })
 tictoc::toc()
 
 # Save files -------------------------------------------------------------------
 
 saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
 saveRDS(var_param_perfs, file = paste0("inst/job_data/bigmem_", min(param_used),
-                                       "_", max(param_used),"perfs.Rds"))
+                                       "_", max(param_used),"perfs.Rds"),
+        compress = TRUE)
