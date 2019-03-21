@@ -23,6 +23,7 @@ suppressPackageStartupMessages({
         library("tidyverse")
         library("cowplot")
         library("furrr")
+        library("lme4")
         
         devtools::load_all()
     })
@@ -82,6 +83,35 @@ plot_predictions_along_environment = function(perf_along_env_df) {
               legend.position = "top")
 }
 
+plot_mod_estimate_along_env = function(mod_df) {
+    mod_df %>%
+        mutate(br = map(lin_mod, broom::tidy, conf.int = TRUE)) %>%
+        unnest(br) %>%
+        filter(effect == "fixed") %>%
+        ggplot(aes(pred_type, estimate, color = trait_name)) +
+        geom_hline(yintercept = 0, linetype = 2) +
+        geom_pointrange(aes(ymin = conf.low,
+                            ymax = conf.high),
+                        position = position_dodge(0.5)) +
+        facet_grid(vars(trait_cor), vars(term),
+                   labeller = labeller(
+                       trait_cor = c(negcor = "Negative Correlation",
+                                     uncor  = "Uncorrelated",
+                                     poscor = "Positive Correlation"),
+                       term = c(`(Intercept)` = "Intercept",
+                                trait_value   = "slope")),
+                   scales = "free_x") +
+        coord_flip() +
+        labs(x = "Slope Estimate",
+             y = "Prediction Type",
+             subtitle = "Estimate with 95% CI intervals") +
+        scale_x_discrete(
+            labels = c(mono             = "Monoculture",
+                       cwm_hierarchical = "CWM with\nHierarch. Compet.",
+                       cwm_limiting     = "CWM with\nLimit. Sim.")) +
+        scale_color_discrete(labels = c(trait1_weight = "Trait 1",
+                                      trait2_weight = "Trait 2"))
+}
 # Other ------------------------------------------------------------------------
 plan(multiprocess, workers = 14)
 ```
@@ -220,10 +250,10 @@ fig_first_scenar = first_scenar %>%
     labs(title = "Trait 1 contributing to all processes") +
     theme(strip.text = element_blank())
 
-first_scenar %>%
+first_mod = first_scenar %>%
     filter(trait_cor == "uncor", trait_name == "trait1_weight") %>%
     nest(-pred_type) %>%
-    mutate(lin_mod = )
+    mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data =.)))
 ```
 
 ```{r second_scenario}
@@ -232,15 +262,28 @@ second_scenar = get_predictions_along_environment(var_perfs, "R50A0H0")
 fig_second_scenar = second_scenar %>%
     plot_predictions_along_environment() +
     labs(title = "Both Traits contributing 50% to Growth")
+
+second_mod = second_scenar %>%
+    nest(-trait_name, -trait_cor, -pred_type) %>%
+    mutate(lin_mod = map(data, ~lme4::lmer(patch ~ trait_value + (1|seed),
+                                           data =.)))
+
+fig_second_mod = plot_mod_estimate_along_env(second_mod)
 ```
 
 
 ```{r third_scenario}
-third_scenar = get_predictions_along_environment(var_perfs, "R50A0H0")
+third_scenar = get_predictions_along_environment(var_perfs, "R100A0H100")
 
 fig_third_scenar = third_scenar %>%
     plot_predictions_along_environment() +
     labs(title = "Trait 1 = 100% Growth; Trait 2 = 100% Competition")
+
+third_mod = third_scenar %>%
+    nest(-trait_name, -trait_cor, -pred_type) %>%
+    mutate(lin_mod = map(data, ~lme4::lmer(patch ~ trait_value + (1|seed), data =.)))
+
+fig_third_mod = plot_mod_estimate_along_env(third_mod)
 ```
 
 ```{r fourth_scenario}
@@ -249,4 +292,10 @@ fourth_scenar = get_predictions_along_environment(var_perfs, "R50A50H50")
 fig_fourth_scenar = fourth_scenar %>%
     plot_predictions_along_environment() +
     labs(title = "Both Traits contributing equally to all processes")
+
+fourth_mod = fourth_scenar %>%
+    nest(-trait_name, -trait_cor, -pred_type) %>%
+    mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data =.)))
+
+fig_fourth_mod = plot_mod_estimate_along_env(fourth_mod)
 ```
