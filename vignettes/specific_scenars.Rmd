@@ -33,18 +33,18 @@ suppressPackageStartupMessages({
 
 get_predictions_along_environment = function(var_perf_df, scenario) {
     given_df = var_perf_df %>%
-        filter(scenario == scenario)
+        filter(scenario == !!scenario)
     
     list(mono = given_df %>%
-             filter(A == 0, B == 1e-4, H == 0, k == 1.2),
+             filter(A == 0, B == 1e-4, H == 0, k == 1.2) %>%
+             get_perf_weighted(),
          cwm_hierarchical = given_df %>%
-             filter(A == 0, B == 1e-4, H == 0.5, k == 1.2),
+             filter(A == 0, B == 1e-4, H == 0.5, k == 1.2) %>%
+             get_perf_weighted(),
          cwm_limiting = given_df %>%
-             filter(A == 1e-5, B == 1e-4, H == 0, k == 1.2)) %>%
+             filter(A == 1e-5, B == 1e-4, H == 0, k == 1.2) %>%
+             get_perf_weighted()) %>%
         bind_rows(.id = "pred_type") %>%
-        group_by(trait_cor, seed, pred_type, patch) %>%
-        summarise(trait1_weight = weighted.mean(trait1, N150),
-                  trait2_weight = weighted.mean(trait2, N150)) %>%
         ungroup() %>%
         mutate(pred_type = factor(pred_type, c("mono",
                                                "cwm_hierarchical",
@@ -55,6 +55,13 @@ get_predictions_along_environment = function(var_perf_df, scenario) {
         gather("trait_name", "trait_value", trait1_weight, trait2_weight)
 }
 
+get_perf_weighted = function(given_df) {
+    given_df %>%
+        group_by(A, B, H, k, scenario, trait_cor, seed, patch) %>%
+        summarise_at(vars(tidyselect::matches("trait\\d*")),
+                     .funs = list(weight = ~weighted.mean(., N150)))
+}
+
 plot_predictions_along_environment = function(perf_along_env_df) {
     perf_along_env_df %>%
         ggplot(aes(patch, trait_value, color = pred_type)) +
@@ -62,6 +69,9 @@ plot_predictions_along_environment = function(perf_along_env_df) {
         geom_line(aes(group = interaction(seed, pred_type)), size = 1,
                   alpha = 1/5) +
         geom_smooth(method = "lm", se = TRUE, size = 1) +
+        ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, size = 2.4,
+                              aes(label = paste(..rr.label.., ..eq.label..,
+                                                sep = "~~"))) +
         facet_grid(vars(trait_cor),
                    vars(trait_name),
                    labeller = labeller(
@@ -113,6 +123,8 @@ plot_mod_estimate_along_env = function(mod_df) {
                                       trait2_weight = "Trait 2"))
 }
 # Other ------------------------------------------------------------------------
+theme_set(theme_bw(12))
+
 plan(multiprocess, workers = 14)
 ```
 
@@ -129,12 +141,12 @@ n_species = 100
 n_gen = 50
 ```
 
-```{r simulation}
+```{r scenarios}
 # Generate all scenarios
 single_trait = data.frame(trait = paste0("trait", 1:2),
-                          growth_weight    = c(1, 0),
-                          compet_weight    = c(1, 0),
-                          hierarchy_weight = c(1, 0))
+                          growth_weight    = c(0, 1),
+                          compet_weight    = c(0, 1),
+                          hierarchy_weight = c(0, 1))
 
 two_traits_R = data.frame(trait = paste0("trait", 1:2),
                           growth_weight    = c(0.5, 0.5),
@@ -150,23 +162,31 @@ two_traits_all  = data.frame(trait = paste0("trait", 1:2),
                              growth_weight    = c(0.5, 0.5),
                              compet_weight    = c(0.5, 0.5),
                              hierarchy_weight = c(0.5, 0.5))
-scenar_list = list(R0A0H0     = single_trait,
-                   R50A0H0    = two_traits_R,
-                   R0A100H100 = two_traits_each,
-                   R50A50H50  = two_traits_all)
+scenar_list = list(R100A100H100 = single_trait,
+                   R50A0H0      = two_traits_R,
+                   R0A100H100   = two_traits_each,
+                   R50A50H50    = two_traits_all)
+```
 
+```{r get_traits}
 # Generate trait matrices for each seed
 fixed_coef = 0.3
 trait_seeds = lapply(seq(n_seed), function(seed) {
     set.seed(seed)
-    list(
-        uncor  = generate_cor_traits(n_patches, n_species, 1, cor_coef = 0),
+    uncor  = generate_cor_traits(n_patches, n_species, 1, cor_coef = 0)
+    set.seed(seed)
         poscor = generate_cor_traits(n_patches, n_species, 1,
-                                     cor_coef = fixed_coef),
+                                     cor_coef = fixed_coef)
+    set.seed(seed)
         negcor = generate_cor_traits(n_patches, n_species, 1,
                                      cor_coef = -fixed_coef)
-    )
+    list(poscor = poscor,
+         uncor  = uncor,
+         negcor = negcor)
 })
+```
+
+```{r simulation}
 # multidimensional matrix
 composition <- array(NA, dim = c(n_patches, n_species, n_gen),
                      dimnames = list(paste0("patches", seq(n_patches)),
@@ -226,13 +246,13 @@ var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
 tictoc::toc()
 
 var_perfs = var_perfs %>%
-    mutate(scenario = case_when(R_scenar ==  0 & A_scenar ==   0 &
-                                    H_scenar ==   0 ~ "R0A0H0",
-                                R_scenar == 50 & A_scenar ==   0 &
+    mutate(scenario = case_when(R_scenar == 100 & A_scenar == 100 &
+                                    H_scenar == 100 ~ "R100A100H100",
+                                R_scenar ==  50 & A_scenar ==   0 &
                                     H_scenar ==   0 ~ "R50A0H0",
-                                R_scenar ==  0 & A_scenar == 100 &
+                                R_scenar ==   0 & A_scenar == 100 &
                                     H_scenar == 100 ~ "R0A100H100",
-                                R_scenar == 50 & A_scenar ==  50 &
+                                R_scenar ==  50 & A_scenar ==  50 &
                                     H_scenar ==  50 ~ "R50A50H50")) %>%
     inner_join(full_trait_df, by = c("trait_cor", "seed", "species"))
 
@@ -242,18 +262,23 @@ n_simul = length(param_sets)
 ```
 
 ```{r first_scenario}
-first_scenar = get_predictions_along_environment(var_perfs, "R0A0H0")
+first_scenar = get_predictions_along_environment(var_perfs, "R100A100H100")
 
 fig_first_scenar = first_scenar %>%
-    filter(trait_name == "trait1_weight", trait_cor == "uncor") %>%
+    filter(trait_name == "trait2_weight", trait_cor == "uncor") %>%
     plot_predictions_along_environment() +
-    labs(title = "Trait 1 contributing to all processes") +
+    labs(title = "Trait 2 contributing to all processes") +
     theme(strip.text = element_blank())
 
 first_mod = first_scenar %>%
-    filter(trait_cor == "uncor", trait_name == "trait1_weight") %>%
+    filter(trait_cor == "uncor", trait_name == "trait2_weight") %>%
     nest(-pred_type) %>%
     mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data =.)))
+
+# Save files -------------------------------------------------------------------
+ggsave("perf_environment_trait2_only.png", fig_first_scenar,
+       width = 15, height = 15.5, units = "cm")
+saveRDS(first_mod, "inst/lm_trait2_only.Rds")
 ```
 
 ```{r second_scenario}
@@ -269,11 +294,16 @@ second_mod = second_scenar %>%
                                            data =.)))
 
 fig_second_mod = plot_mod_estimate_along_env(second_mod)
+
+# Save files -------------------------------------------------------------------
+ggsave("perf_environment_both_traits_only_growth.png", fig_second_scenar,
+       width = 17, height = 25.5, units = "cm")
+saveRDS(second_mod, "inst/lm_both_traits_only_growth.Rds")
 ```
 
 
 ```{r third_scenario}
-third_scenar = get_predictions_along_environment(var_perfs, "R100A0H100")
+third_scenar = get_predictions_along_environment(var_perfs, "R0A100H100")
 
 fig_third_scenar = third_scenar %>%
     plot_predictions_along_environment() +
@@ -284,6 +314,12 @@ third_mod = third_scenar %>%
     mutate(lin_mod = map(data, ~lme4::lmer(patch ~ trait_value + (1|seed), data =.)))
 
 fig_third_mod = plot_mod_estimate_along_env(third_mod)
+
+
+# Save files -------------------------------------------------------------------
+ggsave("perf_environment_trait1_growth_trait2_competition.png", fig_third_scenar,
+       width = 17, height = 25.5, units = "cm")
+saveRDS(third_mod, "inst/lm_trait1_growth_trait2_competition.Rds")
 ```
 
 ```{r fourth_scenario}
@@ -295,7 +331,40 @@ fig_fourth_scenar = fourth_scenar %>%
 
 fourth_mod = fourth_scenar %>%
     nest(-trait_name, -trait_cor, -pred_type) %>%
-    mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data =.)))
+    mutate(lin_mod = map(data, ~lme4::lmer(patch ~ trait_value + (1|seed), data =.)))
 
 fig_fourth_mod = plot_mod_estimate_along_env(fourth_mod)
+
+# Save files -------------------------------------------------------------------
+ggsave("perf_environment_both_traits_all.png", fig_fourth_scenar,
+       width = 17, height = 25.5, units = "cm")
+saveRDS(fourth_mod, "inst/lm_both_traits_all.Rds")
+```
+
+
+Fit big model
+
+```{r fit_big_model}
+# big_mod = var_perfs %>%
+#     group_by(k, A, B, H, trait_cor, scenario, seed, patch) %>%
+#     summarise_at(vars(tidyselect::matches("trait[12]")),
+#                  .funs = list(weight = ~weighted.mean(., N150))) %>%
+#     gather("trait_name", "trait_value", contains("weight")) %>%
+#     ungroup()
+# 
+# indiv_mod = big_mod %>%
+#     nest(seed, patch, trait_value) %>%
+#     mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data = .)),
+#            mod_coef = map(lin_mod, broom::tidy))
+
+single_mod = big_mod %>%
+    filter(trait_name == "trait2_weight", scenario == "R100A100H100",
+           trait_cor == "uncor") %>%
+    nest(-trait_name, -scenario, -trait_cor) %>%
+    mutate(data = map(data, ~mutate_at(.x,
+                                       c("k", "A", "B", "H"),
+                                       scale)),
+           lin_mod = map(data, ~lmerTest::lmer(trait_value - patch ~  (k + A +
+                                                   B + H)^2 + (1|seed),
+                                               data = .)))
 ```
