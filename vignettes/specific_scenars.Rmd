@@ -362,3 +362,20 @@ single_mod = big_mod %>%
                                                    B + H)^2 + (1|seed),
                                                data = .)))
 ```
+
+
+```{r obs_th_growth}
+fig_growth = var_perfs %>%
+    filter(B == 1e-4, A == 1e-5, H == 0, seed == 5) %>%
+    filter(species %in% paste0("species", c(1, 50, 99)), scenario == "R100A100H100", trait_cor == "uncor", k == 1.5) %>%
+    tidyr::gather("growth_type", "growth_value", env_growth_rate, max_growth_rate) %>%
+    ggplot(aes(patch, growth_value, color = species, group = interaction(growth_type, species))) +
+    geom_line(size = 1) +
+    facet_wrap(~growth_type, scales = "free", labeller = as_labeller(c(env_growth_rate = "Theoretical Growth Rate", max_growth_rate = "Realized Growth Rate"))) +
+    theme_bw() +
+    labs(x = "Environment", y = "Growth Rate") +
+    theme(legend.position = "top")
+
+ggsave("theoretical_vs_observed_growth_rate.pdf", fig_growth,
+       width = 15, height = 14.5, units = "cm")
+```
