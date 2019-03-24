@@ -20,17 +20,10 @@ n_traits = 2
 # Generate all scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
-scenar_list = cross(list(R = weights, A = weights, H = weights),
-                  .filter = ~(..2 != 0 & ..3 != 0)) %>%
-    map(function(x) {
-        data.frame(trait            = paste0("trait", 1:2),
-                    growth_weight    = c((100 - x$R)/100, x$R/100),
-                    compet_weight    = c((100 - x$A)/100, x$A/100),
-                    hierarchy_weight = c((100 - x$H)/100, x$H/100))
-        }) %>%
+scenar_list = cross(list(R = weights, A = weights, H = weights)) %>%
+    map(~create_trait_weights(.x$R, .x$A, .x$H, 2)) %>%
     # Name scenarios
-    set_names(nm = cross(list(R = weights, A = weights, H = weights),
-                         .filter = ~(..2 != 0 & ..3 != 0)) %>%
+    set_names(nm = cross(list(R = weights, A = weights, H = weights)) %>%
                   map_chr(~paste0("R", .x$R, "A", .x$A, "H", .x$H)))
 
 # multidimensional matrix
@@ -84,7 +77,7 @@ param_sets = list(
     # Make all combinations but exclude cases where A > B
     cross(.filter = ~..2 > ..4)
 
-number_of_sets_per_task = 5050
+number_of_sets_per_task = 2025
 
 # Return split sequence for a giving number of
 f = function(a, b) {
