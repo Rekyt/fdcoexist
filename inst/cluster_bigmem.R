@@ -93,6 +93,10 @@ f = function(a, b) {
 
 param_used = f(job_task_id, number_of_sets_per_task)
 
+if (max(param_used) > length(param_sets)) {
+    param_used = seq(min(param_used), length(param_sets), by = 1)
+}
+
 plan(multicore, workers = n_slots)
 
 tictoc::tic()
