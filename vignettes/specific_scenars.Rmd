@@ -69,9 +69,8 @@ plot_predictions_along_environment = function(perf_along_env_df) {
         geom_line(aes(group = interaction(seed, pred_type)), size = 1,
                   alpha = 1/5) +
         geom_smooth(method = "lm", se = TRUE, size = 1) +
-        ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, size = 2.4,
-                              aes(label = paste(..rr.label.., ..eq.label..,
-                                                sep = "~~"))) +
+        ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, size = 3,
+                              aes(label = ..eq.label..)) +
         facet_grid(vars(trait_cor),
                    vars(trait_name),
                    labeller = labeller(
@@ -123,9 +122,9 @@ plot_mod_estimate_along_env = function(mod_df) {
                                       trait2_weight = "Trait 2"))
 }
 # Other ------------------------------------------------------------------------
-theme_set(theme_bw(12))
+theme_set(theme_bw(16))
 
-plan(multiprocess, workers = 14)
+plan(multiprocess, workers = 7)
 ```
 
 Actual scenarios
@@ -276,7 +275,7 @@ first_mod = first_scenar %>%
     mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data =.)))
 
 # Save files -------------------------------------------------------------------
-ggsave("perf_environment_trait2_only.png", fig_first_scenar,
+ggsave("perf_environment_trait2_only.pdf", fig_first_scenar,
        width = 15, height = 15.5, units = "cm")
 saveRDS(first_mod, "inst/lm_trait2_only.Rds")
 ```
@@ -296,7 +295,7 @@ second_mod = second_scenar %>%
 fig_second_mod = plot_mod_estimate_along_env(second_mod)
 
 # Save files -------------------------------------------------------------------
-ggsave("perf_environment_both_traits_only_growth.png", fig_second_scenar,
+ggsave("perf_environment_both_traits_only_growth.pdf", fig_second_scenar,
        width = 17, height = 25.5, units = "cm")
 saveRDS(second_mod, "inst/lm_both_traits_only_growth.Rds")
 ```
@@ -317,7 +316,7 @@ fig_third_mod = plot_mod_estimate_along_env(third_mod)
 
 
 # Save files -------------------------------------------------------------------
-ggsave("perf_environment_trait1_growth_trait2_competition.png", fig_third_scenar,
+ggsave("perf_environment_trait1_growth_trait2_competition.pdf", fig_third_scenar,
        width = 17, height = 25.5, units = "cm")
 saveRDS(third_mod, "inst/lm_trait1_growth_trait2_competition.Rds")
 ```
@@ -336,7 +335,7 @@ fourth_mod = fourth_scenar %>%
 fig_fourth_mod = plot_mod_estimate_along_env(fourth_mod)
 
 # Save files -------------------------------------------------------------------
-ggsave("perf_environment_both_traits_all.png", fig_fourth_scenar,
+ggsave("perf_environment_both_traits_all.pdf", fig_fourth_scenar,
        width = 17, height = 25.5, units = "cm")
 saveRDS(fourth_mod, "inst/lm_both_traits_all.Rds")
 ```
@@ -345,17 +344,12 @@ saveRDS(fourth_mod, "inst/lm_both_traits_all.Rds")
 Fit big model
 
 ```{r fit_big_model}
-# big_mod = var_perfs %>%
-#     group_by(k, A, B, H, trait_cor, scenario, seed, patch) %>%
-#     summarise_at(vars(tidyselect::matches("trait[12]")),
-#                  .funs = list(weight = ~weighted.mean(., N150))) %>%
-#     gather("trait_name", "trait_value", contains("weight")) %>%
-#     ungroup()
-# 
-# indiv_mod = big_mod %>%
-#     nest(seed, patch, trait_value) %>%
-#     mutate(lin_mod = map(data, ~lmer(patch ~ trait_value + (1|seed), data = .)),
-#            mod_coef = map(lin_mod, broom::tidy))
+big_mod = var_perfs %>%
+    group_by(k, A, B, H, trait_cor, scenario, seed, patch) %>%
+    summarise_at(vars(tidyselect::matches("trait[12]")),
+                 .funs = list(weight = ~weighted.mean(., N150))) %>%
+    gather("trait_name", "trait_value", contains("weight")) %>%
+    ungroup()
 
 single_mod = big_mod %>%
     filter(trait_name == "trait2_weight", scenario == "R100A100H100",
@@ -364,7 +358,7 @@ single_mod = big_mod %>%
     mutate(data = map(data, ~mutate_at(.x,
                                        c("k", "A", "B", "H"),
                                        scale)),
-           lin_mod = map(data, ~lmerTest::lmer(trait_value - patch ~  (k + A +
+           lin_mod = map(data, ~lme4::lmer(trait_value - patch ~  (k + A +
                                                    B + H)^2 + (1|seed),
                                                data = .)))
 ```
