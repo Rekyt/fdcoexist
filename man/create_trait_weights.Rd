@@ -4,7 +4,7 @@
 \alias{create_trait_weights}
 \title{Generates a data.frame of trait weights}
 \usage{
-create_trait_weights(R, A, H)
+create_trait_weights(R, A, H, n_traits = 4)
 }
 \arguments{
 \item{R}{an integer value giving the contribution of trait in growth}
@@ -14,6 +14,8 @@ similarity}
 
 \item{H}{an integer value giving the contribution of trait in hierarchical
 competition}
+
+\item{n_traits}{number of traits considered in table}
 }
 \description{
 Only in the special case of 3 traits with 1 always driving growth and

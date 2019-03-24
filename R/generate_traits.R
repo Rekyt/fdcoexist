@@ -78,10 +78,12 @@ generate_cor_traits = function(number_patches, number_species, number_other = 9,
 #' @param H an integer value giving the contribution of trait in hierarchical
 #'          competition
 #'
+#' @param n_traits number of traits considered in table
+#'
 #' @export
 #'
 #' @examples create_trait_weights(50, 50, 0)
-create_trait_weights = function(R, A, H, n_traits) {
+create_trait_weights = function(R, A, H, n_traits = 4) {
     if (any(!is.numeric(R), !is.numeric(A), !is.numeric(H))) {
         stop("All provided weights should be integer")
     }
@@ -90,12 +92,18 @@ create_trait_weights = function(R, A, H, n_traits) {
         stop("All weights should be in [0; 100]")
     }
 
-    g_weights = c(100 - R, R,       0,       0)
-    c_weights = c(      0, A, 100 - A,       0)
-    h_weights = c(      0, H,       0, 100 - H)
+    if (n_traits == 4) {
+        g_weights = c(100 - R, R,       0,       0)
+        c_weights = c(      0, A, 100 - A,       0)
+        h_weights = c(      0, H,       0, 100 - H)
+    } else if (n_traits == 2) {
+        g_weights = c(100 - R, R)
+        c_weights = c(100 - A, A)
+        h_weights = c(100 - H, H)
+    }
 
     data.frame(
-        trait            = paste0("trait", 1:4),
+        trait            = paste0("trait", seq(n_traits)),
         growth_weight    = g_weights/100,
         compet_weight    = c_weights/100,
         hierarchy_weight = h_weights/100
