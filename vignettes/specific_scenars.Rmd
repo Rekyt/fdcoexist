@@ -67,10 +67,10 @@ plot_predictions_along_environment = function(perf_along_env_df) {
         ggplot(aes(patch, trait_value, color = pred_type)) +
         geom_abline(slope = 1, intercept = 0, linetype = 2) +
         geom_line(aes(group = interaction(seed, pred_type)), size = 1,
-                  alpha = 1/5) +
-        geom_smooth(method = "lm", se = TRUE, size = 1) +
+                  alpha = 1/6) +
+        geom_smooth(method = "lm", se = FALSE, size = 1.2) +
         ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE, size = 3,
-                              aes(label = ..eq.label..)) +
+                              aes(label = ..eq.label..))
         facet_grid(vars(trait_cor),
                    vars(trait_name),
                    labeller = labeller(
@@ -80,7 +80,7 @@ plot_predictions_along_environment = function(perf_along_env_df) {
                        trait_name = c(trait1_weight = "Trait 1",
                                       trait2_weight = "Trait 2"))) +
         ylim(0, 25) +
-        scale_color_discrete(
+        colorblindr::scale_color_OkabeIto(
             labels = c(indiv            = "Individual",
                        mono             = "Monoculture",
                        cwm_hierarchical = "CWM with\nHierarch. Compet.",
