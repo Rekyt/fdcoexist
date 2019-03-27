@@ -124,7 +124,7 @@ plot_mod_estimate_along_env = function(mod_df) {
 # Other ------------------------------------------------------------------------
 theme_set(theme_bw(16))
 
-plan(multiprocess, workers = 7)
+plan(multiprocess, workers = 8)
 ```
 
 Actual scenarios

@@ -467,3 +467,21 @@ caro_perf_env_plot = caro_poly %>%
          title = "Performance Estimates vs. Environment") +
     theme(aspect.ratio = 1,
           strip.background = element_blank())
+
+# Species richnes figures ------------------------------------------------------
+
+sp_rich = caro_var_perfs %>%
+    group_by(k, A, B, H, scenario, trait_cor, seed,
+             patch) %>%
+    summarise(species_rich = sum(N150 > 0, na.rm = TRUE))
+
+sp_rich %>%
+    filter(trait_cor == "uncor") %>%
+    ggplot(aes(as.factor(k), as.factor(A))) +
+    stat_summary_2d(aes(z = species_rich), fun = "mean", geom = "raster") +
+    facet_grid(vars(H, B), vars(scenario), labeller = label_both) +
+    scale_fill_viridis_c() +
+    labs(fill = "Species Richness") +
+    theme(legend.position = "top",
+          legend.text = element_text(angle = 45),
+          aspect.ratio = 1)
