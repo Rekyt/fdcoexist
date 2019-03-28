@@ -379,3 +379,62 @@ fig_growth = var_perfs %>%
 ggsave("theoretical_vs_observed_growth_rate.pdf", fig_growth,
        width = 15, height = 14.5, units = "cm")
 ```
+
+
+```{r compare_all_performance_values}
+var_cwm = var_perfs %>%
+    group_by(k, A, B, H, scenario, trait_cor, seed, patch) %>%
+    summarise_at(vars(matches("trait[12]")), .funs = list(cwm = ~weighted.mean(., N150)))
+
+# Get indiviudal estimates
+var_individuals = var_perfs %>%
+    filter(A == 0, H == 0, B == 0) %>%
+    select(-A, -H, -B) %>%
+    group_by(k, scenario, trait_cor, seed, species) %>%
+    filter(N150 == max(N150)) %>%
+    rename(individual_optim = patch) %>%
+    select(group_vars(.), individual_optim, trait1, trait2) %>%
+    rename(individual_trait1 = trait1,
+           individual_trait2 = trait2)
+
+# Get monoculture estimates
+var_monocult = var_perfs %>%
+    filter(A == 0, H == 0, B != 0) %>%
+    select(-A, -H) %>%
+    group_by(k, B, scenario, trait_cor, seed, species) %>%
+    filter(N150 == max(N150)) %>%
+    rename(monocult_optim = patch) %>%
+    select(group_vars(.), monocult_optim, trait1, trait2) %>%
+    rename(monocult_trait1 = trait1,
+           monocult_trait2 = trait2)
+
+# Get polyculture estimates
+var_polycult = var_perfs %>%
+    filter(A != 0 | H != 0) %>%
+    group_by(k, A, B, H, scenario, trait_cor, seed, species) %>%
+    filter(N150 == max(N150)) %>%
+    rename(polycult_optim = patch) %>%
+    select(group_vars(.), polycult_optim, trait1, trait2) %>%
+    rename(polycult_trait1 = trait1,
+           polycult_trait2 = trait2)
+
+var_polycult %>%
+    filter(trait_cor == "uncor") %>%
+    ungroup() %>%
+    ggplot(aes(polycult_optim, polycult_trait2)) +
+    geom_abline(slope = 1,intercept = 0, linetype = 2) +
+    geom_point(alpha = 1/30) +
+    geom_smooth(aes(group = seed), method = "lm", se = FALSE, alpha = 1/5,
+                color = "black") +
+    geom_smooth(method = "lm", se = FALSE) +
+    facet_grid(vars(k, B), vars(A, H), labeller = label_both) +
+    theme(aspect.ratio = 1)
+
+
+var_monocult %>%
+    ungroup() %>%
+    ggplot(aes(monocult_optim, monocult_trait2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(alpha = 1/10) +
+    facet_grid(vars(k, B), vars(scenario, trait_cor), labeller = label_both)
+```
