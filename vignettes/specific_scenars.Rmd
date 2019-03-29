@@ -130,9 +130,9 @@ plan(multiprocess, workers = 8)
 Actual scenarios
 
 ```{r parameters}
-list_A = c(0, 10^-(c(4, 5)))
+list_A = c(0, 10^-(c(4, 5, 6)))
 list_k = c(1.2, 1.5)
-list_B = list_A
+list_B = c(0, 10^-(c(2, 3, 4)))
 list_H = c(0, 0.5)
 n_seed = 10
 n_patches = 25
@@ -141,30 +141,14 @@ n_gen = 50
 ```
 
 ```{r scenarios}
-# Generate all scenarios
-single_trait = data.frame(trait = paste0("trait", 1:2),
-                          growth_weight    = c(0, 1),
-                          compet_weight    = c(0, 1),
-                          hierarchy_weight = c(0, 1))
-
-two_traits_R = data.frame(trait = paste0("trait", 1:2),
-                          growth_weight    = c(0.5, 0.5),
-                          compet_weight    = c(0,   0),
-                          hierarchy_weight = c(0,   0))
-
-two_traits_each = data.frame(trait = paste0("trait", 1:2),
-                             growth_weight    = c(1, 0),
-                             compet_weight    = c(0, 1),
-                             hierarchy_weight = c(0, 1))
-
-two_traits_all  = data.frame(trait = paste0("trait", 1:2),
-                             growth_weight    = c(0.5, 0.5),
-                             compet_weight    = c(0.5, 0.5),
-                             hierarchy_weight = c(0.5, 0.5))
-scenar_list = list(R100A100H100 = single_trait,
-                   R50A0H0      = two_traits_R,
-                   R0A100H100   = two_traits_each,
-                   R50A50H50    = two_traits_all)
+weights = c(0, 50, 100)
+scenar_df = expand.grid(R = weights, A = weights, H = weights) %>%
+    as_tibble() %>%
+    mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
+           trait_weights = purrr::pmap(list(R, A, H),
+                                       ~create_trait_weights(..1, ..2, ..3, 2)))
+scenar_list = scenar_df$trait_weights
+names(scenar_list) = scenar_df$scenar_name
 ```
 
 ```{r get_traits}
@@ -199,13 +183,13 @@ param_sets = list(
     run_n = seq(n_seed),
     A     = list_A,
     k     = list_k,
-    B     = list_B,
+    B     = list_B, 
     H     = list_H) %>%
-    # Make all combinations but exclude cases where A > B
-    cross(.filter = ~(..2 > ..4) | ((..2 != 0 & ..5 != 0)))
+    cross()
 
 tictoc::tic()
 
+plan(multiprocess, workers = 15)
 var_param = future_map(param_sets, function(x) {
     suppressMessages({
         devtools::load_all()
@@ -243,6 +227,9 @@ var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
                           ~extract_performances_from_simul(.x, trait_seeds,
                                                            TRUE))
 tictoc::toc()
+
+saveRDS(var_param, "../inst/job_data/other_simuls.Rds")
+saveRDS(var_perfs, "../inst/job_data/other_simuls_perfs.Rds")
 
 var_perfs = var_perfs %>%
     mutate(scenario = case_when(R_scenar == 100 & A_scenar == 100 &
@@ -382,9 +369,12 @@ ggsave("theoretical_vs_observed_growth_rate.pdf", fig_growth,
 
 
 ```{r compare_all_performance_values}
+var_perfs = readRDS("inst/caro_var_perfs.Rds")
+
 var_cwm = var_perfs %>%
     group_by(k, A, B, H, scenario, trait_cor, seed, patch) %>%
-    summarise_at(vars(matches("trait[12]")), .funs = list(cwm = ~weighted.mean(., N150)))
+    summarise_at(vars(dplyr::matches("trait[12]")),
+                 .funs = list(cwm = ~weighted.mean(., N150)))
 
 # Get indiviudal estimates
 var_individuals = var_perfs %>%
@@ -410,13 +400,35 @@ var_monocult = var_perfs %>%
 
 # Get polyculture estimates
 var_polycult = var_perfs %>%
-    filter(A != 0 | H != 0) %>%
+    filter(A != 0 | H != 0, B != 0) %>%
     group_by(k, A, B, H, scenario, trait_cor, seed, species) %>%
     filter(N150 == max(N150)) %>%
     rename(polycult_optim = patch) %>%
     select(group_vars(.), polycult_optim, trait1, trait2) %>%
     rename(polycult_trait1 = trait1,
            polycult_trait2 = trait2)
+```
+
+
+```{r plot_performance_values}
+var_individuals %>%
+    ungroup() %>%
+    ggplot(aes(individual_optim, individual_trait2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(alpha = 1/30) +
+    geom_smooth(aes(group = seed), se = FALSE, method = "lm", color = "black") +
+    geom_smooth(se = FALSE, method = "lm") +
+    facet_grid(vars(k), vars(scenario, trait_cor), labeller = label_both)
+
+var_monocult %>%
+    ungroup() %>%
+    filter(scenario != "R50A0H0") %>%
+    ggplot(aes(monocult_optim, monocult_trait2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(alpha = 1/30) +
+    geom_smooth(se = FALSE, method = "lm", aes(group = seed), color = "black", alpha = 1/4) +
+    geom_smooth(se = FALSE, method = "lm") +
+    facet_grid(vars(k, B), vars(scenario, trait_cor), labeller = label_both)
 
 var_polycult %>%
     filter(trait_cor == "uncor") %>%
@@ -430,11 +442,70 @@ var_polycult %>%
     facet_grid(vars(k, B), vars(A, H), labeller = label_both) +
     theme(aspect.ratio = 1)
 
-
-var_monocult %>%
+var_cwm %>%
     ungroup() %>%
-    ggplot(aes(monocult_optim, monocult_trait2)) +
+    ggplot(aes(patch, trait2_cwm)) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_point(alpha = 1/10) +
-    facet_grid(vars(k, B), vars(scenario, trait_cor), labeller = label_both)
+    geom_line(aes(group = seed), color = "black", alpha = 1/4) +
+    geom_line() +
+    facet_grid(vars(k, B), vars(A, H, scenario, trait_cor),
+               labeller = label_both) +
+    theme(aspect.ratio = 1)
+```
+
+```{r combine_perf_values}
+prep_cwm = var_cwm %>%
+    filter(A != 0 | H != 0, B != 0) %>%
+    ungroup() %>%
+    mutate(pred_type = "cwm") %>%
+    rename(trait1 = trait1_cwm,
+           trait2 = trait2_cwm)
+
+
+prep_polycult = var_polycult %>%
+    ungroup() %>%
+    rename(trait1 = polycult_trait1,
+           trait2 = polycult_trait2,
+           patch  = polycult_optim) %>%
+    select(-species) %>%
+    mutate(pred_type = "polycult")
+
+prep_monocult = prep_cwm %>%
+    distinct(A, H) %>%
+    mutate(df = map2(A, H, ~var_monocult %>%
+                         ungroup() %>%
+                         select(-species) %>%
+                         rename(patch  = monocult_optim,
+                                trait1 = monocult_trait1,
+                                trait2 = monocult_trait2) %>%
+                         mutate(pred_type = "monocult"))) %>%
+    unnest(df)
+
+prep_individual = prep_cwm %>%
+    distinct(A, B, H) %>%
+    mutate(df = map(A, ~var_individuals %>%
+                        ungroup() %>%
+                        select(-species) %>%
+                        rename(patch  = individual_optim,
+                               trait1 = individual_trait1,
+                               trait2 = individual_trait2) %>%
+                        mutate(pred_type = "individual"))) %>%
+    unnest(df)
+
+prep_all = bind_rows(prep_cwm,
+                     prep_polycult,
+                     prep_monocult,
+                     prep_individual)
+```
+
+```{r final_plot}
+prep_all %>%
+    filter(trait_cor == "uncor", scenario != "R50A0H0") %>%
+    ggplot(aes(patch, trait2, color = pred_type)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(stat = "smooth", method = "lm", se = FALSE,
+              aes(group = interaction(pred_type, seed)), alpha = 1/5) +
+    geom_line(stat = "smooth", method = "lm", se = FALSE, alpha = 2/3) +
+    facet_grid(vars(k, B), vars(scenario, A, H), labeller = label_both) +
+    labs(x = "Environment", y = "Performance")
 ```
