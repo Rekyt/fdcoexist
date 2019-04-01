@@ -62,7 +62,7 @@ param_sets = list(
 tictoc::tic()
 
 plan(multiprocess, workers = 14)
-var_param = future_map(param_sets, function(x) {
+var_param = future_map(param_sets[1:320], function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -82,6 +82,7 @@ var_param = future_map(param_sets, function(x) {
 }, .progress = TRUE)
 tictoc::toc()
 
+saveRDS(var_param, "job_data/other_simuls.Rds")
 # All Traits -------------------------------------------------------------------
 
 full_trait_df = map_dfr(trait_seeds, function(x) {
@@ -97,9 +98,9 @@ full_trait_df = map_dfr(trait_seeds, function(x) {
 tictoc::tic()
 var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
                            ~extract_performances_from_simul(.x, trait_seeds,
-                                                            TRUE))
+                                                            TRUE),
+                           .progress = TRUE)
 tictoc::toc()
 
-saveRDS(var_param, "job_data/other_simuls.Rds")
 saveRDS(trait_seeds, "job_data/other_simuls_traits.Rds")
 saveRDS(var_perfs, "job_data/other_simuls_perfs.Rds")
