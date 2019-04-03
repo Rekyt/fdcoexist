@@ -59,9 +59,19 @@ param_sets = list(
     H     = list_H) %>%
     cross()
 
-plan(multiprocess, workers = 14)
+plan(multiprocess, workers = 15)
 
-given_seq = seq(601, 640)
+cli_args = commandArgs(TRUE)
+job_task_id = as.numeric(cli_args[1])
+
+number_of_sets_per_task = 50
+
+# Return split sequence for a giving number of
+f = function(a, b) {
+    seq((a - 1) * b + 1, a * b, by = 1)
+}
+
+given_seq = f(job_task_id, number_of_sets_per_task)
 
 tictoc::tic()
 
@@ -85,7 +95,7 @@ var_param = future_map(param_sets[given_seq], function(x) {
 }, .progress = TRUE)
 tictoc::toc()
 
-saveRDS(var_param, paste0("inst/job_data/other_simuls_", min(given_seq),
+saveRDS(var_param, paste0("inst/job_data/other_simuls_env_2", min(given_seq),
                           "_", max(given_seq), ".Rds"),
         compress = TRUE)
 # All Traits -------------------------------------------------------------------
@@ -109,6 +119,6 @@ var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
                            .progress = TRUE)
 tictoc::toc()
 
-saveRDS(var_perfs, paste0("inst/job_data/other_simuls_", min(given_seq), "_",
-                          max(given_seq), "_perfs.Rds"),
+saveRDS(var_perfs, paste0("inst/job_data/other_simuls_env_2", min(given_seq),
+                          "_", max(given_seq), "_perfs.Rds"),
         compress = TRUE)

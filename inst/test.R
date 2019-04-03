@@ -539,3 +539,5 @@ all_cwm %>%
          y = "Trait CWM",
          color = "Contrib. to\nHierach. Compet.",
          caption = "10 seeds; k = 1.2; A = 1e-4; B = 1e-2; H = 0.5; uncorrelated traits")
+
+all_cwm
