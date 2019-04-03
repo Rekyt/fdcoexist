@@ -59,10 +59,13 @@ param_sets = list(
     H     = list_H) %>%
     cross()
 
+plan(multiprocess, workers = 14)
+
+given_seq = seq(601, 640)
+
 tictoc::tic()
 
-plan(multiprocess, workers = 14)
-var_param = future_map(param_sets[1:320], function(x) {
+var_param = future_map(param_sets[given_seq], function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -82,7 +85,9 @@ var_param = future_map(param_sets[1:320], function(x) {
 }, .progress = TRUE)
 tictoc::toc()
 
-saveRDS(var_param, "job_data/other_simuls.Rds")
+saveRDS(var_param, paste0("inst/job_data/other_simuls_", min(given_seq),
+                          "_", max(given_seq), ".Rds"),
+        compress = TRUE)
 # All Traits -------------------------------------------------------------------
 
 full_trait_df = map_dfr(trait_seeds, function(x) {
@@ -93,6 +98,8 @@ full_trait_df = map_dfr(trait_seeds, function(x) {
 },.id = "seed") %>%
     mutate(seed = as.integer(seed))
 
+saveRDS(trait_seeds, "job_data/other_simuls_traits.Rds")
+
 # Extract performances indices -------------------------------------------------
 
 tictoc::tic()
@@ -102,5 +109,6 @@ var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
                            .progress = TRUE)
 tictoc::toc()
 
-saveRDS(trait_seeds, "job_data/other_simuls_traits.Rds")
-saveRDS(var_perfs, "job_data/other_simuls_perfs.Rds")
+saveRDS(var_perfs, paste0("inst/job_data/other_simuls_", min(given_seq), "_",
+                          max(given_seq), "_perfs.Rds"),
+        compress = TRUE)

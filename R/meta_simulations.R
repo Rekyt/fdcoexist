@@ -26,7 +26,8 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                       given_di_thresh = 24,
                       given_env,
                       given_composition,
-                      given_d) {
+                      given_d,
+                      given_env_width = 5) {
 
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
 
@@ -54,7 +55,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     guessed_th_min = lapply(all_cor, min)
     guessed_th_min = max(unlist(guessed_th_min))
 
-        all_env = list(constant = rep(given_patches, 5))
+    all_env = list(constant = rep(given_patches, given_env_width))
 
     all_compet = list(compet = list(A        = given_A,
                                     B        = given_B,

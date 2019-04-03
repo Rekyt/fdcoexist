@@ -485,3 +485,57 @@ sp_rich %>%
     theme(legend.position = "top",
           legend.text = element_text(angle = 45),
           aspect.ratio = 1)
+
+# Assemble all performances of simulations -------------------------------------
+
+all_perfs = list.files("inst/job_data", "other_simuls_.*_perfs.Rds",
+                       full.names = TRUE) %>%
+    .[c(1, 11, 2:10, 12:13)] %>%
+    purrr::walk(function(x) {
+        given_data = readRDS(x)
+
+        fst_name = gsub(".Rds", ".fst", x, fixed = TRUE)
+
+        fst::write_fst(given_data, fst_name, compress = 100)
+    })
+
+
+full_trait_df = readRDS("inst/job_data/other_simuls_traits.Rds") %>%
+    purrr::map_dfr(function(x) {
+        purrr::map_dfr(x, ~.x %>%
+                           as.data.frame() %>%
+                           tibble::rownames_to_column("species"),
+                       .id = "trait_cor")
+    }, .id = "seed") %>%
+    dplyr::mutate(seed = as.integer(seed))
+
+all_perfs = list.files("inst/job_data", "other_simuls_.*_perfs.fst",
+                       full.names = TRUE) %>%
+    .[c(1, 11, 2:10, 12:13)] %>%
+    purrr::map(function(x) {
+        given_dt = fst::read_fst(x, as.data.table = TRUE)
+        given_dt[N150 > 0,]
+    }) %>%
+    data.table::rbindlist() %>%
+    tibble::as_tibble() %>%
+    dplyr::inner_join(full_trait_df, by = c("seed", "trait_cor", "species"))
+
+
+all_cwm %>%
+    filter(k == 1.2, A == 1e-4, B == 1e-2, H == 0.5, trait_cor == "uncor") %>%
+    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(aes(group = interaction(H_scenar, seed)), alpha = 1/5) +
+    geom_smooth(aes(group = H_scenar), method = "lm", se = FALSE) +
+    facet_grid(vars(R_scenar), vars(A_scenar),
+               labeller = labeller(
+                   R_scenar = function(x) paste0("Contrib. to\nGrowth: ", x, "%"),
+                   A_scenar = function(x) paste0("Contrib. to\nLimit. Sim.: ", x, "%"))) +
+    ylim(1, 25) +
+    scale_color_discrete(labels = function(x) paste0(x, "%")) +
+    theme_bw(14) +
+    theme(aspect.ratio = 1, legend.position = "top") +
+    labs(x = "Environment",
+         y = "Trait CWM",
+         color = "Contrib. to\nHierach. Compet.",
+         caption = "10 seeds; k = 1.2; A = 1e-4; B = 1e-2; H = 0.5; uncorrelated traits")
