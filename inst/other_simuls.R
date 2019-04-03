@@ -91,7 +91,8 @@ var_param = future_map(param_sets[given_seq], function(x) {
                given_di_thresh = 24,
                given_env = 1:25,
                given_composition = composition,
-               given_d = 0.05)
+               given_d = 0.05,
+	       given_env_width = 2)
 }, .progress = TRUE)
 tictoc::toc()
 
