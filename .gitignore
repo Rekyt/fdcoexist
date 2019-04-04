@@ -6,3 +6,4 @@ inst/doc
 .RData
 vert.txt
 *cache/
+inst/job_data/
