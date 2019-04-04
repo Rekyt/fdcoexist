@@ -12,7 +12,7 @@ list_A = c(0, 10^-(c(4, 5, 6)))
 list_k = c(1.2, 1.5)
 list_B = c(0, 10^-(c(2, 3, 4)))
 list_H = c(0, 0.5)
-n_seed = 10
+n_seed = 1
 n_patches = 25
 n_species = 100
 n_gen = 50
@@ -64,6 +64,8 @@ plan(multiprocess, workers = 15)
 cli_args = commandArgs(TRUE)
 job_task_id = as.numeric(cli_args[1])
 
+job_task_id = 13
+
 number_of_sets_per_task = 50
 
 # Return split sequence for a giving number of
@@ -73,9 +75,13 @@ f = function(a, b) {
 
 given_seq = f(job_task_id, number_of_sets_per_task)
 
+if (max(given_seq) > length(param_sets)) {
+    given_seq = seq(min(given_seq), length(param_sets))
+}
+
 tictoc::tic()
 
-var_param = future_map(param_sets[given_seq], function(x) {
+var_param = future_map(param_sets, function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -92,13 +98,16 @@ var_param = future_map(param_sets[given_seq], function(x) {
                given_env = 1:25,
                given_composition = composition,
                given_d = 0.05,
-	       given_env_width = 2)
+               given_env_width = 2)
 }, .progress = TRUE)
 tictoc::toc()
 
-saveRDS(var_param, paste0("inst/job_data/other_simuls_env_2", min(given_seq),
+saveRDS(var_param, paste0("inst/job_data/other_simuls_env_2_", min(given_seq),
                           "_", max(given_seq), ".Rds"),
         compress = TRUE)
+
+var_param = readRDS(paste0("inst/job_data/other_simuls_env_2_", min(given_seq),
+                           "_", max(given_seq), ".Rds"))
 # All Traits -------------------------------------------------------------------
 
 full_trait_df = map_dfr(trait_seeds, function(x) {
@@ -115,8 +124,11 @@ saveRDS(trait_seeds, "job_data/other_simuls_traits.Rds")
 
 tictoc::tic()
 var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
-                           ~extract_performances_from_simul(.x, trait_seeds,
-                                                            TRUE),
+                           function(x) {
+                               devtools::load_all()
+                               extract_performances_from_simul(x, trait_seeds,
+                                                               TRUE)
+                           },
                            .progress = TRUE)
 tictoc::toc()
 

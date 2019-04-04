@@ -520,6 +520,9 @@ all_perfs = list.files("inst/job_data", "other_simuls_env_2.*_perfs.Rds",
     tibble::as_tibble() %>%
     dplyr::inner_join(full_trait_df, by = c("seed", "trait_cor", "species"))
 
+all_cwm = all_perfs %>%
+    group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed, patch) %>%
+    summarise_at(vars(matches("trait[12]")), .funs = list(cwm = ~weighted.mean(., N150)))
 
 all_cwm %>%
     filter(k == 1.2, A == 1e-4, B == 1e-2, H == 0.5, trait_cor == "uncor") %>%
