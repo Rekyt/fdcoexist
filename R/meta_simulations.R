@@ -55,7 +55,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     guessed_th_min = lapply(all_cor, min)
     guessed_th_min = max(unlist(guessed_th_min))
 
-    all_env = list(constant = rep(given_patches, given_env_width))
+    all_env = list(constant = rep(given_env_width, given_patches))
 
     all_compet = list(compet = list(A        = given_A,
                                     B        = given_B,

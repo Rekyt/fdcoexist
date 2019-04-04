@@ -509,14 +509,14 @@ full_trait_df = readRDS("inst/job_data/other_simuls_traits.Rds") %>%
     }, .id = "seed") %>%
     dplyr::mutate(seed = as.integer(seed))
 
-all_perfs = list.files("inst/job_data", "other_simuls_.*_perfs.fst",
+all_perfs = list.files("inst/job_data", "other_simuls_env_2.*_perfs.Rds",
                        full.names = TRUE) %>%
     .[c(1, 11, 2:10, 12:13)] %>%
     purrr::map(function(x) {
-        given_dt = fst::read_fst(x, as.data.table = TRUE)
-        given_dt[N150 > 0,]
+        given_dt = readRDS(x) %>%
+            dplyr::filter(N150 > 0)
     }) %>%
-    data.table::rbindlist() %>%
+    dplyr::bind_rows() %>%
     tibble::as_tibble() %>%
     dplyr::inner_join(full_trait_df, by = c("seed", "trait_cor", "species"))
 
