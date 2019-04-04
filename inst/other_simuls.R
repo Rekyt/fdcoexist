@@ -64,9 +64,9 @@ plan(multiprocess, workers = 15)
 cli_args = commandArgs(TRUE)
 job_task_id = as.numeric(cli_args[1])
 
-job_task_id = 13
+job_task_id = 1
 
-number_of_sets_per_task = 50
+number_of_sets_per_task = 64
 
 # Return split sequence for a giving number of
 f = function(a, b) {
@@ -81,7 +81,7 @@ if (max(given_seq) > length(param_sets)) {
 
 tictoc::tic()
 
-var_param = future_map(param_sets, function(x) {
+var_param = future_map(param_sets[given_seq], function(x) {
     suppressMessages({
         devtools::load_all()
     })
@@ -105,9 +105,6 @@ tictoc::toc()
 saveRDS(var_param, paste0("inst/job_data/other_simuls_env_2_", min(given_seq),
                           "_", max(given_seq), ".Rds"),
         compress = TRUE)
-
-var_param = readRDS(paste0("inst/job_data/other_simuls_env_2_", min(given_seq),
-                           "_", max(given_seq), ".Rds"))
 # All Traits -------------------------------------------------------------------
 
 full_trait_df = map_dfr(trait_seeds, function(x) {
@@ -118,7 +115,8 @@ full_trait_df = map_dfr(trait_seeds, function(x) {
 },.id = "seed") %>%
     mutate(seed = as.integer(seed))
 
-saveRDS(trait_seeds, "job_data/other_simuls_traits.Rds")
+saveRDS(trait_seeds, paste0("job_data/other_simuls_traits", length(param_sets),
+                            ".Rds"))
 
 # Extract performances indices -------------------------------------------------
 

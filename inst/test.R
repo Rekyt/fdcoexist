@@ -522,7 +522,20 @@ all_perfs = list.files("inst/job_data", "other_simuls_env_2.*_perfs.Rds",
 
 all_cwm = all_perfs %>%
     group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed, patch) %>%
-    summarise_at(vars(matches("trait[12]")), .funs = list(cwm = ~weighted.mean(., N150)))
+    summarise_at(vars(dplyr::matches("trait[12]")),
+                 .funs = list(cwm = ~weighted.mean(., N150, na.rm = TRUE)))
+
+all_cwv = all_perfs %>%
+    group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed, patch) %>%
+    summarise_at(vars(dplyr::matches("trait[12]")),
+                 .funs = list(cwv = ~Hmisc::wtd.var(., N150, na.rm = TRUE)))
+
+all_rich = all_perfs %>%
+    filter(N150 > 0) %>%
+    group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed,
+             patch) %>%
+    summarise(species_rich = n()) %>%
+    summarise(species_rich = mean(species_rich))
 
 all_cwm %>%
     filter(k == 1.2, A == 1e-4, B == 1e-2, H == 0.5, trait_cor == "uncor") %>%
@@ -543,4 +556,142 @@ all_cwm %>%
          color = "Contrib. to\nHierach. Compet.",
          caption = "10 seeds; k = 1.2; A = 1e-4; B = 1e-2; H = 0.5; uncorrelated traits")
 
-all_cwm
+all_cwm %>%
+    filter(R_scenar == 50, A_scenar == 50, H_scenar == 50, B != 1e-4, A != 1e-5,
+           trait_cor == "uncor") %>%
+    ggplot(aes(patch, trait2_cwm, color = as.factor(H))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(aes(group = interaction(H, seed)), alpha = 1) +
+    geom_smooth(aes(group = H), method = "lm", se = FALSE) +
+    facet_grid(vars(k, B), vars(A), labeller = label_both) +
+    ylim(1, 25) +
+    theme_bw(14) +
+    theme(aspect.ratio = 1, legend.position = "top") +
+    labs(x = "Environment",
+         y = "Trait CWM",
+         color = "Hierach. Compet.\nIntensity",
+         caption = "1 seed; R50A50H50; uncorrelated traits")
+
+### Coexistence plot
+param_labs = c(k = "Maximum Growth Rate (k)",
+               A = "Limit. Sim. Intensity (A)",
+               B = "Intra-sp. Compet. Intensity (B)",
+               H = "Hierarchical Compet. Intensity (H)")
+
+plot_rich_simul = function(rich_df, x_var, y_var, given_labs = param_labs) {
+    rich_df %>%
+        filter(trait_cor == "uncor") %>%
+        ggplot(aes_string(x = paste0("as.factor(", x_var, ")"),
+                          y = paste0("as.factor(", y_var, ")"),
+                          z = "species_rich")) +
+        stat_summary_2d(fun = mean) +
+        scale_fill_viridis_c(limits = c(0, 70)) +
+        labs(x = given_labs[x_var],
+             y = given_labs[y_var],
+             fill = "SR") +
+        theme(aspect.ratio = 1)
+}
+
+fig_k_A = all_rich %>%
+    plot_rich_simul("k", "A")
+
+fig_k_H = all_rich %>%
+    plot_rich_simul("k", "H")
+
+fig_A_B = all_rich %>%
+    plot_rich_simul("A", "B")
+
+fig_A_H = all_rich %>%
+    plot_rich_simul("A", "H")
+
+fig_k_B = all_rich %>%
+    plot_rich_simul("k", "B")
+
+fig_B_H = all_rich %>%
+    plot_rich_simul("B", "H")
+
+library("cowplot")
+
+plot_grid(fig_k_A, fig_k_H, fig_k_B, fig_B_H, fig_A_H, fig_A_B,
+          ncol = 3, nrow = 2)
+
+### Community level trait distribution
+
+three_cwm = all_perfs %>%
+    filter(k == 1.5, A == 1e-6, B == 1e-2, H == 0.5, trait_cor == "uncor",
+           patch %in% c(1, 13, 25), seed == 1) %>%
+    filter(N150 > 0) %>%
+    mutate(scenario = paste0("R", R_scenar, "A", A_scenar, "H", H_scenar)) %>%
+    filter(scenario %in% c("R100A0H0", "R0A100H0", "R0A0H100")) %>%
+    mutate(scenario = fct_relevel(scenario, c("R100A0H0", "R0A100H0",
+                                              "R0A0H100"))) %>%
+    group_by(patch, scenario) %>%
+    summarise(trait2_cwm = weighted.mean(trait2, N150))
+
+all_perfs %>%
+    filter(k == 1.5, A == 1e-6, B == 1e-2, H == 0.5, trait_cor == "uncor",
+           patch %in% c(1, 13, 25), seed == 1) %>%
+    filter(N150 > 0) %>%
+    mutate(scenario = paste0("R", R_scenar, "A", A_scenar, "H", H_scenar)) %>%
+    filter(scenario %in% c("R100A0H0", "R0A100H0", "R0A0H100")) %>%
+    mutate(scenario = fct_relevel(scenario, c("R100A0H0", "R0A100H0",
+                                              "R0A0H100"))) %>%
+    ggplot(aes(trait2)) +
+    geom_histogram(color = "white") +
+    geom_vline(data = three_cwm, aes(xintercept = trait2_cwm, color = "CWM"),
+               linetype = 2, size = 1) +
+    facet_grid(vars(scenario), vars(patch),
+               labeller = labeller(patch = label_both)) +
+    labs(x = "Trait value",
+         y = "Number of Species",
+         colour = "",
+         caption = "1 seed; k = 1.5; A = 1e-6; B = 1e-2; H = 0.5; uncorrelated traits") +
+    scale_color_manual(values = c(CWM = "darkblue")) +
+    theme(legend.position = "top",
+          aspect.ratio = 1)
+
+### CWV graph
+
+plot_cwm_param = function(cwv_df, chosen_param, given_labs = param_labs) {
+    cwv_df %>%
+        ungroup() %>%
+        filter(B == 1e-3, trait_cor == "uncor",
+               seed == 1) %>%
+        mutate(scenario = paste0("R", R_scenar, "A", A_scenar, "H", H_scenar)) %>%
+        filter(scenario %in% c("R100A0H0", "R0A100H0", "R0A0H100")) %>%
+        mutate(scenario = fct_relevel(scenario, c("R100A0H0", "R0A100H0",
+                                                  "R0A0H100"))) %>%
+        ggplot(aes_string(paste0("as.factor(", chosen_param, ")"),
+                          "trait2_cwv")) +
+        #geom_abline(slope = 1, intercept = 0, linetype = 2) +
+        geom_boxplot() +
+        facet_grid(cols = vars(scenario)) +
+        labs(x = given_labs[chosen_param],
+             y = "Trait CWV")
+
+}
+
+fig_cwv = c("A", "H", "k") %>%
+    map(~plot_cwm_param(all_cwv, .x))
+
+plot_grid(plotlist = fig_cwv, ncol = 1, nrow = 3, align = "hv")
+
+
+### CWM with trait correlations
+all_cwm %>%
+    ungroup() %>%
+    mutate(scenario = paste0("R", R_scenar, "A", A_scenar, "H", H_scenar)) %>%
+    filter(k == 1.5, A == 1e-6, B == 1e-2, H == 0.5, R_scenar == 0,
+           A_scenar == 0, H_scenar == 0) %>%
+    mutate(trait_cor = fct_relevel(trait_cor, "negcor", "uncor", "poscor")) %>%
+    ggplot(aes(patch, trait2_cwm, color = trait_cor)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_smooth(method = "lm", se = FALSE, size = 1) +
+    scale_color_discrete(labels = c(uncor = "r = 0",
+                                    poscor = "r = 0.3",
+                                    negcor = "r = -0.3")) +
+    labs(x = "Environment",
+         y = "Trait CWM",
+         color = "Trait\nCorrelation") +
+    theme(aspect.ratio = 1,
+          legend.position = "top")
