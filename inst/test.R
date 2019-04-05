@@ -695,3 +695,31 @@ all_cwm %>%
          color = "Trait\nCorrelation") +
     theme(aspect.ratio = 1,
           legend.position = "top")
+
+
+### Abundance – Distance to Optimum figure
+th_optim = all_perfs %>%
+    filter(trait_cor == "uncor", B == 1e-2) %>%
+    distinct(k, B) %>%
+    mutate(th_abund = purrr::map2(
+        k, B, ~data.frame(distance_to_optimum = seq(0, 25, length.out = 100)) %>%
+            mutate(N150 = (1/.y) * (.x * exp(-(distance_to_optimum^2) /
+                                               (2*2^2)) - 1)) %>%
+            mutate(N150_corr = ifelse(N150 < 0, 0, N150))))
+
+th_optim %>%
+    unnest(th_abund) %>%
+    gather("abund_type", "abund", N150, N150_corr) %>%
+    ggplot(aes(distance_to_optimum, abund, color = as.factor(k))) +
+    geom_line(aes(group = interaction(abund_type, k)), size = 1) +
+    facet_grid(vars(abund_type))
+
+all_perfs %>%
+    filter(trait_cor == "uncor", B == 1e-2) %>%
+    ggplot(aes(distance_to_optimum, N150)) +
+    geom_point(shape = ".") +
+    geom_line(data = th_optim %>%
+                  unnest(th_abund), aes(y = N150_corr),
+              color = "darkblue", size = 1) +
+    facet_grid(vars(k, H), vars(A), labeller = label_both)
+
