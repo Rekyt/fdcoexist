@@ -698,6 +698,8 @@ all_cwm %>%
 
 
 ### Abundance – Distance to Optimum figure
+theme_set(theme_bw(12))
+
 th_optim = all_perfs %>%
     filter(trait_cor == "uncor", B == 1e-2) %>%
     distinct(k, B) %>%
@@ -723,3 +725,18 @@ all_perfs %>%
               color = "darkblue", size = 1) +
     facet_grid(vars(k, H), vars(A), labeller = label_both)
 
+all_perfs %>%
+    select(seed, trait_cor, h_fun, di_thresh, k, A, B, H, patch, species, N150, distance_to_optimum) %>%
+    filter(B == 1e-2,trait_cor == "uncor") %>%
+    mutate(th_n150 = (1/B) * (k * exp(-(distance_to_optimum^2) / (2 * 2^2)) - 1),
+           th_n150_corr = ifelse(th_n150 < 0, 0, th_n150)) %>%
+    mutate(sq_deviation = (N150 - th_n150_corr)^2) %>%
+    group_by(k, A, B, H, trait_cor, seed) %>%
+    summarise(mse = mean(sq_deviation), rmse = sqrt(mse)) %>%
+    ungroup() %>%
+    ggplot(aes(as.factor(k), rmse)) +
+    ggbeeswarm::geom_quasirandom(width = 0.1) +
+    labs(x = "Maximum Basal Growth Rate (k)",
+         y = "RMSE of abundance vs. dopt") +
+    theme(legend.position = "top",
+          aspect.ratio = 1)
