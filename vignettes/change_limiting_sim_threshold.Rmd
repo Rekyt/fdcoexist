@@ -1,0 +1,123 @@
+---
+title: "Changing Limiting Similarity distance threshold"
+author:
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: pdf_document
+vignette: >
+    %\VignetteIndexEntry{Full equation of the model}
+    %\VignetteEncoding{UTF-8}
+    %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup}
+# Packages ---------------------------------------------------------------------
+suppressPackageStartupMessages({
+    suppressWarnings({
+        library("tidyverse")
+        library("cowplot")
+        library("furrr")
+        
+        devtools::load_all()
+    })
+})
+
+# Other ------------------------------------------------------------------------
+theme_set(theme_bw(16))
+```
+
+The aim of this vignette is to demonstrate the influence of a parameter that changes limiting similarity: the threshold distance. The idea is that to compute limiting similiarity the model consider the pairwise distance of a species to all the other species present in the patch. However, we can argue that after a given distance threshold species are not in competition anymore. Their occupied niches are different enough to avoid competition between them.
+
+At the moment, the simulations were done only considering the full range of traits.
+
+**put the equation of limiting similarity HERE**
+
+```{r simulation_parameters}
+# Simulation Parameters
+n_seed = 1
+n_patches = 5
+n_species = 25
+n_gen = 50
+
+given_A = 1e-5
+given_B = 1e-2
+given_H = 0
+given_k = 1.2
+
+list_di_thresh = seq(0.5, 24, length.out = 5)
+
+# Create traits
+trait_df = list(
+    list(uncor = generate_cor_traits(25, n_species, 1,
+                                            cor_coef = 0))
+)
+
+# Trait Scenario
+trait_weights = list(R0A100H0 = create_trait_weights(0, 0, 0, n_traits = 2))
+
+# Composition df
+composition <- array(NA, dim = c(n_patches, n_species, n_gen),
+                     dimnames = list(paste0("patches", seq(n_patches)),
+                                     paste0("species", seq(n_species)),
+                                     paste0("time", seq(n_gen))))
+
+composition[,,1] = 50
+```
+
+```{r running_simulation}
+param_sets = list(A         = given_A,
+                  k         = given_k,
+                  B         = given_B,
+                  H         = given_H,
+                  di_thresh = list_di_thresh) %>%
+    cross()
+
+tictoc::tic()
+plan(multiprocess, workers = 2)
+var_param = future_map(param_sets, function(x) {
+    suppressMessages({
+        pkgload::load_all()
+    })
+    
+    meta_simul(seed_number = 1,
+               given_k = x$k,
+               given_A = x$A,
+               given_B = x$B,
+               given_scenars = trait_weights,
+               given_H = x$H,
+               given_traits = trait_df[[1]],
+               given_h_fun = "sum",
+               given_di_thresh = x$di_thresh,
+               given_env = seq(1, 25, length.out = n_patches),
+               given_composition = composition,
+               given_d = 0.05)
+}, .progress = TRUE)
+tictoc::toc()
+
+tictoc::tic()
+var_perfs = future_map_dfr(unlist(var_param, recursive = FALSE),
+                   ~extract_performances_from_simul(.x, trait_df,
+                                                    TRUE))
+tictoc::toc()
+
+env_df = data.frame(patch = seq(n_patches),
+                    env = seq(1, 25, length.out = n_patches))
+
+var_full = var_perfs %>%
+    inner_join(trait_df %>%
+                   map(~.x %>%
+                           as.data.frame() %>%
+                           rownames_to_column("species")) %>%
+                   bind_rows(.id = "seed") %>%
+                   mutate(seed = as.integer(seed)),
+               by = c("seed", "species")) %>%
+    inner_join(env_df, by = "patch")
+
+var_full %>%
+    ggplot(aes(uncor.trait1, N150)) +
+    geom_point() +
+    geom_line() +
+    facet_grid(vars(di_thresh), vars(env), labeller = label_both)
+```
