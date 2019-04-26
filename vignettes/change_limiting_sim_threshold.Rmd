@@ -38,10 +38,10 @@ At the moment, the simulations were done only considering the full range of trai
 # Simulation Parameters
 n_seed = 1
 n_patches = 5
-n_species = 12
+n_species = 100
 n_gen = 50
 
-given_A = 1e-3
+given_A = 1e-4
 given_B = 1e-2
 given_H = 0
 given_k = 1.5
@@ -50,15 +50,12 @@ list_di_thresh = seq(0.5, 24, length.out = 5)
 
 # Create traits
 trait_df = list(
-    list(uncor = matrix(c(seq(1, 19, length.out = 4) %>%
-                            rep(each = 3) + c(0, 1, 2),
-                        rnorm(n_species)), ncol = 2,
-         dimnames = list(species = paste0("species", seq(12)),
-                         trait   = paste0("trait", 1:2))))
+    list(uncor = generate_cor_traits(25, n_species, number_other = 1,
+                                     cor_coef = 0))
 )
 
 # Trait Scenario
-trait_weights = list(R0A0H0 = create_trait_weights(0, 0, 0, n_traits = 2)[1,])
+trait_weights = list(R0A0H0 = create_trait_weights(0, 0, 0, n_traits = 2))
 
 # Composition df
 composition <- array(NA, dim = c(n_patches, n_species, n_gen),
