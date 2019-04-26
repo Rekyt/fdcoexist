@@ -44,14 +44,14 @@ $\delta_{ij}$ is the functional dissimilarity coefficient between species $i$ an
 First we can compute $\delta_{ij}$ as the euclidean distance between species using multiple traits:
 
 \begin{equation}
-\delta_{ij} = \sqrt{\sum_{c = 1}^{T_c} (t_{i, c} - t_{j, c})^2}, 
+\delta_{ij} = \sqrt{\sum_{c = 1}^{T} (t_{i, c} - t_{j, c})^2}, 
 \end{equation}
 
-with $T_c$ the number of traits contributing to competition, $t_{i, c}$ trait $c$ of species $i$ and $t_{j, c}$ trait $c$ of species $j$. If want to take the contribution of traits to competition we have to modify the trait values as follow:
+with $T$ the number of traits, $t_{i, c}$ trait $c$ of species $i$ and $t_{j, c}$ trait $c$ of species $j$. If want to take the contribution of traits to competition we have to modify the trait values as follow:
 
 \begin{gather}
-\delta_{ij} = \sqrt{\sum_{c = 1}^{T_c} \left[ \sqrt{w_c} (t_{i, c} - t_{j, c})\right]^2}\\
-\delta_{ij} = \sqrt{\sum_{c = 1}^{T_c} w_c \times (t_{i, c} - t_{j, c})^2},
+\delta_{ij} = \sqrt{\sum_{c = 1}^{T} \left[ \sqrt{w_c} (t_{i, c} - t_{j, c})\right]^2}\\
+\delta_{ij} = \sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2},
 \end{gather}
 with $w_c$ the contribution of trait $c$ in limiting similarity and we have $\sum_{c = 1}^{T_c} w_c = 1$.
 
@@ -84,10 +84,10 @@ with $B$ the coefficient scaling intra-specific competition.
 
 Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
 \begin{equation}
-R_{i, x} = \sum_{g = 1}^{T_g} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right)
+R_{i, x} = \sum_{g = 1}^{T} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right)
 \end{equation}
 
-with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T_g} w_g = 1$), $t_{i, g}$ the trait number $g$ of species $i$.
+with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T} w_g = 1$), $t_{i, g}$ the trait number $g$ of species $i$.
 
 ## Adding Hierarchical competition
 
@@ -95,10 +95,10 @@ If we add hierarchical competition, the species with the largest trait has an in
 
 \begin{gather}
 R_{i, x}                   = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}} \\
-R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T_h} w_h \times f_H(t_{i, h}),
+R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T} w_h \times f_H(t_{i, h}),
 \end{gather}
 
-with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of traits contributing to hierarchical competition (as many as $T_h$, with $\sum_{h = 1}^{T_h} w_h = 1$). The function $f_H()$ is the hierarchical function that adjusts the importance of hierarchical traits. The idea is that species with low values of traits are disadvantaged while species with high trait values are advantaged. We want to consider $f_H()$ as being linear with a median value of 0 and be scaled between -1 and 1 for easier scaling by $H$. We can achieve this with the following function:
+with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of traits contributing to hierarchical competition (as many as $T$, with $\sum_{h = 1}^{T} w_h = 1$). The function $f_H()$ is the hierarchical function that adjusts the importance of hierarchical traits. The idea is that species with low values of traits are disadvantaged while species with high trait values are advantaged. We want to consider $f_H()$ as being linear with a median value of 0 and be scaled between -1 and 1 for easier scaling by $H$. We can achieve this with the following function:
 
 \begin{gather}
 f_H(t_{i, h}) = \frac{t_{i, h} - \min(t_h)}{\max(t_h) - \min(t_h)} \times
@@ -111,16 +111,16 @@ The fraction gets scaled in $[0, 1]$, it gets multiplied by 2 so it is in $[0, 2
 So the fully developed hierarchical growth term is:
 
 \begin{equation}
-R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T_h} w_h \times
+R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T} w_h \times
          \frac{t_{i, h} - \min(t_h)}{ \max(t_h) - \min(t_h)} \times 2 - 1,
 \end{equation}
 
 and the total growth term is:
 
 \begin{equation}
-R_{i, x} = k \sum_{g = 1}^{T_g} w_g \times
+R_{i, x} = k \sum_{g = 1}^{T} w_g \times
            \exp\left(- \frac{(t_{g,i} - e_x)^2}{2\times {l_x}^2} \right) +
-           H \sum_{h = 1}^{T_h} w_h \times
+           H \sum_{h = 1}^{T} w_h \times
            \frac{t_{i, h} - \min(t_h)}{\max(t_h) - \min(t_h)} \times 2 - 1,
 \end{equation}
 
@@ -158,13 +158,13 @@ So the final equation looks like the following:
 
 \begin{equation}
 N_{t+1, i, x} = \frac{
-    \left[ k \displaystyle\sum_{g = 1}^{T_g} w_g \times \exp\left(- \displaystyle\frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right) +
-    H \sum_{h = 1}^{T_h} w_h \times
+    \left[ k \displaystyle\sum_{g = 1}^{T} w_g \times \exp\left(- \displaystyle\frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right) +
+    H \sum_{h = 1}^{T} w_h \times
         \frac{t_{i, h} - \min(t_h)}{
         \max(t_h) - \min(t_h)} \times 2 - 1 \right] \times N_{t, i, x}}{
-    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} [\max(\delta_{ij}) - \sqrt{\sum_{c = 1}^{T_c} w_c \times (t_{i, c} - t_{j, c})^2}] +
+    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} [\max(\delta_{ij}) - \sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}] +
 B \times N_{t,i,x}
 } + D_{t, i, x}
 \end{equation}
 
-with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T_g$, $T_h$ and $T_c$ the number of traits respectively contributing to growth, hierarchical competition and limiting similarity.
+with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T$ the number of traits.
