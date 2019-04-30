@@ -74,8 +74,7 @@ param_sets = list(
     k     = list_k,
     B     = list_B,
     H     = list_H) %>%
-    # Make all combinations but exclude cases where A > B
-    cross(.filter = ~..2 > ..4)
+    cross()
 
 number_of_sets_per_task = 1010
 
@@ -90,7 +89,7 @@ if (max(param_used) > length(param_sets)) {
     param_used = seq(min(param_used), length(param_sets), by = 1)
 }
 
-plan(multicore)
+plan(multicore, workers = n_slots)
 
 tictoc::tic()
 
@@ -124,7 +123,7 @@ saveRDS(var_param, file = paste0("inst/job_data/var_param_bigmem_",
 
 cat("\nExtracting Performance from each simul\n")
 
-plan(multicore)
+plan(multicore, workers = n_slots)
 
 tictoc::tic()
 var_param_perfs = future_lapply(unlist(var_param, recursive = FALSE),
