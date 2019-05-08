@@ -15,7 +15,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
                       fig.width = 8, fig.height = 10.5, cache = TRUE,
-                      cache.lazy = FALSE)
+                      cache.lazy = FALSE, eval = FALSE)
 
 # Packages ---------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -130,18 +130,18 @@ plan(multiprocess, workers = 8)
 Actual scenarios
 
 ```{r parameters}
-list_A = c(0, 10^-(c(4, 5, 6)))
+list_A = c(0, 10^-(c(5)))
 list_k = c(1.2, 1.5)
-list_B = c(0, 10^-(c(2, 3, 4)))
+list_B = c(0, 10^-(c(2)))
 list_H = c(0, 0.5)
-n_seed = 10
+n_seed = 2
 n_patches = 25
 n_species = 100
 n_gen = 50
 ```
 
 ```{r scenarios}
-weights = c(0, 50, 100)
+weights = c(0, 100)
 scenar_df = expand.grid(R = weights, A = weights, H = weights) %>%
     as_tibble() %>%
     mutate(scenar_name   = paste0("R", R, "A", A, "H", H),
@@ -189,7 +189,7 @@ param_sets = list(
 
 tictoc::tic()
 
-plan(multiprocess, workers = 15)
+plan(multiprocess)
 var_param = future_map(param_sets, function(x) {
     suppressMessages({
         devtools::load_all()

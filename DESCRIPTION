@@ -20,18 +20,16 @@ LazyData: true
 License: GPL (>= 2)
 Encoding: UTF-8
 Imports: 
-    directlabels,
-    FD,
-    cowplot
+    dplyr,
+    tibble,
+    tidyr,
+    Weighted.Desc.Stat
 Suggests: 
     testthat,
     knitr,
     rmarkdown,
-    tidyr,
-    dplyr,
     stringr,
     furrr,
-    tibble,
     forcats,
     spelling,
     tictoc

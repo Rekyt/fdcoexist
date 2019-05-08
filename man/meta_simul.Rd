@@ -7,7 +7,7 @@
 meta_simul(seed_number, given_k = k, given_A = A, given_B = B,
   given_H = H, given_scenars = NULL, given_traits = NULL,
   given_h_fun = "sum", given_di_thresh = 24, given_env,
-  given_composition, given_d)
+  given_composition, given_d, given_env_width = 5)
 }
 \arguments{
 \item{seed_number}{the actual seed used to generate traits}

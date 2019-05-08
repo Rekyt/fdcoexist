@@ -740,3 +740,90 @@ all_perfs %>%
          y = "RMSE of abundance vs. dopt") +
     theme(legend.position = "top",
           aspect.ratio = 1)
+
+
+# Actual figures ---------------------------------------------------------------
+
+single_simul %>%
+    filter(species %in% paste0("species", c(1, 40, 50, 99))) %>%
+    ggplot(aes(patch, env_growth_rate, color = species)) +
+    geom_line(size = 1) +
+    geom_vline(data = single_simul %>%
+                   filter(species %in% paste0("species", c(1, 40, 50, 99))) %>%
+                   group_by(species) %>%
+                   filter(env_growth_rate == max(env_growth_rate)), aes(xintercept = patch), linetype = 2)
+
+# Obtaining individual T by E
+single_simul = var_perfs %>%
+    filter(trait_cor == "uncor", scenario == "R100A100H100", seed == 1,
+           k == 1.2, H == 0, B == 1e-4, A == 0)
+
+base_simul = var_perfs %>%
+    filter(trait_cor == "uncor", scenario == "R100A100H100", seed == 1,
+           k == 1.2, H == 0, B == 0, A == 0)
+
+plot_individual = single_simul %>%
+    group_by(species) %>%
+    filter(env_growth_rate == max(env_growth_rate)) %>%
+    ungroup() %>%
+    ggplot(aes(patch, trait2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point() +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
+    labs(x = "Environment",
+         y = "Focal Trait")
+
+plot_monoculture = single_simul %>%
+    group_by(species) %>%
+    filter(N150 > 0, N150 == max(N150)) %>%
+    ungroup() %>%
+    ggplot(aes(patch, trait2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point() +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
+    labs(x = "Environment",
+         y = "Focal Trait")
+
+plot_max_growth = single_simul %>%
+    group_by(species) %>%
+    filter(max_growth_rate == max(max_growth_rate)) %>%
+    ungroup() %>%
+    ggplot(aes(patch, trait2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point() +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
+    labs(x = "Environment",
+         y = "Focal Trait")
+
+single_simul %>%
+    bind_rows(base_simul) %>%
+    filter(species %in% paste0("species", c(1, 40, 50, 99))) %>%
+    ggplot(aes(patch, N150, color = species)) +
+    geom_line() +
+    facet_wrap(~B, scales = "free_y")
+
+single_simul %>%
+    bind_rows(base_simul) %>%
+    group_by(patch, B) %>%
+    summarise(cwm = weighted.mean(trait2, N150)) %>%
+    ggplot(aes(patch, cwm, color = as.factor(B), group = B)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line() +
+    lims(y = c(1, 25))
+
+var_perfs %>%
+    filter(trait_cor == "uncor", seed == 1, R_scenar == 100, A_scenar == 100,
+           H_scenar == 100, k == 1.2, B == 1e-4) %>%
+    group_by(A, H, patch) %>%
+    summarise(cwm = weighted.mean(trait2, N150)) %>%
+    ungroup() %>%
+    ggplot(aes(patch, cwm, color = interaction(A, H))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(size = 0.9) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
+    scale_color_discrete(
+        name = "CWM Type",
+        labels = c("0.0" = "Monoculture",
+                   "1e-06.0" = "Community\nOnly Limit. Sim.",
+                   "0.1" = "Community\nOnly Hierarch. Compet.",
+                   "1e-06.1" = "Community\nLimit. Sim. + Hierarch. Compet."))

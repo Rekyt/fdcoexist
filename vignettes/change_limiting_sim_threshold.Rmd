@@ -97,7 +97,7 @@ var_param = future_map(param_sets, function(x) {
                given_composition = composition,
                given_d = 0.05,
                given_env_width = 8)
-}, .progress = TRUE)
+})
 tictoc::toc()
 
 tictoc::tic()
