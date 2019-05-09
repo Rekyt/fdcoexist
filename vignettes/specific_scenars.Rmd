@@ -124,7 +124,7 @@ plot_mod_estimate_along_env = function(mod_df) {
 # Other ------------------------------------------------------------------------
 theme_set(theme_bw(16))
 
-plan(multiprocess, workers = 8)
+plan(multiprocess)
 ```
 
 Actual scenarios
@@ -187,9 +187,9 @@ param_sets = list(
     H     = list_H) %>%
     cross()
 
-tictoc::tic()
-
 plan(multiprocess)
+
+tictoc::tic()
 var_param = future_map(param_sets, function(x) {
     suppressMessages({
         devtools::load_all()

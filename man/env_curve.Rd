@@ -4,8 +4,7 @@
 \alias{env_curve}
 \title{Species growth rate for a given trait and environment}
 \usage{
-env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5,
-  H = 0, th_max = 25, th_min = 1, h_fun = "sum")
+env_curve(trait_values, env_value, trait_weights, k = 2, width = 0.5)
 }
 \arguments{
 \item{trait_values}{a numeric vector of species trait values}
@@ -22,17 +21,6 @@ limiting similarity.}
 \item{k}{a scalar giving the maximum growth rate in optimal environment}
 
 \item{width}{a numeric for niche breadth, constant in gaussian function}
-
-\item{H}{a numeric for hierarchical competition such as H/k <= 1}
-
-\item{th_max}{a numeric for the hierarchical trait value maximizing
-hierarchical competiton}
-
-\item{th_min}{a numeric for the hierarchical trait value minimizing
-hierarchical competition}
-
-\item{h_fun}{a character name of a function that describes how hierarchical
-is combined to environmental-based growth (default: \code{"sum"})}
 }
 \description{
 Using traits that affect growth rate and specified environments, this

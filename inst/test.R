@@ -755,12 +755,12 @@ single_simul %>%
 
 # Obtaining individual T by E
 single_simul = var_perfs %>%
-    filter(trait_cor == "uncor", scenario == "R100A100H100", seed == 1,
-           k == 1.2, H == 0, B == 1e-4, A == 0)
+    filter(trait_cor == "uncor", R_scenar == 100, A_scenar == 100,
+           H_scenar == 100, seed == 1, k == 1.2, H == 0, B == 1e-4, A == 0)
 
 base_simul = var_perfs %>%
-    filter(trait_cor == "uncor", scenario == "R100A100H100", seed == 1,
-           k == 1.2, H == 0, B == 0, A == 0)
+    filter(trait_cor == "uncor", R_scenar == 100, A_scenar == 100,
+           H_scenar == 100, seed == 1, k == 1.2, H == 0, B == 0, A == 0)
 
 plot_individual = single_simul %>%
     group_by(species) %>%
@@ -827,3 +827,27 @@ var_perfs %>%
                    "1e-06.0" = "Community\nOnly Limit. Sim.",
                    "0.1" = "Community\nOnly Hierarch. Compet.",
                    "1e-06.1" = "Community\nLimit. Sim. + Hierarch. Compet."))
+var_perfs %>%
+    filter(trait_cor == "uncor", R_scenar == 100, A_scenar == 100,
+           H_scenar == 100, k == 1.2, B == 1e-4) %>%
+    group_by(seed, A, H, patch) %>%
+    summarise(cwm = weighted.mean(trait2, N150)) %>%
+    ungroup() %>%
+    ggplot(aes(patch, cwm, color = interaction(A, H))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_line(size = 0.9) +
+    geom_smooth(data = var_perfs %>%
+                    filter(trait_cor == "uncor", R_scenar == 100, A_scenar == 100,
+                           H_scenar == 100, k == 1.2, B == 1e-4, A != 0 | H != 0) %>%
+                    group_by(seed, A, H, species) %>%
+                    filter(N150 == max(N150)) %>%
+                    select(patch, trait2),
+                aes(patch, trait2), color = "darkred", size = 0.9, method = "lm", se = FALSE) +
+    ggpmisc::stat_poly_eq(formula = y ~ x, parse = TRUE) +
+    scale_color_discrete(
+        name = "CWM Type",
+        labels = c("0.0" = "Monoculture",
+                   "1e-06.0" = "Community\nOnly Limit. Sim.",
+                   "0.1" = "Community\nOnly Hierarch. Compet.",
+                   "1e-06.1" = "Community\nLimit. Sim. + Hierarch. Compet.")) +
+    facet_wrap(~seed)

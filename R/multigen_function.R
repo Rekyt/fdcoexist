@@ -94,17 +94,10 @@ bevHoltFct <- function(R, N, alpha){
 #'                      limiting similarity.
 #' @param k      a scalar giving the maximum growth rate in optimal environment
 #' @param width  a numeric for niche breadth, constant in gaussian function
-#' @param H      a numeric for hierarchical competition such as H/k <= 1
-#' @param th_max a numeric for the hierarchical trait value maximizing
-#'               hierarchical competiton
-#' @param th_min a numeric for the hierarchical trait value minimizing
-#'               hierarchical competition
-#' @param h_fun  a character name of a function that describes how hierarchical
-#'               is combined to environmental-based growth (default: `"sum"`)
 #'
 #' @export
 env_curve <- function(trait_values, env_value, trait_weights, k = 2,
-                      width = 0.5, H = 0, th_max = 25, th_min = 1, h_fun = "sum") {
+                      width = 0.5) {
 
     if (length(width) != 1 & length(width) != length(env_value)) {
         stop("There are either too many or not enough values for width")
@@ -115,7 +108,6 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
     } else {
         fitness_traits <- trait_weights[trait_weights$growth_weight != 0 &
                                          !is.na(trait_weights$growth_weight),]
-
         given_values <- trait_values[fitness_traits$trait]
 
         # Each trait has similar impact
@@ -123,31 +115,127 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
 
         # Weigh each trait function of contribution to growth
         R <- weighted.mean(R, fitness_traits$growth_weight)
-
-        # Add to R effect of hierarchical traits
-        # (so far same traits as limiting similarity traits)
-        hierarchical_trait <- trait_weights[trait_weights$hierarchy_weight != 0 &
-                                         !is.na(trait_weights$hierarchy_weight),]
-
-        hierarchical_values <- trait_values[hierarchical_trait$trait]
-
-        if (any(hierarchical_values > th_max)) {
-            stop("th_max must be superior to any hierarchical trait value in a",
-                 " directional filter perspective")
-        }
-
-        # Compute hierarchical competition contribution to growth
-        # R_h = H * h_i
-        # with h_i in [-1,1]
-        # see https://stats.stackexchange.com/a/281164
-        R_h <- H * (((hierarchical_values - th_min)/(th_max - th_min)) * 2 - 1)
-        # Weigh each trait function of contribution to competition
-        R_h <- weighted.mean(R_h, hierarchical_trait$hierarchy_weight)
-
-        # Combining environmental-based growth and additional growth due to
-        # hierarchical competition
-        R <- get(h_fun)(R, R_h, na.rm = TRUE)
     }
+}
+
+
+#' Function to run the simulation
+#'
+#' Using specified parameters this function run the simulation
+#'
+#' @inheritParams compute_compet_distance
+#' @param env         a vector of environmental values
+#' @param time        an integer giving the total number of generations
+#' @param species     an integer giving the total number of species to simulate
+#' @param patches     an integer giving the total number of patches to simulate
+#' @param composition the actual array containing species abundances per site
+#'                    over time, giving the initial populations of each species
+#' @param A           the scalar of inter-specific competition coefficient
+#'                    (see [bevHoltFct()])
+#' @param B           the scalar for intra-specific competition coefficient
+#'                    by default B = A
+#' @param d           a numeric value between 0 and 1 giving the percentage of
+#'                    dispersal occurring across all patches
+#' @param k           a scalar giving the maximum growth rate in optimal
+#'                    environment
+#' @param width       a numeric giving niche breadth of all species
+#' @param H           a numeric for hierarchical competition such as H/k <= 1
+#' @param th_max      a numeric for the hierarchical trait value maximizing
+#'                    hierarchical competition
+#' @param th_min      a numeric for the hierarchical trait value minimizing
+#'                    hierarchical competition
+#' @param h_fun       a function that describes how hierarchical is combined to
+#'                    environmental-based growth (default: `sum()`)
+#' @param di_thresh   dissimilary threshold above which species are considered
+#'                    maximally dissimilar
+#'
+#' @export
+multigen <- function(traits, trait_weights, env, time, species, patches,
+                     composition, A = A, B = B, d, k, width, H, th_max, th_min,
+                     h_fun = "+", di_thresh = th_max - th_min) {
+
+    # Check k dimensions
+    if ((length(k) != 1 & length(k) != species)) {
+        stop("k should be either length one (one k for all species) or ",
+             "k should be a matrix with one row per species")
+    }
+
+    # Check assumptions on trait_weights data.frame
+    check_trait_weights(trait_weights, traits)
+
+    # Calculate dist trait
+    disttraits <- compute_compet_distance(trait_weights, traits)
+
+    traits_k <- cbind(traits, k)
+
+    # Calculate fitness term (R = growth)
+    env_param <- cbind(env, width)
+    Rmatrix <- apply(traits_k, 1, function(x) { # Loop over the species
+        apply(env_param, 1, function(y){ # Loop over env, k, width combinations
+            env_curve(trait_values  = x[-c(length(x))],
+                      env_value     = y[1],
+                      trait_weights = trait_weights,
+                      k             = x[length(x)],
+                      width         = y[2])
+        })
+    })
+
+    # List of alphaterms
+    alphalist = list()
+
+    # List of R_h terms (extra growth from hierarchical competiton)
+    rh_list = list()
+
+    for (m in seq(1, time - 1)) {
+
+        # Calculate niche term (alpha) including carrying capacity
+        alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B,
+                           di_thresh = di_thresh)
+
+        alphalist[[m]] <- alpha
+
+        # Compute hierarchical competition
+        R_h <- compute_hierarchical_compet(
+            composition_given_time_step = composition[,,m],
+            trait_values                = traits,
+            trait_weights               = trait_weights,
+            H                           = H,
+            th_max                      = th_max,
+            th_min                      = th_min)
+
+        rh_list[[m]] <- R_h
+
+        # Total growth
+        R_tot <- get(h_fun)(Rmatrix, R_h)
+
+        # Update composition
+        composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha)
+
+        # threshold number of individuals
+        composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
+                                        composition[,, m + 1])
+        ## Dispersal
+        # Probability of dispersal proportional to number of individuals
+        # in patch given a certain probability 'd'
+        migrate <- d * composition[,, m + 1]
+
+        stay <- composition[,, m + 1] - migrate
+
+        # All immigrants move evenly to all patches
+        immigrants <- apply(migrate, 2, "sum")/patches
+        # /!\ vector recycling when summing both matrices
+        total <- t(t(stay) + immigrants)
+
+        # Final composition
+        composition[,, m + 1] <- total
+
+        # threshold number of individuals
+        composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
+                                        composition[,, m + 1])
+    }
+    return(list(compo   = composition,
+                rmatrix = Rmatrix,
+                rhlist  = rh_list))
 }
 
 #' Check trait weights data.frame
@@ -275,4 +363,87 @@ scale_distance = function(dist_matrix) {
     }
 
     dist_matrix <- (dist_matrix - min(dist_matrix)) / denom_standard
+}
+
+
+#' Compute Hierarchical Competition coefficient at each time step
+#'
+#' Outputs a matrix of additional growth per patch per species given by
+#' hierarchical competition. The values are considered
+#' @param composition_given_time_step composition matrix at a given time step
+#'                                    (a site-species matrix with sites in rows)
+#' @param trait_values a trait matrix
+#' @param trait_weights a scenario data.frame
+#' @param H the hierarchical competition scalar
+#' @param th_max the maximum hierarchical trait value (in general max. trait in
+#'               the pool)
+#' @param th_min the minimum hierarchical trait value (in general min. trait in
+#'               the pool)
+#' @export
+compute_hierarchical_compet = function(composition_given_time_step,
+                                       trait_values, trait_weights,
+                                       H, th_max, th_min) {
+    # Add to R effect of hierarchical traits
+    # (so far same traits as limiting similarity traits)
+    hierarchical_trait <- trait_weights[
+        trait_weights$hierarchy_weight != 0 &
+            !is.na(trait_weights$hierarchy_weight),]
+
+    if (nrow(hierarchical_trait) == 0) {
+        R_h <- matrix(0,
+                      nrow = nrow(composition[,,1]),
+                      ncol = ncol(composition[,,1]),
+                      dimnames = dimnames(composition[,,1]))
+    } else {
+        hierarchical_values <- trait_values[, hierarchical_trait$trait,
+                                            drop = FALSE]
+
+        if (any(hierarchical_values > th_max)) {
+            stop("th_max must be superior to any hierarchical trait value in a",
+                 " directional filter perspective")
+        }
+
+        R_h <- apply(composition_given_time_step, 1, function(single_com) {
+            absent_species <- names(single_com[single_com == 0])
+
+            all_traits <- hierarchical_values
+
+            if (length(absent_species) != 0) {
+                all_traits[absent_species,] <- NA
+            }
+
+            mini_traits <- matrixStats::colMins(all_traits, na.rm = TRUE)
+
+            maxi_traits <- matrixStats::colMaxs(all_traits, na.rm = TRUE)
+
+            # t_i - min(t_i) # with minimum in each community
+            hier_numerator <- sweep(all_traits, 2, mini_traits)
+
+            hier_denominator <- maxi_traits - mini_traits
+
+            hier_growth <- sweep(hier_numerator, 2, hier_denominator,
+                                 FUN = "/")
+
+            # R_h <- H * (h_i * 2 - 1)
+            # with h_i in [0,1]
+            #      and (h_i * 2 - 1) in [-1, 1]
+            #      so R_h is in [-H, H]
+            # see https://stats.stackexchange.com/a/281164
+            hier_growth <- matrixStats::rowWeightedMeans(
+                hier_growth, hierarchical_trait$hierarchy_weight) * 2 - 1
+
+            hier_growth <- H * hier_growth
+        })
+
+        R_h <- t(R_h)
+
+        # Replace all NAs left by 0
+        R_h[is.na(R_h)] <- 0
+    }
+
+    dimnames(R_h) <- dimnames(composition_given_time_step)
+
+
+
+    return(R_h)
 }

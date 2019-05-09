@@ -28,7 +28,6 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                       given_composition,
                       given_d,
                       given_env_width = 5) {
-
     # Default Trait Contribution Scenario: Focal Trait contributes 50% growth
     # 50% limiting similarity et 50% hierarchical competition
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
@@ -43,7 +42,6 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
     given_gen = compo_dim[3]
     given_species = compo_dim[2]
     given_patches = compo_dim[1]
-
 
     # By default generate set of uncorrelated traits
     set.seed(seed_number)
@@ -113,9 +111,8 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                 scenario      = given_row[["scenario"]],
                 compo         = list(simul$compo),
                 rmatrix       = simul$rmatrix,
-                rmatenv       = simul$rmatenv,
-                alphaterm     = simul$alpha,
                 h_fun         = given_h_fun,
-                di_thresh     = given_di_thresh))
+                di_thresh     = given_di_thresh,
+                rh_list       = simul$rhlist))
     })
 }
