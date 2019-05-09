@@ -10,7 +10,7 @@ suppressMessages({
 list_A = c(0, 10^-6)
 list_k = c(1.2)
 list_B = c(0, 10^-4)
-list_H = c(0, 1)
+list_H = c(0, 0.05, 0.1, 0.15, 0.2)
 n_seed = 5
 n_patches = 25
 n_species = 100
@@ -75,7 +75,7 @@ param_sets = list(
     H     = list_H) %>%
     cross()
 
-plan(multicore, workers = 8)
+plan(multiprocess)
 
 tictoc::tic()
 var_param = future_map(param_sets, function(x) {
@@ -90,7 +90,7 @@ var_param = future_map(param_sets, function(x) {
                given_scenars = scenar_list,
                given_H = x$H,
                given_traits = trait_seeds[[x$run_n]],
-               given_h_fun = "sum",
+               given_h_fun = "+",
                given_di_thresh = 24,
                given_env = 1:25,
                given_composition = composition,

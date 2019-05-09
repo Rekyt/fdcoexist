@@ -18,13 +18,7 @@ extract_performances_from_simul = function(simul, trait_list,
         given_k = "gaussian"
     }
 
-    th_growth_rate = simul$rmatrix %>%
-        tibble::as_tibble() %>%
-        tibble::rownames_to_column("patch") %>%
-        dplyr::mutate(patch = as.numeric(patch)) %>%
-        tidyr::gather("species", "th_growth_rate", -patch)
-
-    env_growth_rate = simul$rmatenv %>%
+    env_growth_rate = simul$rmatrix %>%
         tibble::as_tibble() %>%
         tibble::rownames_to_column("patch") %>%
         dplyr::mutate(patch = as.numeric(patch)) %>%
@@ -85,7 +79,6 @@ extract_performances_from_simul = function(simul, trait_list,
             dplyr::inner_join(max_growth, by = "species")
     }) %>%
         dplyr::bind_rows() %>%
-        dplyr::inner_join(th_growth_rate, by = c("patch", "species")) %>%
         dplyr::inner_join(env_growth_rate, by = c("patch", "species")) %>%
         dplyr::mutate(seed      = simul$seed,
                       trait_cor = simul$traits,

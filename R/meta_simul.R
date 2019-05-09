@@ -104,10 +104,9 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                 scenario      = given_row[["scenario"]],
                 compo         = list(simul$compo),
                 rmatrix       = simul$rmatrix,
-                rmatenv       = simul$rmatenv,
-                alphaterm     = simul$alpha,
                 h_fun         = given_h_fun,
-                di_thresh     = given_di_thresh))
+                di_thresh     = given_di_thresh,
+                rh_list       = simul$rhlist))
     })
 }
 
