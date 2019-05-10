@@ -37,8 +37,26 @@ extract_performances_from_simul = function(simul, trait_list,
         dplyr::mutate(patch = as.numeric(patch)) %>%
         tidyr::gather("species", "env_growth_rate", -patch)
 
+    # Distance to Optimum ------------------------------------------------------
+    # Get optimality: distance to optimum environment given by weighted
+    # average with contribution of first trait & second trait
+    # First: compute individual trait distance across all sites
+    optim_dist = outer(trait_df, seq_len(nrow(given_compo)), "-")
+
+    optim_dist = apply(optim_dist, 3, function(given_row) {
+        matrixStats::rowWeightedMeans(given_row, c(100 - contrib$R, contrib$R,
+                                                   rep(0, n_other)))
+    })
+
+    dimnames(optim_dist) <- dimnames(given_compo)[2:1]
+
+    optim_dist = as.data.frame(optim_dist) %>%
+        rownames_to_column("species") %>%
+        gather("patch", "distance_to_optimum", -species) %>%
+        mutate(patch = as.numeric(gsub("patches", "", patch)))
+
     # Get performance for all species and all sites
-    lapply(seq_len(nrow(given_compo)), function(site_index) {
+    sp_perf = lapply(seq_len(nrow(given_compo)), function(site_index) {
 
         site_abund = given_compo[site_index,,]
 
@@ -70,17 +88,6 @@ extract_performances_from_simul = function(simul, trait_list,
         }) %>%
             tibble::enframe("species", "max_growth_rate")
 
-        # Get optimality: distance to optimum environment given by weighted
-        # average with contribution of first trait & second trait
-        optim_dist = apply(trait_df, 1, function(given_traits) {
-            opt_dist = weighted.mean(abs(site_index - given_traits),
-                                     c(c(100 - contrib$R, contrib$R,
-                                         rep(0, n_other))))
-
-            return(opt_dist)
-        }) %>%
-            tibble::enframe("species", "distance_to_optimum")
-
         # Abundance at final time step
         sp_abund = site_abund[, max_time] %>%
             tibble::enframe("species", "N150") %>%
@@ -90,11 +97,13 @@ extract_performances_from_simul = function(simul, trait_list,
 
         # Combine all data
         sp_abund %>%
-            dplyr::inner_join(optim_dist, by = "species") %>%
             dplyr::inner_join(max_growth, by = "species")
-    }) %>%
+    })
+
+    sp_perf %>%
         dplyr::bind_rows() %>%
         dplyr::inner_join(env_growth_rate, by = c("patch", "species")) %>%
+        dplyr::inner_join(optim_dist, by = c("patch", "species")) %>%
         dplyr::mutate(seed      = simul$seed,
                       trait_cor = simul$traits,
                       h_fun     = simul$h_fun,
