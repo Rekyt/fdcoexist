@@ -17,7 +17,7 @@ extract_performances_from_simul = function(simul, trait_list,
 
     max_time = dim(given_compo)[3]
 
-    trait_df = trait_list[[simul$seed]][[simul$traits]]
+    trait_df = trait_list[[simul$traits]]
 
     n_other = ncol(trait_df) - 2
 
