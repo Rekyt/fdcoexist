@@ -16,6 +16,8 @@
 #' @param given_composition the empty matrix with good dimensions to be used
 #'        to follow population dynamics
 #' @param given_d           the index of dispersal
+#' @param given_env_width   the fixed strength of environmental filtering across
+#'        patches
 #'
 #' @export
 meta_simul = function(seed_number, given_k = k, given_A = A,

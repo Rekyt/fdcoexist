@@ -31,7 +31,7 @@
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, th_max, th_min,
-                     h_fun = "sum", di_thresh = th_max - th_min) {
+                     h_fun = "+", di_thresh = th_max - th_min) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -45,41 +45,25 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     # Calculate dist trait
     disttraits <- compute_compet_distance(trait_weights, traits)
 
-    traits_k_and_H <- cbind(traits, k, H)
+    traits_k <- cbind(traits, k)
 
     # Calculate fitness term (R = growth)
-    env_param <- cbind(env, width, th_max, th_min)
-    Rmatrix <- apply(traits_k_and_H, 1, function(x) { # Loop over the species
+    env_param <- cbind(env, width)
+    Rmatrix <- apply(traits_k, 1, function(x) { # Loop over the species
         apply(env_param, 1, function(y){ # Loop over env, k, width combinations
-            env_curve(trait_values  = x[-c(length(x) - 1, length(x))],
+            env_curve(trait_values  = x[-c(length(x))],
                       env_value     = y[1],
                       trait_weights = trait_weights,
-                      k             = x[length(x) - 1],
-                      width         = y[2],
-                      H             = x[length(x)],
-                      th_max = y[3],
-                      th_min = y[4],
-                      h_fun  = h_fun)
-        })
-    })
-
-    # Compute only the environmental part of growth_rate
-    Rmatrix_env <- apply(traits_k_and_H, 1, function(x) { # Loop over the species
-        apply(env_param, 1, function(y){ # Loop over env, k, width combinations
-            env_curve(trait_values  = x[-c(length(x) - 1, length(x))],
-                      env_value     = y[1],
-                      trait_weights = trait_weights,
-                      k             = x[length(x) - 1],
-                      width         = y[2],
-                      H             = 0,
-                      th_max        = y[3],
-                      th_min        = y[4],
-                      h_fun         = h_fun)
+                      k             = x[length(x)],
+                      width         = y[2])
         })
     })
 
     # List of alphaterms
     alphalist = list()
+
+    # List of R_h terms (extra growth from hierarchical competiton)
+    rh_list = list()
 
     for (m in seq(1, time - 1)) {
 
@@ -89,7 +73,22 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
 
         alphalist[[m]] <- alpha
 
-        composition[,, m + 1] <- bevHoltFct(Rmatrix, composition[,,m], alpha)
+        # Compute hierarchical competition
+        R_h <- compute_hierarchical_compet(
+            composition_given_time_step = composition[,,m],
+            trait_values                = traits,
+            trait_weights               = trait_weights,
+            H                           = H,
+            th_max                      = th_max,
+            th_min                      = th_min)
+
+        rh_list[[m]] <- R_h
+
+        # Total growth
+        R_tot <- get(h_fun)(Rmatrix, R_h)
+
+        # Update composition
+        composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha)
 
         # threshold number of individuals
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
@@ -114,7 +113,6 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                                         composition[,, m + 1])
     }
     return(list(compo   = composition,
-                alpha   = alphalist,
                 rmatrix = Rmatrix,
-                rmatenv = Rmatrix_env))
+                rhlist  = rh_list))
 }

@@ -8,6 +8,7 @@ vignette: >
   %\VignetteIndexEntry{Full equation of the model}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  \usepackage[utf8]{inputenc}
 ---
 
 ## Basic Equation

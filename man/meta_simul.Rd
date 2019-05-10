@@ -37,6 +37,9 @@ limiting similarity}
 to follow population dynamics}
 
 \item{given_d}{the index of dispersal}
+
+\item{given_env_width}{the fixed strength of environmental filtering across
+patches}
 }
 \description{
 Simulations with various parameters

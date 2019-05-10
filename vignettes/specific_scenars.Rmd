@@ -8,6 +8,7 @@ vignette: >
     %\VignetteIndexEntry{Full equation of the model}
     %\VignetteEncoding{UTF-8}
     %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 editor_options: 
     chunk_output_type: console
 ---
