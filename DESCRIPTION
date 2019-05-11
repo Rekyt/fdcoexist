@@ -23,6 +23,7 @@ License: GPL (>= 2)
 Encoding: UTF-8
 Imports: 
     dplyr,
+    matrixStats,
     tibble,
     tidyr,
     Weighted.Desc.Stat
