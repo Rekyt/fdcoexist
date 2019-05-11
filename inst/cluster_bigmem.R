@@ -15,6 +15,7 @@ n_patches = 25
 n_species = 100
 n_gen = 50
 n_traits = 2
+init_pop = 50
 
 # Traits & Contribution scenarios ----------------------------------------------
 # Generate all trait contribution scenarios
@@ -31,6 +32,7 @@ composition = array(NA, dim = c(n_patches, n_species, n_gen),
                     dimnames = list(paste0("patches", seq(n_patches)),
                                     paste0("species", seq(n_species)),
                                     paste0("time", seq(n_gen))))
+composition[,,1] = init_pop
 
 # Generate sets of traits
 used_trait_list = lapply(seq(n_seed), function(given_seed) {

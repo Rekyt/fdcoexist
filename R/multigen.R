@@ -66,7 +66,6 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     rh_list = list()
 
     for (m in seq(1, time - 1)) {
-
         # Calculate niche term (alpha) including carrying capacity
         alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B,
                            di_thresh = di_thresh)
