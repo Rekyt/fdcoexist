@@ -51,9 +51,9 @@ extract_performances_from_simul = function(simul, trait_list,
     dimnames(optim_dist) <- dimnames(given_compo)[2:1]
 
     optim_dist = as.data.frame(optim_dist) %>%
-        rownames_to_column("species") %>%
-        gather("patch", "distance_to_optimum", -species) %>%
-        mutate(patch = as.numeric(gsub("patches", "", patch)))
+        tibble::rownames_to_column("species") %>%
+        tidyr::gather("patch", "distance_to_optimum", -species) %>%
+        dplyr::mutate(patch = as.numeric(gsub("patches", "", patch)))
 
     # Get performance for all species and all sites
     sp_perf = lapply(seq_len(nrow(given_compo)), function(site_index) {
