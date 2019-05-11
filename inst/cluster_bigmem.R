@@ -96,7 +96,7 @@ var_param = future_lapply(param_sets, function(x) {
                given_env_width = 2)
 
     map_dfr(simul_list, function(y) {
-        extract_performances_from_simul(y, trait_seeds[[x$run_n]], TRUE)
+        extract_performances_from_simul(y, used_trait_list[[x$run_n]], TRUE)
     })
 })
 tictoc::toc()

@@ -35,8 +35,7 @@ Suggests:
     furrr,
     forcats,
     spelling,
-    tictoc,
-    matrixStats
+    tictoc
 RoxygenNote: 6.1.1
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
