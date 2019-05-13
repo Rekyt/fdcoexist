@@ -76,10 +76,14 @@ param_sets = list(
 plan(multiprocess, workers = future::availableCores())
 
 tictoc::tic()
-var_param = future_lapply(param_sets, function(x) {
+var_param = future_lapply(seq_along(param_sets), function(given_n) {
     suppressMessages({
         devtools::load_all()
     })
+    
+    cat("set: ", given_n, "\n")
+
+    x = param_sets[[given_n]]
 
     simul_list = meta_simul(seed_number = x$run_n,
                given_k = x$k,
@@ -95,9 +99,10 @@ var_param = future_lapply(param_sets, function(x) {
                given_d = 0.05,
                given_env_width = 2)
 
-    map_dfr(simul_list, function(y) {
+    simul_perf = map_dfr(simul_list, function(y) {
         extract_performances_from_simul(y, used_trait_list[[x$run_n]], TRUE)
     })
+    saveRDS(simul_perf, paste0("inst/job_data/perf_df_", given_n, ".Rds"), compress = TRUE)
 })
 tictoc::toc()
 
@@ -105,6 +110,6 @@ tictoc::toc()
 # Save Trait data.frame
 saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
 # Save performance extracted from simulations
-saveRDS(var_param, file = paste0("inst/job_data/perf_list_",
-                                 gsub("-", "_", Sys.Date()), ".Rds"),
-        compress = TRUE)
+# saveRDS(var_param, file = paste0("inst/job_data/perf_list_",
+#                                 gsub("-", "_", Sys.Date()), ".Rds"),
+#        compress = TRUE)
