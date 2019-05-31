@@ -24,32 +24,30 @@ median_scenario = all_cwm %>%
            H_scenar == 50)
 
 plot_param_space = function(provided_df, x_var, y_var) {
-    ggplot(provided_df, aes_string(x_var, y_var, z = "estimate")) +
+
+    x_name = paste0("as.factor(", x_var, ")")
+    y_name = paste0("as.factor(", y_var, ")")
+
+    ggplot(provided_df, aes_string(x_name, y_name, z = "estimate")) +
         stat_summary_2d(fun = mean, geom = "tile", na.rm = TRUE,
-                        drop = FALSE, bins = 42) +
+                        drop = FALSE) +
         scale_fill_viridis_c(limits = c(0, 1)) +
         theme_bw() +
         theme(aspect.ratio = 1,
               legend.position = "top")
 }
 
-fig_k_A = plot_param_space(median_scenario, "k", "A") +
-    scale_y_log10()
+fig_k_A = plot_param_space(median_scenario, "k", "A")
 
-fig_k_B = plot_param_space(median_scenario, "k", "B") +
-    scale_y_log10()
+fig_k_B = plot_param_space(median_scenario, "k", "B")
 
 fig_k_H = plot_param_space(median_scenario, "k", "H")
 
-fig_A_B = plot_param_space(median_scenario, "A", "B") +
-    scale_x_log10() +
-    scale_y_log10()
+fig_A_B = plot_param_space(median_scenario, "A", "B")
 
-fig_A_H = plot_param_space(median_scenario, "A", "H") +
-    scale_x_log10()
+fig_A_H = plot_param_space(median_scenario, "A", "H")
 
-fig_B_H = plot_param_space(median_scenario, "B", "H") +
-    scale_x_log10()
+fig_B_H = plot_param_space(median_scenario, "B", "H")
 
 estimate_legend = cowplot::get_legend(fig_k_A)
 
