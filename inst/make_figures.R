@@ -1,28 +1,14 @@
-list.files("inst/job_data/perfs_52920/cwm/", full.names = TRUE) %>%
-    purrr::map_dfr(readRDS) %>%
-    nest() %>%
-    mutate(mod_cwm1 = map(data, ~lm(trait1_cwm ~ patch, data = .x)),
-           mod_cwm2 = map(data, ~lm(trait2_cwm ~ patch, data = .x)),
-           tidy_cwm1 = map(mod_cwm1, broom::tidy),
-           tidy_cwm2 = map(mod_cwm2, broom::tidy)) -> ji
+# Script to assemble all performances from all fdcoexist simulations and output
+# final figures
+# Author: Matthias Grenié <matthias dot grenie at gmail dot com>
+# Packages ---------------------------------------------------------------------
+library("dplyr")
+library("tidyr")
+library("purrr")
+library("ggplot2")
+library("cowplot")
 
-weights = c(0, 50, 100)
-
-all_param_df = crossing(h_fun = "+", di_thresh = 24, k = list_k, A = list_A,
-                        B = list_B, H = list_H,
-                        trait_cor = c("negcor", "uncor", "poscor"),
-                        R_scenar = weights, A_scenar = weights,
-                        H_scenar = weights, seed = 1:30)
-
-all_cwm = ji %>%
-    unnest(tidy_cwm1) %>%
-    filter(term == "patch") %>%
-    full_join(all_param_df)
-
-median_scenario = all_cwm %>%
-    filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
-           H_scenar == 50)
-
+# Functions --------------------------------------------------------------------
 plot_param_space = function(provided_df, x_var, y_var) {
 
     x_name = paste0("as.factor(", x_var, ")")
@@ -32,10 +18,56 @@ plot_param_space = function(provided_df, x_var, y_var) {
         stat_summary_2d(fun = mean, geom = "tile", na.rm = TRUE,
                         drop = FALSE) +
         scale_fill_viridis_c(limits = c(0, 1)) +
+        scale_x_discrete(labels = function(x) {
+            x %>%
+                as.character() %>%
+                as.numeric() %>%
+                format(digits = 2)
+        }) +
+        scale_y_discrete(labels = function(x) {
+            x %>%
+                as.character() %>%
+                as.numeric() %>%
+            format(digits = 2)
+        }) +
         theme_bw() +
         theme(aspect.ratio = 1,
-              legend.position = "top")
+              legend.position = "top",
+              axis.text.x = element_text(angle = 45, hjust = 1))
 }
+
+# Load data --------------------------------------------------------------------
+
+all_cwm = readRDS("inst/job_data/perfs_52920/all_cwms.Rds")
+
+# Parameter space --------------------------------------------------------------
+weights = c(0, 50, 100)
+list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
+list_k = seq(1, 1.5, length.out = 6)
+list_B = list_A
+list_H = seq(0, 0.2, length.out = 6)
+all_param_df = crossing(h_fun = "+", di_thresh = 24, k = list_k, A = list_A,
+                        B = list_B, H = list_H,
+                        trait_cor = c("negcor", "uncor", "poscor"),
+                        R_scenar = weights, A_scenar = weights,
+                        H_scenar = weights, seed = 1:30)
+
+# Compute slopes ---------------------------------------------------------------
+all_slopes = all_cwm %>%
+    nest() %>%
+    mutate(mod_cwm1 = map(data, ~lm(trait1_cwm ~ patch, data = .x)),
+           mod_cwm2 = map(data, ~lm(trait2_cwm ~ patch, data = .x)),
+           tidy_cwm1 = map(mod_cwm1, broom::tidy),
+           tidy_cwm2 = map(mod_cwm2, broom::tidy)) %>%
+    unnest(tidy_cwm1) %>%
+    filter(term == "patch") %>%
+    full_join(all_param_df)
+
+median_scenario = all_slopes %>%
+    filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
+           H_scenar == 50)
+
+# Plot parameter space ---------------------------------------------------------
 
 fig_k_A = plot_param_space(median_scenario, "k", "A")
 
@@ -56,5 +88,32 @@ cowplot::plot_grid(
     list(fig_k_A, fig_A_B, fig_k_B, fig_A_H, fig_k_B, fig_B_H) %>%
         lapply(function(x) x +
                    theme(legend.position = "none")) %>%
-        cowplot::plot_grid(plotlist = ., nrow = 3),
+        cowplot::plot_grid(plotlist = ., nrow = 3, align = "hv"),
     rel_heights = c(0.05, 0.95), nrow = 2, ncol = 1)
+
+
+# Figure CWM-Environment -------------------------------------------------------
+
+subset_cwm = all_cwm %>%
+    filter(trait_cor == "uncor", R_scenar == 0, A_scenar == 0,
+           H_scenar == 0)
+
+subset_cwm %>%
+    ungroup() %>%
+    mutate(A_H = paste("A = ", format(A, digits = 2, scientific = TRUE),
+                       "; H = ", format(H, digits = 2, scientific = TRUE),
+                       sep = "")) %>%
+    ggplot(aes(patch, trait1_cwm, color = A_H,
+               group = interaction(A_H, seed))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2, size = 0.8) +
+    geom_point(alpha = 1/5) +
+    stat_smooth(geom = "line", size = 1, alpha = 1/3) +
+    facet_grid(vars(k), vars(B), labeller = labeller(B = function(x) {
+        x %>%
+            as.numeric() %>%
+            format(digits = 2, scientific = TRUE) %>%
+            paste0("B = ", .)
+    }, k = label_both)) +
+    scale_color_discrete() +
+    theme_bw()
+
