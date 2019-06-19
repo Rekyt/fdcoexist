@@ -16,19 +16,19 @@ seqlast = function(from, to, by) {
 }
 
 # Load initial data ------------------------------------------------------------
-list_perf_files = list.files("inst/job_data/perfs_52920/", "all_perf_df_*",
+list_perf_files = list.files("inst/job_data/bigmem_53/", "bigmem_.*perfs.Rds",
                              full.names = TRUE, recursive = FALSE)
 
-trait_df = readRDS("inst/job_data/perfs_52920/bigmem_trait_df.Rds") %>%
+trait_df = readRDS("inst/job_data/bigmem_53/bigmem_trait_df.Rds") %>%
     mutate(seed = as.numeric(seed))
 
 # Compute CWMs -----------------------------------------------------------------
-lapply(list_perf_files[10], function(single_perf_file) {
+lapply(list_perf_files, function(single_perf_file) {
     # Get the numbers in the perf file
     param_groups = basename(single_perf_file)
 
-    number = regmatches(param_groups, gregexpr("[0-9]+_[0-9]+",
-                                               param_groups))[[1]]
+    number = regmatches(param_groups,
+                        gregexpr("[0-9]+_[0-9]+", param_groups))[[1]]
 
     cat("number: ", number, "\n")
 

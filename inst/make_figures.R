@@ -40,6 +40,14 @@ plot_param_space = function(provided_df, x_var, y_var) {
 
 all_cwm = readRDS("inst/job_data/perfs_52920/all_cwms.Rds")
 
+
+# Isolate problematic releves --------------------------------------------------
+# Some combinations of parameters leads to more than 25 values (across the range
+# of patches) It may be because of anomaly during Assemblage of CWMs
+all_cwm %>%
+    count() %>%
+    filter(n > 25)
+
 # Parameter space --------------------------------------------------------------
 weights = c(0, 50, 100)
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
