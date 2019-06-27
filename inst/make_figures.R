@@ -38,7 +38,9 @@ plot_param_space = function(provided_df, x_var, y_var) {
 
 # Load data --------------------------------------------------------------------
 
-all_cwm = readRDS("inst/job_data/perfs_52920/all_cwms.Rds")
+all_cwm = readRDS("inst/job_data/older_hierarch/all_cwm.Rds")
+
+all_slopes = readRDS("inst/job_data/older_hierarch/all_slopes.Rds")
 
 
 # Isolate problematic releves --------------------------------------------------
@@ -61,17 +63,9 @@ all_param_df = crossing(h_fun = "+", di_thresh = 24, k = list_k, A = list_A,
                         H_scenar = weights, seed = 1:30)
 
 # Compute slopes ---------------------------------------------------------------
-all_slopes = all_cwm %>%
-    nest() %>%
-    mutate(mod_cwm1 = map(data, ~lm(trait1_cwm ~ patch, data = .x)),
-           mod_cwm2 = map(data, ~lm(trait2_cwm ~ patch, data = .x)),
-           tidy_cwm1 = map(mod_cwm1, broom::tidy),
-           tidy_cwm2 = map(mod_cwm2, broom::tidy)) %>%
-    unnest(tidy_cwm1) %>%
-    filter(term == "patch") %>%
-    full_join(all_param_df)
-
 median_scenario = all_slopes %>%
+    filter(cwm_name == "trait1_cwm") %>%
+    ungroup() %>%
     filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
            H_scenar == 50)
 
@@ -91,7 +85,7 @@ fig_B_H = plot_param_space(median_scenario, "B", "H")
 
 estimate_legend = cowplot::get_legend(fig_k_A)
 
-cowplot::plot_grid(
+param_space = cowplot::plot_grid(
     estimate_legend,
     list(fig_k_A, fig_A_B, fig_k_B, fig_A_H, fig_k_B, fig_B_H) %>%
         lapply(function(x) x +
@@ -99,6 +93,8 @@ cowplot::plot_grid(
         cowplot::plot_grid(plotlist = ., nrow = 3, align = "hv"),
     rel_heights = c(0.05, 0.95), nrow = 2, ncol = 1)
 
+ggsave("fig_param_space.png", plot = param_space, width = 14, height = 21,
+       units = "cm")
 
 # Figure CWM-Environment -------------------------------------------------------
 
@@ -106,7 +102,7 @@ subset_cwm = all_cwm %>%
     filter(trait_cor == "uncor", R_scenar == 0, A_scenar == 0,
            H_scenar == 0)
 
-subset_cwm %>%
+fig_all_cwm = subset_cwm %>%
     ungroup() %>%
     mutate(A_H = paste("A = ", format(A, digits = 2, scientific = TRUE),
                        "; H = ", format(H, digits = 2, scientific = TRUE),
@@ -123,5 +119,8 @@ subset_cwm %>%
             paste0("B = ", .)
     }, k = label_both)) +
     scale_color_discrete() +
-    theme_bw()
+    theme_bw() +
+    theme(aspect.ratio = 1)
 
+ggsave("fig_all_cwm.png", fig_all_cwm, width = 29.7, height = 21,
+       units = "cm")
