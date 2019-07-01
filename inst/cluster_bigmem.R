@@ -17,6 +17,25 @@ n_gen = 50
 n_traits = 2
 init_pop = 50
 
+set.seed(20190619)
+seed_list = sample(1e6, size = n_seed)
+
+# Sets of all parameters
+param_sets = list(
+    run_n = seed_list,
+    A     = list_A,
+    k     = list_k,
+    B     = list_B,
+    H     = list_H) %>%
+    cross()
+
+# Initial population matrix
+composition = array(NA, dim = c(n_patches, n_species, n_gen),
+                    dimnames = list(paste0("patches", seq(n_patches)),
+                                    paste0("species", seq(n_species)),
+                                    paste0("time", seq(n_gen))))
+composition[,,1] = init_pop
+
 # Traits & Contribution scenarios ----------------------------------------------
 # Generate all trait contribution scenarios
 weights = round(seq(0, 100, length.out = 3), digits = 0)
@@ -27,15 +46,8 @@ scenar_list = cross(list(R = weights, A = weights, H = weights)) %>%
     set_names(nm = cross(list(R = weights, A = weights, H = weights)) %>%
                   map_chr(~paste0("R", .x$R, "A", .x$A, "H", .x$H)))
 
-# Initial population matrix
-composition = array(NA, dim = c(n_patches, n_species, n_gen),
-                    dimnames = list(paste0("patches", seq(n_patches)),
-                                    paste0("species", seq(n_species)),
-                                    paste0("time", seq(n_gen))))
-composition[,,1] = init_pop
-
 # Generate sets of traits
-used_trait_list = lapply(seq(n_seed), function(given_seed) {
+used_trait_list = lapply(seed_list, function(given_seed) {
     set.seed(given_seed)
     given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
@@ -52,7 +64,7 @@ used_trait_list = lapply(seq(n_seed), function(given_seed) {
          poscor = cor_trait,
          negcor = negcor_trait)
 })
-names(used_trait_list) = seq(n_seed)
+names(used_trait_list) = seed_list
 
 full_trait_df = map_dfr(used_trait_list,~.x %>%
                             map_dfr(function(x) {
@@ -63,14 +75,7 @@ full_trait_df = map_dfr(used_trait_list,~.x %>%
                             .id = "trait_cor"),
                         .id = "seed")
 
-# Sets of all parameters
-param_sets = list(
-    run_n = seq(n_seed),
-    A     = list_A,
-    k     = list_k,
-    B     = list_B,
-    H     = list_H) %>%
-    cross()
+saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
 
 # Actual simulations -----------------------------------------------------------
 plan(multiprocess, workers = future::availableCores())
@@ -80,7 +85,7 @@ var_param = future_lapply(seq_along(param_sets), function(given_n) {
     suppressMessages({
         devtools::load_all()
     })
-    
+
     cat("set: ", given_n, "\n")
 
     x = param_sets[[given_n]]
@@ -102,14 +107,8 @@ var_param = future_lapply(seq_along(param_sets), function(given_n) {
     simul_perf = map_dfr(simul_list, function(y) {
         extract_performances_from_simul(y, used_trait_list[[x$run_n]], TRUE)
     })
-    saveRDS(simul_perf, paste0("inst/job_data/perf_df_", given_n, ".Rds"), compress = TRUE)
+    saveRDS(simul_perf,
+            paste0("inst/job_data/perf_df_", given_n, ".Rds"),
+            compress = TRUE)
 })
 tictoc::toc()
-
-# Save files -------------------------------------------------------------------
-# Save Trait data.frame
-saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
-# Save performance extracted from simulations
-# saveRDS(var_param, file = paste0("inst/job_data/perf_list_",
-#                                 gsub("-", "_", Sys.Date()), ".Rds"),
-#        compress = TRUE)
