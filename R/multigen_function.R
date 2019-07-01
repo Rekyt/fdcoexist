@@ -283,6 +283,8 @@ compute_hierarchical_compet = function(composition_given_time_step,
                  " directional filter perspective")
         }
 
+        # Compute the hierarchical competition growth term for all communities
+        # successively
         R_h <- apply(composition_given_time_step, 1, function(single_com) {
             absent_species <- names(single_com[single_com == 0])
 
@@ -292,25 +294,27 @@ compute_hierarchical_compet = function(composition_given_time_step,
                 all_traits[absent_species,] <- NA
             }
 
-            mini_traits <- matrixStats::colMins(all_traits, na.rm = TRUE)
+            com_maxi <- matrixStats::colMaxs(all_traits, na.rm = TRUE)
+            com_mini <- matrixStats::colMins(all_traits, na.rm = TRUE)
 
-            maxi_traits <- matrixStats::colMaxs(all_traits, na.rm = TRUE)
+            # max(t_i) - t_i # with minimum in each community
+            hier_numerator <- sweep(-all_traits, 2, com_maxi, FUN = "+")
 
-            # t_i - min(t_i) # with minimum in each community
-            hier_numerator <- sweep(all_traits, 2, mini_traits)
+            # Standardize the outcome by the range of traits observed
+            # in each community
+            hier_denominator <- com_maxi - com_mini
 
-            hier_denominator <- maxi_traits - mini_traits
+            # The fraction would be in [0,1] reaching 0 for species with max.
+            # trait in community and 1 for species with minimum trait
+            # now [-1,0] with max. trait will be 0 and -1 for species
+            # with min. trait
+            hier_growth <- -sweep(hier_numerator, 2, hier_denominator,
+                                  FUN = "/")
 
-            hier_growth <- sweep(hier_numerator, 2, hier_denominator,
-                                 FUN = "/")
-
-            # R_h <- H * (h_i * 2 - 1)
-            # with h_i in [0,1]
-            #      and (h_i * 2 - 1) in [-1, 1]
-            #      so R_h is in [-H, H]
-            # see https://stats.stackexchange.com/a/281164
+            # Weighted mean of hierarchical competition terms for each species
             hier_growth <- matrixStats::rowWeightedMeans(
-                hier_growth, hierarchical_trait$hierarchy_weight) * 2 - 1
+                hier_growth, hierarchical_trait$hierarchy_weight
+            )
 
             hier_growth <- H * hier_growth
         })
@@ -322,8 +326,6 @@ compute_hierarchical_compet = function(composition_given_time_step,
     }
 
     dimnames(R_h) <- dimnames(composition_given_time_step)
-
-
 
     return(R_h)
 }
