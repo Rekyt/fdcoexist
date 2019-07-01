@@ -96,7 +96,7 @@ var_param = future_lapply(seq_along(param_sets), function(given_n) {
                given_B = x$B,
                given_scenars = scenar_list,
                given_H = x$H,
-               given_traits = used_trait_list[[x$run_n]],
+               given_traits = used_trait_list[[as.character(x$run_n)]],
                given_h_fun = "+",
                given_di_thresh = 24,
                given_env = 1:25,
@@ -105,7 +105,9 @@ var_param = future_lapply(seq_along(param_sets), function(given_n) {
                given_env_width = 2)
 
     simul_perf = map_dfr(simul_list, function(y) {
-        extract_performances_from_simul(y, used_trait_list[[x$run_n]], TRUE)
+        extract_performances_from_simul(
+            y, used_trait_list[[as.character(x$run_n)]], TRUE
+    )
     })
     saveRDS(simul_perf,
             paste0("inst/job_data/perf_df_", given_n, ".Rds"),
