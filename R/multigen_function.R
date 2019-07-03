@@ -263,6 +263,7 @@ scale_distance = function(dist_matrix) {
 compute_hierarchical_compet = function(composition_given_time_step,
                                        trait_values, trait_weights,
                                        H, th_max, th_min) {
+
     # Add to R effect of hierarchical traits
     # (so far same traits as limiting similarity traits)
     hierarchical_trait <- trait_weights[
@@ -270,10 +271,10 @@ compute_hierarchical_compet = function(composition_given_time_step,
             !is.na(trait_weights$hierarchy_weight),]
 
     if (nrow(hierarchical_trait) == 0) {
-        R_h <- matrix(0,
-                      nrow = nrow(composition_given_time_step[,,1]),
-                      ncol = ncol(composition_given_time_step[,,1]),
-                      dimnames = dimnames(composition_given_time_step[,,1]))
+        Rh <- matrix(0,
+                     nrow = nrow(composition_given_time_step[,,1]),
+                     ncol = ncol(composition_given_time_step[,,1]),
+                     dimnames = dimnames(composition_given_time_step[,,1]))
     } else {
         hierarchical_values <- trait_values[, hierarchical_trait$trait,
                                             drop = FALSE]
@@ -283,49 +284,34 @@ compute_hierarchical_compet = function(composition_given_time_step,
                  " directional filter perspective")
         }
 
-        # Compute the hierarchical competition growth term for all communities
-        # successively
-        R_h <- apply(composition_given_time_step, 1, function(single_com) {
-            absent_species <- names(single_com[single_com == 0])
+        # For each trait compute a hierarhical competition value
+        traits_Rh = lapply(as.data.frame(hierarchical_values),function(x) {
+            species = rownames(hierarchical_values)
 
-            all_traits <- hierarchical_values
+            # Compute the difference of traits between all pairs of species
+            single_trait_diff = outer(x, x, "-") / (diff(range(x)))
 
-            if (length(absent_species) != 0) {
-                all_traits[absent_species,] <- NA
-            }
+            # Do not consider "taller" species
+            single_trait_diff[single_trait_diff > 0] = 0
 
-            com_maxi <- matrixStats::colMaxs(all_traits, na.rm = TRUE)
-            com_mini <- matrixStats::colMins(all_traits, na.rm = TRUE)
+            rownames(single_trait_diff) = species
+            colnames(single_trait_diff) = species
 
-            # max(t_i) - t_i # with minimum in each community
-            hier_numerator <- sweep(-all_traits, 2, com_maxi, FUN = "+")
+            # Weight the difference by the abundance of species
+            single_trait_Rh = composition_given_time_step %*%
+                t(single_trait_diff)
+            single_trait_Rh[composition_given_time_step == 0] = 0
 
-            # Standardize the outcome by the range of traits observed
-            # in each community
-            hier_denominator <- com_maxi - com_mini
-
-            # The fraction would be in [0,1] reaching 0 for species with max.
-            # trait in community and 1 for species with minimum trait
-            # now [-1,0] with max. trait will be 0 and -1 for species
-            # with min. trait
-            hier_growth <- -sweep(hier_numerator, 2, hier_denominator,
-                                  FUN = "/")
-
-            # Weighted mean of hierarchical competition terms for each species
-            hier_growth <- matrixStats::rowWeightedMeans(
-                hier_growth, hierarchical_trait$hierarchy_weight
-            )
-
-            hier_growth <- H * hier_growth
+            single_trait_Rh
         })
 
-        R_h <- t(R_h)
+        # Weight the different hierarchical growth by the importance of
+        # the trait for hierarchical competition
+        Rh = Reduce(`+`,
+                    Map(`*`, traits_Rh, hierarchical_trait$hierarchy_weight))
 
-        # Replace all NAs left by 0
-        R_h[is.na(R_h)] <- 0
+        Rh[composition_given_time_step == 0] = 0L
     }
 
-    dimnames(R_h) <- dimnames(composition_given_time_step)
-
-    return(R_h)
+    return(H * Rh)
 }

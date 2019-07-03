@@ -16,27 +16,29 @@ vignette: >
 This document resumes the equation used in our model and details the different processes.
 Our coexistence model is developed following this equation (Beverton-Holt equation):
 
-\begin{equation}
+$$
 N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha_i}
-\end{equation}
+$$
 
 with $N_{t+1, i, x}$ the abundance of species $i$ in patch $x$ at time $t + 1$, $R_{i, x}$ the growth of species $i$ in patch $x$, $A$ the constant for inter-specific competition and $\alpha_i$ the competition coefficient for species $i$. We can detail both $R_{i, x}$ and $\alpha_i$:
 
-\begin{gather}
+$$
+\begin{aligned}
 \alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}\\
 R_{i, x} = k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times {l_x}^2}\right)
-\end{gather}
+\end{aligned}
+$$
 
 with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $e_x$ the environmental value of patch $x$ and ${l_x}^2$ the width of the environmental filter in patch $x$.
 
 If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
 
-\begin{equation}
+$$
 N_{t+1, i, x} = \frac{
 k \times \exp\left(- \displaystyle\frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) \times N_{t, i, x}}{
 1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}
 }
-\end{equation}
+$$
 
 ## Detailing the computation of $\delta_{ij}$ & $\sigma_{ij}$
 
@@ -44,49 +46,56 @@ $\delta_{ij}$ is the functional dissimilarity coefficient between species $i$ an
 
 First we can compute $\delta_{ij}$ as the euclidean distance between species using multiple traits:
 
-\begin{equation}
+$$
 \delta_{ij} = \sqrt{\sum_{c = 1}^{T} (t_{i, c} - t_{j, c})^2}, 
-\end{equation}
+$$
 
 with $T$ the number of traits, $t_{i, c}$ trait $c$ of species $i$ and $t_{j, c}$ trait $c$ of species $j$. If want to take the contribution of traits to competition we have to modify the trait values as follow:
 
-\begin{gather}
+$$
+\begin{aligned}
 \delta_{ij} = \sqrt{\sum_{c = 1}^{T} \left[ \sqrt{w_c} (t_{i, c} - t_{j, c})\right]^2}\\
 \delta_{ij} = \sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2},
-\end{gather}
+\end{aligned}
+$$
+
 with $w_c$ the contribution of trait $c$ in limiting similarity and we have $\sum_{c = 1}^{T_c} w_c = 1$.
 
 We use $1 - \delta_{ij}$ in above-mentioned equations to consider limiting similarity (closer species experience higher inter-specific competition) thus we can use a similarity term:
 
-\begin{gather}
+$$
+\begin{aligned}
 \sigma_{ij} = \max(\delta_{ij}) - \delta_{ij},\quad \sigma_{ii} = 0 ~\forall~i \in [1, S] \\
-\end{gather}
+\end{aligned}
+$$
 
 ## Adding intra-specific competition
 
 The equation above only considers inter-specific competition when $j \neq i$ in the sum. We can however add intra-specific competition when $j = i$. Each site has a species-specific carrying capacity $K$ as the number of individuals approaches this carrying capacity the intra-specific competition increases:
-\begin{equation}
+
+$$
 \alpha_{ii} = B \times N_{t,i,x}
-\end{equation}
+$$
 
 Thus the equation becomes:
 
-\begin{equation}
+$$
 N_{t+1, i, x} = \frac{
 k \times \exp\left(- \displaystyle\frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) \times N_{t, i, x}}{
 1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} \times \sigma_{ij} +
 B \times N_{t,i,x}
 }
-\end{equation}
+$$
 
 with $B$ the coefficient scaling intra-specific competition. 
 
 ## Multi-trait growth term
 
 Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
-\begin{equation}
+
+$$
 R_{i, x} = \sum_{g = 1}^{T} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right)
-\end{equation}
+$$
 
 with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T} w_g = 1$), $t_{i, g}$ the trait number $g$ of species $i$.
 
@@ -94,50 +103,68 @@ with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to
 
 If we add hierarchical competition, the species with the largest trait has an increased growth and species with lowest trait see their growth decreased. We can include this as an additional term in the computation of the growth term $R_{i,x}$ such as:
 
-\begin{gather}
-R_{i, x}                   = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}} \\
-R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T} w_h \times f_H(t_{i, h}),
-\end{gather}
-
-with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of traits contributing to hierarchical competition (as many as $T$, with $\sum_{h = 1}^{T} w_h = 1$). The function $f_H()$ is the hierarchical function that adjusts the importance of hierarchical traits. The idea is that species with low values of traits are disadvantaged while species with high trait values are advantaged. We want to consider $f_H()$ being bounded between -1 and 0 as hierarchical competition has a negative effect on all non highest competitive species:
 $$
 \begin{aligned}
-f_H(t_i) &= 
-    \frac{\max\limits_{i \in [1, S]}(t_i) - t_i}{
-          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
-          \begin{cases}
-            \in [0, 1] \\
-            0 ~\text{when}~ t_i = \max\limits_{i \in [1, S]}(t_i) \\
-            1 ~\text{when}~ t_i = \min\limits_{i \in [1, S]}(t_i)
-          \end{cases} \\
-f_H(t_i) &= 
-    -\frac{\max\limits_{i \in [1, S]}(t_i) - t_i}{
-          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
-    \begin{cases}
-          \in [-1, 0]\\
-          0 ~\text{when}~ t_i = \max\limits_{i \in [1, S]}(t_i)\\
-          -1 ~\text{when}~ t_i = \min\limits_{i \in [1, S]}(t_i)
-    \end{cases}
+R_{i, x}                   = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}} \\
+R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T} w_h \times f_H(t_{i, h}),
 \end{aligned}
 $$
 
-The fraction is in $[0, 1]$, minus the fraction in $[-1, 0]$
-So the fully developed hierarchical growth term is:
+with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of traits contributing to hierarchical competition (as many as $T$, with $\sum_{h = 1}^{T} w_h = 1$). As a competition function $f_H()$ depends on the abundance of taller species:
 
-\begin{equation}
-R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T} w_h \times
-         -\frac{\max(t_i) - t_i}{
-          \max(t_i) - \min(t_i)},
-\end{equation}
+$$
+\begin{aligned}
+f_H(t_i) &= 
+    \frac{t_j - t_i}{
+          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
+          &\begin{cases}
+            \in [0, 1] \\
+            0 ~\text{when}~ t_i = t_j \\
+            1 ~\text{when}~ t_i = \min\limits_{i \in [1, S]}(t_i),
+            ~t_j = \max\limits_{i \in [1, S]}(t_i)
+          \end{cases} \\
+f_H(t_i) &= 
+    -\frac{t_j - t_i}{
+          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
+          &\begin{cases}
+            \in [0, -1] \\
+            0 ~\text{when}~ t_i = t_j \\
+            -1 ~\text{when}~ t_i = \min\limits_{i \in [1, S]}(t_i),
+            ~t_j = \max\limits_{i \in [1, S]}(t_i)
+          \end{cases} \\
+          &= 
+    \frac{t_i - t_j}{
+          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
+          &
+\end{aligned}
+$$
+
+The fraction is in $[0, 1]$, minus the fraction is in $[-1, 0]$.
+Because hierarchical competition depends on all taller species than the focal species we want to consider this function for all taller species and weight this difference by the abundance of non-focal species:
+$$
+\begin{aligned}
+  f_H(t_i) = \sum_{\substack{j = 1\\j \neq i\\t_j > t_i}}^S
+    \frac{t_i - t_j}{\max(t_i) - \min(t_i)} N_{t, j, x}
+\end{aligned}
+$$
+So we consider all traits involved in hierarchical competition:
+
+$$
+\begin{aligned}
+  R_{i, x, \text{hierarch.}}
+    &= H \sum_{h = 1}^{T} w_h \times f_H(t_{i, h})\\
+    &= H \sum_{h = 1}^{T} w_h \times \left[ \sum_{\substack{j = 1\\j \neq i\\t_{j, h} > t_{i, h}}}^S
+      \frac{t_{i, h} - t_{j, h}}{\max(t_{i, h}) - \min(t_{i, h})} N_{t, j, x} \right]
+\end{aligned}
+$$
 
 and the total growth term is:
 
-\begin{equation}
+$$
 R_{i, x} = k \sum_{g = 1}^{T} w_g \times
-           \exp\left(- \frac{(t_{g,i} - e_x)^2}{2\times {l_x}^2} \right) -
-           H \sum_{h = 1}^{T} w_h \times
-           \frac{\max(t_i) - t_i}{\max(t_i) - \min(t_i)},
-\end{equation}
+           \exp\left(- \frac{(t_{i,g} - e_x)^2}{2\times {l_x}^2} \right) +
+           H \sum_{h = 1}^{T} w_h \times \left[ \sum_{\substack{j = 1\\j \neq i\\t_{j, h} > t_{i, h}}}^S \frac{t_{i, h} - t_{j, h}}{\max(t_{i, h}) - \min(t_{i, h})} N_{t, j, x} \right],
+$$
 
 
 ## Adding dispersal
@@ -145,40 +172,48 @@ R_{i, x} = k \sum_{g = 1}^{T} w_g \times
 In our model we consider dispersal between patches as if all patches were in a meta-community. At each time step a proportion $d$ of inviduals for each species move across patches. $d$ percent of individuals leave each patch and move evenly across patches.
 
 The dispersion is thus
-\begin{gather}
-    N_{t, i, x, \text{leaving}} = d \times N_{t, i, x} \\
-    N_{t, i, x, \text{sedentaries}} = N_{t, i, x} - N_{t, i, x, \text{leaving}} = N_{t, i, x} - d \times N_{t, i, x} \\
-    N_{t, i, x, \text{sedentaries}} = (1 - d) N_{t, i, x}\\
-\end{gather}
+$$
+\begin{aligned}
+    N_{t, i, x, \text{leaving}} &= d \times N_{t, i, x} \\
+    N_{t, i, x, \text{sedentaries}} &= N_{t, i, x} - N_{t, i, x, \text{leaving}} = N_{t, i, x} - d \times N_{t, i, x} \\
+    N_{t, i, x, \text{sedentaries}} &= (1 - d) N_{t, i, x}\\
+\end{aligned}
+$$
 
 For then for each species all immigrants are split evenly across patches:
 
-\begin{equation}
+$$
     N_{t, i, \text{migrants}} = \sum_{k = 1}^{k = 25} d \times N_{t, i, k}
-\end{equation}
+$$
 
 Finally the number of inviduals in the patch after dispersal becomes:
 
-\begin{gather}
+$$
+\begin{aligned}
 N_{t, i, x} = N_{t, i, x, \text{sedentaries}} + \frac{N_{t, i, \text{migrants}}}{25} \\
 N_{t, i, x} = (1 - d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}\\
 N_{t, i, x} = (1 - \frac{24}{25}d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1, k \neq x}^{k = 25} N_{t, i, k}}{25} \\
 N_{t, i, x} = N_{t, i, x} \underbrace{- d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}}_{D_{t,i,x}} \\
 D_{t, i, x} = - d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}
-\end{gather}
+\end{aligned}
+$$
 
 ## Final equation
 
 So the final equation looks like the following:
 
-\begin{equation}
+$$
 N_{t+1, i, x} = \frac{
-    \left[ k \displaystyle\sum_{g = 1}^{T} w_g \times \exp\left(- \displaystyle\frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right) -
-     H \sum_{h = 1}^{T} w_h \times
-           \frac{\max(t_i) - t_i}{\max(t_i) - \min(t_i)} \right] \times N_{t, i, x}}{
-    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} [\max(\delta_{ij}) - \delta_{ij}] - \sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}] +
+    \left[k \displaystyle\sum_{g = 1}^{T} w_g \times
+           \exp\left(- \frac{(t_{i,g} - e_x)^2}{2\times {l_x}^2} \right)
+          + H \sum_{h = 1}^{T} w_h \times
+            \left[ \sum_{\substack{j = 1\\j \neq i\\t_{j, h} > t_{i, h}}}^S
+                   \frac{t_{i, h} - t_{j, h}}{\max(t_{i, h}) - \min(t_{i, h})}
+                  N_{t, j, x} \right]
+    \right] \times N_{t, i, x}}{
+    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} \left[ \max(\delta_{ij}) - \underbrace{\sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}}_{\delta_{ij}} ~ \right] +
 B \times N_{t,i,x}
 } + D_{t, i, x}
-\end{equation}
+$$
 
 with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T$ the number of traits.
