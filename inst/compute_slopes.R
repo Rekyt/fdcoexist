@@ -24,19 +24,36 @@ n_groups = nrow(all_groups)
 
 group_list = seqlast(1, n_groups, 1e5)
 
-# Compute CWM ------------------------------------------------------------------
-future::plan(future::multiprocess, jobs = 62)
+
+
+# Cut CWM file into slices -----------------------------------------------------
+lapply(seq_along(group_list[-length(group_list)]),
+       function(group_index) {
+           all_cwm %>%
+               semi_join(all_groups %>%
+                             slice(group_list[group_index],
+                                   group_list[group_index + 1]),
+                         by = c("k", "A", "B", "H", "h_fun", "di_thresh",
+                                "R_scenar", "A_scenar", "H_scenar",
+                                "trait_cor", "seed")) %>%
+               saveRDS(cwm_mod, paste0("inst/job_data/perf_2fd398/cwm_slice_",
+                                       group_list[group_index], "_",
+                                       group_list[group_index + 1], ".Rds"),
+                       compress = TRUE)
+})
+
+# Compute CWM-Env linear models on slices  -------------------------------------
+future::plan(future::multiprocess, workers = 62)
+
+cwm_slices = list.files("inst/job_data/perf_2fd398", "cwm_slice_*")
 
 future_lapply(
-    seq_along(group_list[-length(group_list)]),
-    function(group_index) {
-        cwm_mod = all_cwm %>%
-            semi_join(all_groups %>%
-                          slice(group_list[group_index],
-                                group_list[group_index + 1]),
-                      by = c("k", "A", "B", "H", "h_fun", "di_thresh",
-                             "R_scenar", "A_scenar", "H_scenar",
-                             "trait_cor", "seed")) %>%
+    cwm_slices,
+    function(cwm_slice) {
+
+        slice_group = regmatches(cwm_slice, regexpr("[0-9]+_[0-9]+", cwm_slice))
+
+        cwm_mod = cwm_slice %>%
             select(-trait2_cwm, -trait1_cwv, -trait2_cwv, -species_rich) %>%
             mutate(trait1_cwm = ifelse(is.na(trait1_cwm), 0, trait1_cwm)) %>%
             tidyr::nest(trait1_cwm, patch) %>%
@@ -45,14 +62,14 @@ future_lapply(
                    lm_sum = purrr::map(lm_mod, broom::tidy))
 
         saveRDS(cwm_mod, paste0("inst/job_data/perf_2fd398/cwm_mod_",
-                                group_index, "_", group_index + 1, ".Rds"),
+                                slice_group, ".Rds"),
                 compress = TRUE)
 
         cwm_mod %>%
             unnest(lm_sum) %>%
             filter(estimate == "patch") %>%
             saveRDS(paste0("inst/job_data/perf_2fd398/cwm_slopes_",
-                           group_index, "_", group_index + 1, ".Rds"),
+                           slice_group, ".Rds"),
                     compress = TRUE)
     }
 )
