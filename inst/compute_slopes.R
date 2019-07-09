@@ -36,7 +36,7 @@ lapply(seq_along(group_list[-length(group_list)]),
                          by = c("k", "A", "B", "H", "h_fun", "di_thresh",
                                 "R_scenar", "A_scenar", "H_scenar",
                                 "trait_cor", "seed")) %>%
-               saveRDS(cwm_mod, paste0("inst/job_data/perf_2fd398/cwm_slice_",
+               saveRDS(paste0("inst/job_data/perf_2fd398/cwm_slice_",
                                        group_list[group_index], "_",
                                        group_list[group_index + 1], ".Rds"),
                        compress = TRUE)
