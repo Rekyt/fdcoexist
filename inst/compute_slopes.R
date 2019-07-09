@@ -29,10 +29,13 @@ group_list = seqlast(1, n_groups, 1e5)
 # Cut CWM file into slices -----------------------------------------------------
 lapply(seq_along(group_list[-length(group_list)]),
        function(group_index) {
+
+           first_elem = group_list[group_index]
+           last_elem = group_list[group_index + 1]
+
            all_cwm %>%
                semi_join(all_groups %>%
-                             slice(group_list[group_index],
-                                   group_list[group_index + 1]),
+                             slice(first_elem:last_elem),
                          by = c("k", "A", "B", "H", "h_fun", "di_thresh",
                                 "R_scenar", "A_scenar", "H_scenar",
                                 "trait_cor", "seed")) %>%
@@ -45,7 +48,8 @@ lapply(seq_along(group_list[-length(group_list)]),
 # Compute CWM-Env linear models on slices  -------------------------------------
 future::plan(future::multiprocess, workers = 62)
 
-cwm_slices = list.files("inst/job_data/perf_2fd398", "cwm_slice_*")
+cwm_slices = list.files("inst/job_data/perf_2fd398", "cwm_slice_*",
+                        full.names = TRUE)
 
 future_lapply(
     cwm_slices,
@@ -54,6 +58,7 @@ future_lapply(
         slice_group = regmatches(cwm_slice, regexpr("[0-9]+_[0-9]+", cwm_slice))
 
         cwm_mod = cwm_slice %>%
+            readRDS() %>%
             select(-trait2_cwm, -trait1_cwv, -trait2_cwv, -species_rich) %>%
             mutate(trait1_cwm = ifelse(is.na(trait1_cwm), 0, trait1_cwm)) %>%
             tidyr::nest(trait1_cwm, patch) %>%
