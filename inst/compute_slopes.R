@@ -14,7 +14,7 @@ seqlast = function(from, to, by) {
 }
 
 # Load Data --------------------------------------------------------------------
-all_cwm = readRDS("inst/job_data/perf_2fd398")
+all_cwm = readRDS("inst/job_data/perf_2fd398/all_cwm.Rds")
 
 all_groups = all_cwm %>%
     distinct(k, A, B, H, h_fun, di_thresh, R_scenar, A_scenar, H_scenar,
