@@ -9,7 +9,7 @@ suppressMessages({
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
 list_k = seq(1, 1.5, length.out = 6)
 list_B = list_A
-list_H = seq(0, 0.2, length.out = 6)
+list_H = list_A
 n_seed = 30
 n_patches = 25
 n_species = 100
