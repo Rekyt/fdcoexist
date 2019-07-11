@@ -96,6 +96,8 @@ median_scenario_mean_slope = median_scenario %>%
 
 
 # Supplementary Figure 1: Slope parameter space --------------------------------
+# Average slope between CWM and the Environment observed across simulation
+# parameters (for a fixed trait correlation and trait contribution scenario)
 
 fig_k_A = plot_param_space(median_scenario, "k", "A")
 
@@ -124,6 +126,9 @@ ggsave("fig_param_space.png", plot = param_space, width = 14, height = 21,
 
 
 # Supplementary Figure 2: SR parameter space -----------------------------------
+# Average species richness observed across simulation
+# parameters (for a fixed trait correlation and trait contribution scenario and
+# for a given patch)
 
 all_sr = all_cwm %>%
     filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,

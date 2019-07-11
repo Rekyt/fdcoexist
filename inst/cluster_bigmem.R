@@ -6,11 +6,11 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
-list_k = seq(1, 1.5, length.out = 6)
+list_A = c(0, 10^-(seq(1, 8, length.out = 6)))[c(1, 6)]
+list_k = c(1.2, 1.3)
 list_B = list_A
-list_H = list_A
-n_seed = 30
+list_H = c(0, 10^-(seq(4, 5.5, length.out = 5)))
+n_seed = 15
 n_patches = 25
 n_species = 100
 n_gen = 50

@@ -34,7 +34,8 @@ seed_df = all_perf_df %>%
 # Figure 2: Abundance environment curve ----------------------------------------
 # Effect of simulation parameters on single species abundance along the
 # environment.
-# (Abundance vs. Patch in function of values of parameters)
+# (Abundance vs. Patch in function of values of parameters for a fixed trait
+# contribution scenario)
 # Four panels figure: color code for parameter values k, A, B, H
 subset_perf = all_perf_df %>%
     filter(seed == 227470, trait_cor == "uncor", species == "species55",
@@ -69,7 +70,7 @@ all_perf_df %>%
 # Figure 3: CWM-Environment figure ---------------------------------------------
 # Effect of Trait contribution scenario on CWM_Trait2-Environment Relationship
 # (CWM vs. Patch, 9 panels, R_scenar on rows, A_scenar on columns,
-# H_scenar color)
+# H_scenar color, for a fixed simulation parameter set)
 single_cwm %>%
     filter(patch >= 5, patch <= 20) %>%
     ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar),
@@ -161,6 +162,8 @@ perf_poly_growth = perf_subset %>%
 perf_ind_all = perf_ind %>%
     full_join(perf_best_growth) %>%
     full_join(perf_poly_growth)
+
+
 # Figure 4: Difference between performance indices -----------------------------
 # Difference in performance indices affected by the intensity of ecological
 # processes
@@ -169,7 +172,8 @@ perf_ind_all = perf_ind %>%
 # Difference between CWM and polyculture (trait of species with highest realized
 # growth rate per site)
 # Figure of estimates of mixed model explaining these differences against
-# simulation parameters (k, A, B, H) (+random effect on seed)
+# simulation parameters and trait contribution scenario
+# (k, A, B, H, {R, A, H}_scenar) (+random effect on seed)
 
 perf_diff = perf_ind_all %>%
     group_by(patch, add = TRUE) %>%
@@ -201,7 +205,10 @@ sjPlot::plot_model(mod_diff_cwm_poly, show.values = TRUE) +
                alpha = 1/2) +
     labs(title = "Parameters Effect on Difference between CWM - Polyculture")
 
-# Plot Figures -----------------------------------------------------------------
+
+# Figure 5: Higher-order moments CWV & CWS -------------------------------------
+
+# Other Figures ----------------------------------------------------------------
 perf_ind_all %>%
     tidyr::gather("perf_name", "perf_value", ends_with("trait2")) %>%
     ggplot(aes(patch, perf_value, color = perf_name)) +
