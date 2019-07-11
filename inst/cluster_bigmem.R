@@ -6,6 +6,8 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
+main_folder = "inst/job_data/perf_ef503c/"
+
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))[c(1, 6)]
 list_k = c(1.2, 1.3)
 list_B = list_A
@@ -75,7 +77,7 @@ full_trait_df = map_dfr(used_trait_list,~.x %>%
                             .id = "trait_cor"),
                         .id = "seed")
 
-saveRDS(full_trait_df, file = "inst/job_data/bigmem_trait_df.Rds")
+saveRDS(full_trait_df, file = paste0(main_folder, "bigmem_trait_df.Rds"))
 
 # Actual simulations -----------------------------------------------------------
 plan(multiprocess, workers = future::availableCores())
@@ -110,7 +112,7 @@ var_param = future_lapply(seq_along(param_sets), function(given_n) {
     )
     })
     saveRDS(simul_perf,
-            paste0("inst/job_data/perf_df_", given_n, ".Rds"),
+            paste0(main_folder, "perf_df_", given_n, ".Rds"),
             compress = TRUE)
 })
 tictoc::toc()
