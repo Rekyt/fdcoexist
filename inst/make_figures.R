@@ -16,9 +16,10 @@ plot_param_space = function(provided_df, x_var, y_var,
     y_name = paste0("as.factor(", y_var, ")")
 
     ggplot(provided_df, aes_string(x_name, y_name, z = z_var)) +
-        stat_summary_2d(fun = "mean", geom = "tile", na.rm = TRUE,
+        stat_summary_2d(fun = "mean", geom = "tile",
+                        fun.args = list(na.rm = FALSE),
                         drop = TRUE) +
-        scale_fill_viridis_c() +
+        scale_fill_viridis_c(na.value = "gray65") +
         scale_x_discrete(labels = function(x) {
             x %>%
                 as.character() %>%
@@ -42,66 +43,70 @@ plot_sr_param_space = function(provided_df, x_var, y_var) {
     plot_param_space(provided_df, x_var, y_var, z_var = "species_rich") +
         scale_fill_viridis_c(limits = c(0, 28))
 }
-# Load data --------------------------------------------------------------------
-
-all_cwm = readRDS("inst/job_data/perf_2fd398/all_cwm.Rds")
-
-all_slopes = readRDS("inst/job_data/perf_2fd398/all_slopes.Rds")
-
-subset_cwm = all_cwm %>%
-    filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
-           H_scenar == 50, patch >= 5, patch <= 20)
-# Isolate problematic releves --------------------------------------------------
-# Some combinations of parameters leads to more than 25 values (across the range
-# of patches) It may be because of anomaly during Assemblage of CWMs
-all_cwm %>%
-    count() %>%
-    filter(n > 25)
 
 # Parameter space --------------------------------------------------------------
 weights = c(0, 50, 100)
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
 list_k = seq(1, 1.5, length.out = 6)
 list_B = list_A
-list_H = seq(0, 0.2, length.out = 6)
-all_param_df = crossing(h_fun = "+", di_thresh = 24, k = list_k, A = list_A,
-                        B = list_B, H = list_H,
-                        trait_cor = c("negcor", "uncor", "poscor"),
-                        R_scenar = weights, A_scenar = weights,
-                        H_scenar = weights, seed = 1:30)
+list_H = list_A
 
-# Compute slopes ---------------------------------------------------------------
+set.seed(20190619)
+seed_list = sample(1e6, size = 30)
+
+# Data Frame of combination of all parameters
+all_param_df = crossing(k = list_k, A = list_A,
+                        B = list_B, H = list_H,
+                        seed = seed_list) %>%
+    mutate(file_number = row_number())
+
+# Load data --------------------------------------------------------------------
+
+all_cwm = readRDS("inst/job_data/perf_2fd398/all_cwm.Rds")
+
+all_slopes = readRDS("inst/job_data/perf_2fd398/all_slopes.Rds")
+
+# Extract scenario -------------------------------------------------------------
+
+# Get all combination of scnearios
+all_comb = all_cwm %>%
+    select(k, A, B, H, h_fun, di_thresh, R_scenar, A_scenar, H_scenar,
+           trait_cor, seed) %>%
+    filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
+           H_scenar == 50) %>%
+    distinct() %>%
+    full_join(crossing(trait_cor = c("negcor", "uncor", "poscor"),
+                       cwm_name  = c("trait1_cwm", "trait2_cwm")),
+              by = "trait_cor")
+
+# Select median scenario and add missing combination
 median_scenario = all_slopes %>%
     filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
-           H_scenar == 50)
+           H_scenar == 50) %>%
+    # Add missing combinations
+    full_join(all_comb %>%
+                  filter(trait_cor == "uncor"),
+              by = colnames(all_comb)) %>%
+    filter(cwm_name == "trait2_cwm")
 
-subset_data = subset_cwm %>%
-    tidyr::nest(patch, trait1_cwm, trait2_cwm, trait1_cwv, trait2_cwv,
-                species_rich) %>%
-    mutate(all_na = purrr::map_lgl(data, ~all(is.na(.$trait1_cwm))))
+# Compute average slope per parameter combination
+median_scenario_mean_slope = median_scenario %>%
+    group_by(k, A, B, H) %>%
+    summarise(mean_slope = mean(estimate, na.rm = TRUE))
 
-subset_slopes = subset_data %>%
-    filter(!all_na) %>%
-    mutate(lm_mod = purrr::map(data, ~lm(trait1_cwm ~ patch,
-                                         data = .x, na.action = na.exclude)),
-           lm_sum = purrr::map(lm_mod, broom::tidy)) %>%
-    unnest(lm_sum) %>%
-    filter(term == "patch") %>%
-    full_join(subset_data)
+# Slope parameter space --------------------------------------------------------
 
-# Plot parameter space ---------------------------------------------------------
+fig_k_A = plot_param_space(median_scenario, "k", "A")
 
-fig_k_A = plot_param_space(subset_slopes, "k", "A")
+fig_k_B = plot_param_space(median_scenario, "k", "B")
 
-fig_k_B = plot_param_space(subset_slopes, "k", "B")
+fig_k_H = plot_param_space(median_scenario, "k", "H")
 
-fig_k_H = plot_param_space(subset_slopes, "k", "H")
+fig_A_B = plot_param_space(median_scenario, "A", "B")
 
-fig_A_B = plot_param_space(subset_slopes, "A", "B")
+fig_A_H = plot_param_space(median_scenario, "A", "H")
 
-fig_A_H = plot_param_space(subset_slopes, "A", "H")
-
-fig_B_H = plot_param_space(subset_slopes, "B", "H")
+fig_B_H = plot_param_space(median_scenario, "B", "H")
 
 estimate_legend = cowplot::get_legend(fig_k_A)
 
@@ -116,32 +121,8 @@ param_space = cowplot::plot_grid(
 ggsave("fig_param_space.png", plot = param_space, width = 14, height = 21,
        units = "cm")
 
-# Figure CWM-Environment -------------------------------------------------------
 
-fig_all_cwm = subset_cwm %>%
-    ungroup() %>%
-    mutate(A_H = paste("A = ", format(A, digits = 2, scientific = TRUE),
-                       "; H = ", format(H, digits = 2, scientific = TRUE),
-                       sep = "")) %>%
-    ggplot(aes(patch, trait1_cwm, color = A_H,
-               group = interaction(A_H, seed))) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2, size = 0.8) +
-    geom_point(alpha = 1/5) +
-    stat_smooth(geom = "line", size = 1, alpha = 1/3) +
-    facet_grid(vars(k), vars(B), labeller = labeller(B = function(x) {
-        x %>%
-            as.numeric() %>%
-            format(digits = 2, scientific = TRUE) %>%
-            paste0("B = ", .)
-    }, k = label_both)) +
-    scale_color_discrete() +
-    theme_bw() +
-    theme(aspect.ratio = 1)
-
-ggsave("fig_all_cwm.png", fig_all_cwm, width = 29.7, height = 21,
-       units = "cm")
-
-# Make figures using species richness ------------------------------------------
+# Species Richness parameter space ---------------------------------------------
 
 all_sr = all_cwm %>%
     filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
@@ -169,3 +150,32 @@ param_sr_space = cowplot::plot_grid(
                    theme(legend.position = "none")) %>%
         cowplot::plot_grid(plotlist = ., nrow = 3, align = "hv"),
     rel_heights = c(0.05, 0.95), nrow = 2, ncol = 1)
+
+
+# Figure CWM-Environment -------------------------------------------------------
+subset_cwm = all_cwm %>%
+    filter(trait_cor == "uncor", R_scenar == 50, A_scenar == 50,
+           H_scenar == 50, patch >= 5, patch <= 20)
+
+fig_all_cwm = subset_cwm %>%
+    ungroup() %>%
+    mutate(A_H = paste("A = ", format(A, digits = 2, scientific = TRUE),
+                       "; H = ", format(H, digits = 2, scientific = TRUE),
+                       sep = "")) %>%
+    ggplot(aes(patch, trait1_cwm, color = A_H,
+               group = interaction(A_H, seed))) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2, size = 0.8) +
+    geom_point(alpha = 1/5) +
+    stat_smooth(geom = "line", size = 1, alpha = 1/3) +
+    facet_grid(vars(k), vars(B), labeller = labeller(B = function(x) {
+        x %>%
+            as.numeric() %>%
+            format(digits = 2, scientific = TRUE) %>%
+            paste0("B = ", .)
+    }, k = label_both)) +
+    scale_color_discrete() +
+    theme_bw() +
+    theme(aspect.ratio = 1)
+
+ggsave("fig_all_cwm.png", fig_all_cwm, width = 29.7, height = 21,
+       units = "cm")
