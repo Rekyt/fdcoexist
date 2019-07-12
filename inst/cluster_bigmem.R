@@ -51,20 +51,20 @@ scenar_list = cross(list(R = weights, A = weights, H = weights)) %>%
 # Generate sets of traits
 used_trait_list = lapply(seed_list, function(given_seed) {
     set.seed(given_seed)
-    given_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
+    uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
                                        cor_coef = 0)
     set.seed(given_seed)
-    cor_trait = given_traits = generate_cor_traits(n_patches, n_species,
-                                                   n_traits - 1,
-                                                   cor_coef = 0.3)
+    poscor_traits = generate_cor_traits(n_patches, n_species,
+                                        n_traits - 1,
+                                        cor_coef = 0.3)
     set.seed(given_seed)
-    negcor_trait = given_traits = generate_cor_traits(n_patches, n_species,
-                                                      n_traits - 1,
-                                                      cor_coef = -0.3)
+    negcor_traits = generate_cor_traits(n_patches, n_species,
+                                        n_traits - 1,
+                                        cor_coef = -0.3)
 
-    list(uncor  = given_traits,
-         poscor = cor_trait,
-         negcor = negcor_trait)
+    list(uncor  = uncor_traits,
+         poscor = poscor_traits,
+         negcor = negcor_traits)
 })
 names(used_trait_list) = seed_list
 
