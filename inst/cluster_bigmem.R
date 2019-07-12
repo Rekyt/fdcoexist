@@ -6,7 +6,7 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_ef503c/"
+main_folder = "inst/job_data/perf_ecd96db/"
 
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))[c(1, 6)]
 list_k = 1.3
@@ -81,7 +81,7 @@ saveRDS(full_trait_df, file = paste0(main_folder, "bigmem_trait_df.Rds"))
 plan(multiprocess, workers = future::availableCores() - 1)
 
 tictoc::tic()
-var_param = future_lapply(seq_along(param_sets), function(given_n) {
+var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
     suppressMessages({
         devtools::load_all()
     })
@@ -112,5 +112,5 @@ var_param = future_lapply(seq_along(param_sets), function(given_n) {
     saveRDS(simul_perf,
             paste0(main_folder, "perf_df_", given_n, ".Rds"),
             compress = TRUE)
-})
+}, .progress = TRUE)
 tictoc::toc()

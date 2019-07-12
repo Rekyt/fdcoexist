@@ -2,6 +2,7 @@
 # Packages ---------------------------------------------------------------------
 library("dplyr")
 library("furrr")
+library("cowplot")
 pkgload::load_all()
 
 plan(multiprocess, workers = 15)
@@ -13,13 +14,32 @@ scientific_notation = function(x, label = "H") {
     paste0(label, ": ", scales::scientific_format()(as.numeric(x)))
 }
 
+plot_env_abund = function(perf_df, variable = "H", legend_label) {
+    subset_perf %>%
+        ggplot(aes_string("patch", "N150",
+                          color = paste0("as.factor(", variable, ")"))) +
+        geom_line(size = 1, alpha = 1/3) +
+        #geom_line(size = 1.3, alpha = 1/3, aes(group = NULL)) +
+        facet_wrap(~seed, scales = "free_y") +
+        scale_color_viridis_d(labels = function(x) x %>%
+                                  as.numeric() %>%
+                                  scales::scientific()) +
+        labs(x = "Environment",
+             y = "Final Abundance",
+             color = legend_label) +
+        theme(aspect.ratio = 1,
+              legend.position = "top")
+}
+
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
 
-all_trait = readRDS("inst/job_data/perf_ef503c/bigmem_trait_df.Rds")
+main_folder = "inst/job_data/perf_ecd96db"
+
+all_trait = readRDS(paste0(main_folder, "/bigmem_trait_df.Rds"))
 
 tictoc::tic()
-list.files("inst/job_data/perf_ef503c", "perf_df_*", full.names = TRUE) %>%
+list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
     future_walk(function(x) {
 
         pkgload::load_all()
@@ -32,13 +52,15 @@ list.files("inst/job_data/perf_ef503c", "perf_df_*", full.names = TRUE) %>%
     .progress = TRUE)
 tictoc::toc()
 
-all_perf_df = list.files("inst/job_data/perf_ef503c", "cwm_df_*",
-                         full.names = TRUE) %>%
+all_sp_perf_df = list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
+    purrr::map_dfr(readRDS)
+
+all_perf_df = list.files(main_folder, "cwm_df_*", full.names = TRUE) %>%
     purrr::map_dfr(readRDS)
 
 tidy_perf = all_perf_df %>%
     filter(trait_cor == "uncor") %>%
-    tidyr::gather("comperf_name", "comperf_value", matches("trait2")) %>%
+    tidyr::gather("comperf_name", "comperf_value", matches("trait[12]")) %>%
     tidyr::separate("comperf_name", c("comperf_name", "trait"), sep = "_") %>%
     filter(trait == "trait2")
 
@@ -65,23 +87,18 @@ seed_df = all_perf_df %>%
 # (Abundance vs. Patch in function of values of parameters for a fixed trait
 # contribution scenario)
 # Four panels figure: color code for parameter values k, A, B, H
-subset_perf = all_perf_df %>%
-    filter(seed == 227470, trait_cor == "uncor", species == "species55",
-           R_scenar == 50, A_scenar == 50, H_scenar == 50)
+subset_perf = all_sp_perf_df %>%
+    filter(trait_cor == "uncor", species == "species67",
+           R_scenar == 0, A_scenar == 0, H_scenar == 0)
 
-all_perf_df %>%
-    filter(seed == 227470, trait_cor == "uncor", species == "species48",
-           R_scenar == 0, A_scenar == 50, H_scenar == 0) %>%
-    ggplot(aes(patch, N150, color = as.factor(H))) +
-    geom_line(size = 1, alpha = 2/3) +
-    facet_wrap(~species, scales = "free_y") +
-    scale_color_viridis_d() +
-    labs(x = "Environment",
-         y = "Final Abundance",
-         color = "Hierarch. Compet.\nIntensity") +
-    theme(aspect.ratio = 1,
-          legend.position = "top")
+fig_env_abund_k = plot_env_abund(subset_perf, "k", "Max. Growth Rate")
+fig_env_abund_A = plot_env_abund(subset_perf, "A", "Limiting. Sim.\nIntensity")
+fig_env_abund_B = plot_env_abund(subset_perf, "B", "Intrasp. Compet.\nIntensity")
+fig_env_abund_H = plot_env_abund(subset_perf, "H", "Hierach. Compet.\nIntensity")
 
+fig_env_abund = plot_grid(fig_env_abund_k, fig_env_abund_A,
+                          fig_env_abund_B, fig_env_abund_H,
+                          ncol = 2, labels = c("k", "A", "B", "H"))
 
 # Abundance of species in a patch in function of H
 all_perf_df %>%
@@ -128,10 +145,11 @@ single_cwm %>%
           legend.position = "top")
 
 # Test the influence of parameters
-all_cwm %>%
-    filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B > 6.3e-6, B < 6.4e-6, H > 6.3e-6,
-           trait_cor == "uncor", patch >= 5, patch <= 20) %>%
-    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar),
+all_perf_df %>%
+    filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B >  2.5e-7, B <  2.6e-7,
+           H > 3.16e-5, H < 3.17e-5, trait_cor == "uncor", patch >= 5,
+           patch <= 20) %>%
+    ggplot(aes(patch, cwm_trait2, color = as.factor(H_scenar),
                # specify interaction otherwise it messes with groups
                group = interaction(as.factor(H_scenar), seed))) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
@@ -141,7 +159,7 @@ all_cwm %>%
                           formula = y ~ x, parse = TRUE, size = 3,
                           label.y.npc = "bottom", label.x.npc = "right",
                           coef.digits = 2) +
-    facet_grid(vars(R_scenar), vars(H, A_scenar),
+    facet_grid(vars(R_scenar), vars(A_scenar),
                labeller = labeller(
                    R_scenar = function(x) paste0("Trait 2 Contrib.\n",
                                                  "to Growth : ", x, "%"),
@@ -156,41 +174,6 @@ all_cwm %>%
                                    ") relationship")) +
     theme(aspect.ratio = 1,
           legend.position = "top")
-
-# Compute Different Performances indices ---------------------------------------
-
-perf_subset = all_perf_df %>%
-    filter(patch >= 5, patch <= 20, trait_cor == "uncor", R_scenar == 50,
-           A_scenar == 50, H_scenar == 50) %>%
-    semi_join(seed_df, by = "seed") %>%
-    group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, seed, patch)
-
-tictoc::tic()
-perf_ind = perf_subset %>%
-    summarise(monocult_trait2 = weighted.mean(trait2, env_growth_rate,
-                                              na.rm = TRUE),
-              polycult_trait2 = weighted.mean(
-                  trait2,
-                  ifelse(is.na(max_growth_rate), 0, max_growth_rate),
-                  na.rm = TRUE),
-              cwm_trait2      = weighted.mean(trait2, N150, na.rm = TRUE))
-tictoc::toc()
-
-# Other definition of monoculture performance index
-perf_best_growth = perf_subset %>%
-    filter(env_growth_rate == max(env_growth_rate)) %>%
-    rename(monobest_trait2 = trait2) %>%
-    select(monobest_trait2)
-
-perf_poly_growth = perf_subset %>%
-    filter(max_growth_rate == max(max_growth_rate, na.rm = TRUE)) %>%
-    rename(polybest_trait2 = trait2) %>%
-    select(polybest_trait2)
-
-perf_ind_all = perf_ind %>%
-    full_join(perf_best_growth) %>%
-    full_join(perf_poly_growth)
-
 
 # Figure 4: Difference between performance indices -----------------------------
 # Difference in performance indices affected by the intensity of ecological
@@ -252,6 +235,58 @@ tidy_perf %>%
     theme_bw() +
     theme(aspect.ratio = 1)
 # Figure 5: Higher-order moments CWV & CWS -------------------------------------
+
+# Figure 6: Single Patch Trait-Perforamance relationship -----------------------
+fig_trait_perf_A = all_sp_perf_df %>%
+    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
+           B > 2e-7, H == 1e-4, seed == 227470, patch == 5) %>%
+    inner_join(all_trait %>%
+                   mutate(seed = as.numeric(seed))) %>%
+    mutate(N150 = log10(N150 + 1)) %>%
+    tidyr::gather("perf_index", "perf_value", N150, max_growth_rate,
+                  env_growth_rate) %>%
+    ggplot(aes(trait2, perf_value, color = as.factor(A))) +
+    geom_point() +
+    geom_line() +
+    facet_wrap(~perf_index, scales = "free_y") +
+    scale_color_viridis_d() +
+    labs(x = "Trait Value",
+         y = "Performance Value")
+
+fig_trait_perf_B = all_sp_perf_df %>%
+    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
+           A > 2e-7, H == 1e-4, seed == 227470, patch == 5) %>%
+    inner_join(all_trait %>%
+                   mutate(seed = as.numeric(seed))) %>%
+    mutate(N150 = log10(N150 + 1)) %>%
+    tidyr::gather("perf_index", "perf_value", N150, max_growth_rate,
+                  env_growth_rate) %>%
+    ggplot(aes(trait2, perf_value, color = as.factor(B))) +
+    geom_point() +
+    geom_line() +
+    facet_wrap(~perf_index, scales = "free_y") +
+    scale_color_viridis_d() +
+    labs(x = "Trait Value",
+         y = "Performance Value")
+
+fig_trait_perf_H = all_sp_perf_df %>%
+    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
+           A > 2e-7, B > 2e-7, seed == 227470, patch == 5) %>%
+    inner_join(all_trait %>%
+                   mutate(seed = as.numeric(seed))) %>%
+    mutate(N150 = log10(N150 + 1)) %>%
+    tidyr::gather("perf_index", "perf_value", N150, max_growth_rate,
+                  env_growth_rate) %>%
+    ggplot(aes(trait2, perf_value, color = as.factor(H))) +
+    geom_point() +
+    geom_line() +
+    facet_wrap(~perf_index, scales = "free_y") +
+    scale_color_viridis_d() +
+    labs(x = "Trait Value",
+         y = "Performance Value")
+
+plot_grid(fig_trait_perf_A, fig_trait_perf_B, fig_trait_perf_H,
+          nrow = 3)
 
 # Other Figures ----------------------------------------------------------------
 perf_ind_all %>%
