@@ -30,6 +30,17 @@ landscape_df = function(given_composition, time = 150) {
 }
 
 
+wtd_var = function(x, w, na.rm = TRUE) {
+
+    if (na.rm) {
+        s <- !is.na(x + w)
+        x <- x[s]
+        w <- w[s]
+    }
+
+    Weighted.Desc.Stat::w.var(x, w)
+}
+
 #' Weighted Skewness with na.rm
 #'
 #' Compute weighted Skewness using [`Weighted.Desc.Stat::w.skewness`] but add an
@@ -71,6 +82,8 @@ wtd_kurtosis = function(x, w, na.rm = TRUE) {
 
     Weighted.Desc.Stat::w.kurtosis(x, w)
 }
+
+
 
 #' Extract Contribution from Scenario Name
 #'

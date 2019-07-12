@@ -11,15 +11,20 @@
 #' @param trait_df trait data.frame containing columns `trait_cor`, `seed` and
 #'                 `species`
 #'
+#' @import dplyr
 #' @export
 compute_weighted_performance = function(perf_df, trait_df) {
 
     # Add trait information to performances
     perf_df = perf_df %>%
         inner_join(trait_df %>%
-                       mutate(seed = as.integer(seed)),
+                              mutate(seed = as.integer(seed)),
                    by = c("trait_cor", "seed", "species")) %>%
-        group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, seed, patch)
+        group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed,
+                 patch)
+
+    species_rich = perf_df %>%
+        summarise(species_rich = sum(N150 > 0, na.rm = TRUE))
 
     # Compute monoculture estimator using best environmental growth per patch
     best_mono_growth = perf_df %>%
@@ -44,7 +49,10 @@ compute_weighted_performance = function(perf_df, trait_df) {
                  polycult = ~weighted.mean(
                      ., ifelse(is.na(max_growth_rate), 0, max_growth_rate),
                      na.rm = TRUE),
-                 cwm = ~weighted.mean(., N150, na.rm = TRUE))) %>%
+                 cwm          = ~weighted.mean(., N150, na.rm = TRUE),
+                 cwv          = ~wtd_var(., N150, na.rm = TRUE),
+                 cws          = ~wtd_skewness(., N150, na.rm = TRUE),
+                 cwk          = ~wtd_kurtosis(., N150, na.rm = TRUE))) %>%
         # Reverse suffix to prefix
         rename_at(vars(ends_with("monocult")),
                   ~paste0("monocult_",
@@ -55,7 +63,9 @@ compute_weighted_performance = function(perf_df, trait_df) {
         rename_at(vars(ends_with("cwm")),
                   ~paste0("cwm_",
                           gsub("_cwm", "", .,fixed = TRUE))) %>%
+        # Add estimators from best growth
         inner_join(best_mono_growth, by = c(group_vars(.), "patch")) %>%
         inner_join(best_poly_growth, by = c(group_vars(.), "patch")) %>%
+        inner_join(species_rich,     by = c(group_vars(.), "patch")) %>%
         ungroup()
 }
