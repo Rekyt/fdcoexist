@@ -9,9 +9,9 @@ suppressMessages({
 main_folder = "inst/job_data/perf_ef503c/"
 
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))[c(1, 6)]
-list_k = c(1.2, 1.3)
+list_k = 1.3
 list_B = list_A
-list_H = c(0, 10^-(seq(4, 5.5, length.out = 5)))
+list_H = c(0, 10^-(seq(4, 5, length.out = 3)))
 n_seed = 15
 n_patches = 25
 n_species = 100
@@ -29,7 +29,7 @@ param_sets = list(
     k     = list_k,
     B     = list_B,
     H     = list_H) %>%
-    cross()
+    purrr::cross()
 
 # Initial population matrix
 composition = array(NA, dim = c(n_patches, n_species, n_gen),
@@ -62,9 +62,7 @@ used_trait_list = lapply(seed_list, function(given_seed) {
                                         n_traits - 1,
                                         cor_coef = -0.3)
 
-    list(uncor  = uncor_traits,
-         poscor = poscor_traits,
-         negcor = negcor_traits)
+    list(uncor  = uncor_traits)
 })
 names(used_trait_list) = seed_list
 
@@ -80,7 +78,7 @@ full_trait_df = map_dfr(used_trait_list,~.x %>%
 saveRDS(full_trait_df, file = paste0(main_folder, "bigmem_trait_df.Rds"))
 
 # Actual simulations -----------------------------------------------------------
-plan(multiprocess, workers = future::availableCores())
+plan(multiprocess, workers = future::availableCores() - 1)
 
 tictoc::tic()
 var_param = future_lapply(seq_along(param_sets), function(given_n) {

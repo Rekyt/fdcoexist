@@ -1,18 +1,46 @@
 # Script make performance comparison figure
 # Packages ---------------------------------------------------------------------
 library("dplyr")
+library("furrr")
+pkgload::load_all()
+
+plan(multiprocess, workers = 15)
+
+# Functions ---------------------------------------------------------------------
+theme_set(theme_bw(14))
+# Function so that facet labels are properly formatted
+scientific_notation = function(x, label = "H") {
+    paste0(label, ": ", scales::scientific_format()(as.numeric(x)))
+}
 
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
-all_perf_df = paste0("inst/job_data/perf_2fd398/perf_data/perf_df_",
-                     all_param_df %>%
-                         filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B > 6.3e-6,
-                                B < 6.4e-6) %>%
-                         pull(file_number), ".Rds") %>%
+
+all_trait = readRDS("inst/job_data/perf_ef503c/bigmem_trait_df.Rds")
+
+tictoc::tic()
+list.files("inst/job_data/perf_ef503c", "perf_df_*", full.names = TRUE) %>%
+    future_walk(function(x) {
+
+        pkgload::load_all()
+
+        x %>%
+            readRDS() %>%
+            compute_weighted_performance(all_trait) %>%
+            saveRDS(gsub("perf_df_", "cwm_df_", x), compress = TRUE)
+    },
+    .progress = TRUE)
+tictoc::toc()
+
+all_perf_df = list.files("inst/job_data/perf_ef503c", "cwm_df_*",
+                         full.names = TRUE) %>%
     purrr::map_dfr(readRDS)
 
-all_trait = readRDS("inst/job_data/perf_2fd398/bigmem_trait_df.Rds")
-
+tidy_perf = all_perf_df %>%
+    filter(trait_cor == "uncor") %>%
+    tidyr::gather("comperf_name", "comperf_value", matches("trait2")) %>%
+    tidyr::separate("comperf_name", c("comperf_name", "trait"), sep = "_") %>%
+    filter(trait == "trait2")
 
 # Subset data ------------------------------------------------------------------
 
@@ -206,6 +234,23 @@ sjPlot::plot_model(mod_diff_cwm_poly, show.values = TRUE) +
     labs(title = "Parameters Effect on Difference between CWM - Polyculture")
 
 
+
+tidy_perf %>%
+    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
+           !(comperf_name %in% c("monocult", "polycult"))) %>%
+    ggplot(aes(patch, comperf_value, color = comperf_name)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(alpha = 1/50) +
+    stat_smooth(se = FALSE, geom = "line", size = 1,
+                alpha = 1/10, aes(group = interaction(seed, comperf_name))) +
+    stat_smooth(se = FALSE, geom = "line", size = 1.3,
+                alpha = 1/2) +
+    facet_grid(vars(A, B), vars(H),
+               labeller = labeller(H = function(x) scientific_notation(x, "H"),
+                                   A = function(x) scientific_notation(x, "A"),
+                                   B = function(x) scientific_notation(x, "B"))) +
+    theme_bw() +
+    theme(aspect.ratio = 1)
 # Figure 5: Higher-order moments CWV & CWS -------------------------------------
 
 # Other Figures ----------------------------------------------------------------
