@@ -72,9 +72,10 @@ all_perf_df = all_perf_df %>%
                by = c("species", "seed", "trait_cor"))
 
 # Single Parameter Set CWMs
-single_cwm = all_cwm %>%
-    filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B > 6.3e-6, B < 6.4e-6, H > 6.3e-6,
-           H < 6.4e-6, trait_cor == "uncor", patch >= 5, patch <= 20)
+single_cwm = tidy_perf %>%
+    filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B > 2.5e-7, B < 2.6e-7, H == 1e-4,
+           trait_cor == "uncor", patch >= 5, patch <= 20,
+           comperf_name == "cwm")
 
 seed_df = all_perf_df %>%
     distinct(seed) %>%
@@ -117,8 +118,8 @@ all_perf_df %>%
 # (CWM vs. Patch, 9 panels, R_scenar on rows, A_scenar on columns,
 # H_scenar color, for a fixed simulation parameter set)
 single_cwm %>%
-    filter(patch >= 5, patch <= 20) %>%
-    ggplot(aes(patch, trait2_cwm, color = as.factor(H_scenar),
+    filter(patch >= 5, patch <= 20, trait == "trait2") %>%
+    ggplot(aes(patch, comperf_value, color = as.factor(H_scenar),
                # specify interaction otherwise it messes with groups
                group = interaction(as.factor(H_scenar), seed))) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) +
@@ -175,48 +176,9 @@ all_perf_df %>%
     theme(aspect.ratio = 1,
           legend.position = "top")
 
-# Figure 4: Difference between performance indices -----------------------------
+# Figure 4: Effect of Param. Values on Estimators of TxE relationship -----------
 # Difference in performance indices affected by the intensity of ecological
 # processes
-# Difference between CWM and monoculture (trait of species with highest purely
-# environmental growth rate per site)
-# Difference between CWM and polyculture (trait of species with highest realized
-# growth rate per site)
-# Figure of estimates of mixed model explaining these differences against
-# simulation parameters and trait contribution scenario
-# (k, A, B, H, {R, A, H}_scenar) (+random effect on seed)
-
-perf_diff = perf_ind_all %>%
-    group_by(patch, add = TRUE) %>%
-    summarise(diff_cwm_mono  = cwm_trait2 - monobest_trait2,
-              diff_cwm_poly  = cwm_trait2 - polybest_trait2)
-
-
-# Difference between CWM to Monoculture
-mod_diff_cwm_mono = perf_diff %>%
-    ungroup() %>%
-    mutate_at(vars(A, B, H),
-              .funs = list(log = ~as.numeric(scale(log(. + 1e-16))))) %>%
-    lme4::lmer(diff_cwm_mono ~ k + A + B + H_log + (1|seed), data = .)
-
-sjPlot::plot_model(mod_diff_cwm_mono, show.values = TRUE) +
-    geom_hline(yintercept = 0, linetype = 2, colour = "#001c00", size = 1,
-               alpha = 1/2) +
-    labs(title = "Parameters Effect on Difference between CWM - Monoculture")
-
-# Difference between CWM to Polyculture
-mod_diff_cwm_poly = perf_diff %>%
-    ungroup() %>%
-    mutate_at(vars(A, B, H),
-              .funs = list(log = ~as.numeric(scale(log(. + 1e-16))))) %>%
-    lme4::lmer(diff_cwm_poly ~ k + A + B + H_log + (1|seed), data = .)
-
-sjPlot::plot_model(mod_diff_cwm_poly, show.values = TRUE) +
-    geom_hline(yintercept = 0, linetype = 2, colour = "#001c00", size = 1,
-               alpha = 1/2) +
-    labs(title = "Parameters Effect on Difference between CWM - Polyculture")
-
-
 
 tidy_perf %>%
     filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
@@ -232,6 +194,9 @@ tidy_perf %>%
                labeller = labeller(H = function(x) scientific_notation(x, "H"),
                                    A = function(x) scientific_notation(x, "A"),
                                    B = function(x) scientific_notation(x, "B"))) +
+    guides()
+    labs(x = "Environment",
+         y = "Performance Value") +
     theme_bw() +
     theme(aspect.ratio = 1)
 # Figure 5: Higher-order moments CWV & CWS -------------------------------------
@@ -289,38 +254,5 @@ plot_grid(fig_trait_perf_A, fig_trait_perf_B, fig_trait_perf_H,
           nrow = 3)
 
 # Other Figures ----------------------------------------------------------------
-perf_ind_all %>%
-    tidyr::gather("perf_name", "perf_value", ends_with("trait2")) %>%
-    ggplot(aes(patch, perf_value, color = perf_name)) +
-    facet_wrap(~perf_name, scales = "free_y") +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_point(alpha = 1/3)
-
-perf_ind_all %>%
-    filter(polycult_trait2 > -40, polycult_trait2 < 40) %>%
-    ggplot(aes(polycult_trait2, polybest_trait2)) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_point()
-
-perf_ind_all %>%
-    ggplot(aes(monocult_trait2, monobest_trait2)) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_point()
-
-single_cwm %>%
-    ggplot(aes(patch, trait1_cwm, color = as.factor(seed))) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_point() +
-    stat_smooth(method = "lm", geom = "line", size = 1)
-
-perf_diff %>%
-    tidyr::gather("diff_name", "diff_value", starts_with("diff")) %>%
-    filter(diff_name == "diff_cwm_mono") %>%
-    ggplot(aes(interaction(R_scenar, H_scenar), diff_value)) +
-    geom_hline(yintercept = 0, linetype = 2) +
-    geom_violin(draw_quantiles = c(0.5)) +
-    geom_point(alpha = 1/5, position = position_jitter(0.2)) +
-    facet_wrap(~diff_name, scales = "free_y") +
-    ylim(-10, 10)
 
 
