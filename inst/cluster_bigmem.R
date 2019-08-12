@@ -8,7 +8,7 @@ suppressMessages({
 # Parameters -------------------------------------------------------------------
 main_folder = "inst/job_data/perf_ecd96db/"
 
-list_A = c(0, 10^-(seq(1, 8, length.out = 6)))[c(1, 6)]
+list_A = c(0, 10^-(seq(1, 8, length.out = 6)))[c(1, 4, 6)]
 list_k = 1.3
 list_B = list_A
 list_H = c(0, 10^-(seq(4, 5, length.out = 3)))
@@ -103,6 +103,10 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
                given_composition = composition,
                given_d = 0.05,
                given_env_width = 2)
+
+    saveRDS(simul_list,
+            paste0(main_folder, "simul_cat_", given_n, ".Rds"),
+            compress = TRUE)
 
     simul_perf = map_dfr(simul_list, function(y) {
         extract_performances_from_simul(
