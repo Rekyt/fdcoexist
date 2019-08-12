@@ -74,13 +74,18 @@ extract_performances_from_simul = function(simul, trait_list,
             growth_rate = NA_real_
 
             if (time_before_extinct > 10) {
-                given_time = 1:time_before_extinct
 
+                # Compute difference in abundance
                 growth_num = given_abund[seq(2, time_before_extinct)] -
                     given_abund[seq(time_before_extinct - 1)]
 
+                # Take out cases when abundance does not change
+                consider_cases = which(growth_num != 0)
+
                 growth_denom = given_abund[seq(time_before_extinct - 1)]
-                growth_rate = max(growth_num/growth_denom, na.rm = TRUE)
+                growth_rate = mean(growth_num[consider_cases] /
+                                       growth_denom[consider_cases],
+                                   na.rm = TRUE)
             }
 
             ifelse(is.null(growth_rate) | is.infinite(growth_rate),
