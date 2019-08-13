@@ -6,12 +6,12 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_e03ffd5/"
+main_folder = "inst/job_data/perf_04c796f/"
 
 list_A = c(0, 3.4e-8, 7.3e-8, 1.51e-7, 5.5e-7)
 list_k = 1.3
 list_B = c(0, 10^-(seq(1, 8, length.out = 6)))[4]
-list_H = 0
+list_H = c(0, 2.32e-5, 5e-5, 1e-4, 3.7e-4)
 n_seed = 15
 n_patches = 25
 n_species = 100
