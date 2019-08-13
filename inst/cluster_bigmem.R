@@ -6,7 +6,7 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_5d8d709/"
+main_folder = "inst/job_data/perf_85946c0/"
 
 list_A = c(0, 10^-(seq(1, 8, length.out = 6)))
 list_k = 1.3
