@@ -34,7 +34,7 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
 
-main_folder = "inst/job_data/perf_1455dd4/"
+main_folder = "inst/job_data/perf_e03ffd5/"
 
 all_trait = readRDS(paste0(main_folder, "/bigmem_trait_df.Rds"))
 
@@ -84,7 +84,7 @@ seed_df = all_perf_df %>%
 # Compare Avg. Growth Rate wit various param -----------------------------------
 # Compare values of average growth rate per patch when param. equals 0 or ≠ than
 # 0
-target_param = rlang::sym("H")
+target_param = rlang::sym("A")
 
 all_sp_perf_df %>%
     filter(R_scenar == 0, A_scenar == 0, H_scenar == 0) %>%
