@@ -19,19 +19,16 @@
 #'                    environment
 #' @param width       a numeric giving niche breadth of all species
 #' @param H           a numeric for hierarchical competition such as H/k <= 1
-#' @param th_max      a numeric for the hierarchical trait value maximizing
-#'                    hierarchical competition
-#' @param th_min      a numeric for the hierarchical trait value minimizing
-#'                    hierarchical competition
 #' @param h_fun       a function that describes how hierarchical is combined to
 #'                    environmental-based growth (default: `sum()`)
 #' @param di_thresh   dissimilary threshold above which species are considered
 #'                    maximally dissimilar
+#' @inheritParams compute_compet_distance
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A = A, B = B, d, k, width, H, th_max, th_min,
-                     h_fun = "+", di_thresh = th_max - th_min) {
+                     composition, A = A, B = B, d, k, width, H, h_fun = "+",
+                     di_thresh = 24, exponent = 1) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -43,7 +40,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     check_trait_weights(trait_weights, traits)
 
     # Calculate dist trait
-    disttraits <- compute_compet_distance(trait_weights, traits)
+    disttraits <- compute_compet_distance(trait_weights, traits, exponent)
 
     traits_k <- cbind(traits, k)
 
@@ -78,8 +75,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
             trait_values                = traits,
             trait_weights               = trait_weights,
             H                           = H,
-            th_max                      = th_max,
-            th_min                      = th_min)
+            exponent                    = exponent)
 
         rh_list[[m]] <- R_h
 

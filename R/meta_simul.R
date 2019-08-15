@@ -18,6 +18,8 @@
 #' @param given_d           the index of dispersal
 #' @param given_env_width   the fixed strength of environmental filtering across
 #'        patches
+#' @param given_exponent \[`numeric(1)`\] (default: 1)\cr{}
+#'                       The exponent used before standardizing the distance
 #'
 #' @export
 meta_simul = function(seed_number, given_k = k, given_A = A,
@@ -29,7 +31,8 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                       given_env,
                       given_composition,
                       given_d,
-                      given_env_width = 5) {
+                      given_env_width = 5,
+                      given_exponent  = 1) {
     # Default Trait Contribution Scenario: Focal Trait contributes 50% growth
     # 50% limiting similarity et 50% hierarchical competition
     our_scenars = list(R50A50H50 = create_trait_weights(50, 50, 50))
@@ -93,11 +96,10 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
             d             = given_d,
             k             = given_k,
             H             = all_compet[[given_row[["compet_status"]]]][["H"]],
-            th_max        = guessed_th_max,
-            th_min        = guessed_th_min,
             width         = all_env[[given_row[["env_width"]]]],
             h_fun         = given_h_fun,
-            di_thresh     = given_di_thresh)
+            di_thresh     = given_di_thresh,
+            exponent      = given_exponent)
 
         return(
             list(
@@ -115,6 +117,7 @@ meta_simul = function(seed_number, given_k = k, given_A = A,
                 rmatrix       = simul$rmatrix,
                 h_fun         = given_h_fun,
                 di_thresh     = given_di_thresh,
-                rh_list       = simul$rhlist))
+                rh_list       = simul$rhlist,
+                trait_exponent = given_exponent))
     })
 }

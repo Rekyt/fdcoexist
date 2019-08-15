@@ -194,14 +194,17 @@ check_trait_weights = function(trait_weights, traits) {
 #' This function compute trait distance between species using a trait matrix and
 #' a trait weights data.frame. For all the traits with competition weights not
 #' equal to zero, it computes a weighted 'composite trait' that is then used to
-#' compute euclidean trait distance between species.
+#' compute euclidean trait distance between species. Trait distance is first
+#' exponentiated then standardized between 0 and 1.
 #'
 #' @inheritParams check_trait_weights
+#' @param exponent \[`numeric(1)`\] (default: 1)\cr{}
+#'                 The exponent used before standardizing the distance
 #'
 #' @return an euclidean distance matrix (of type matrix)
 #' @importFrom stats dist weighted.mean
 #' @export
-compute_compet_distance = function(trait_weights, traits) {
+compute_compet_distance = function(trait_weights, traits, exponent = 1) {
 
     # If there is no defined competition trait, there is no competition
     if (sum(trait_weights$compet_weight, na.rm = TRUE) == 0) {
@@ -225,7 +228,9 @@ compute_compet_distance = function(trait_weights, traits) {
                                       function(x,y) x * sqrt(y))
 
         # Compute distance matrix
-        disttraits <- as.matrix(dist(scaled_compet_traits))
+        disttraits <- as.matrix(dist(scaled_compet_traits))^exponent
+
+        disttraits/max(disttraits)
     }
 
     return(disttraits)
@@ -255,14 +260,12 @@ scale_distance = function(dist_matrix) {
 #' @param trait_values a trait matrix
 #' @param trait_weights a scenario data.frame
 #' @param H the hierarchical competition scalar
-#' @param th_max the maximum hierarchical trait value (in general max. trait in
-#'               the pool)
-#' @param th_min the minimum hierarchical trait value (in general min. trait in
-#'               the pool)
+#' @inheritParams compute_compet_distance
+#'
 #' @export
 compute_hierarchical_compet = function(composition_given_time_step,
                                        trait_values, trait_weights,
-                                       H, th_max, th_min) {
+                                       H, exponent = 1) {
 
     # Add to R effect of hierarchical traits
     # (so far same traits as limiting similarity traits)
@@ -279,12 +282,7 @@ compute_hierarchical_compet = function(composition_given_time_step,
         hierarchical_values <- trait_values[, hierarchical_trait$trait,
                                             drop = FALSE]
 
-        if (any(hierarchical_values > th_max)) {
-            stop("th_max must be superior to any hierarchical trait value in a",
-                 " directional filter perspective")
-        }
-
-        # For each trait compute a hierarhical competition value
+        # For each trait compute a hierarchical competition value
         traits_Rh = lapply(as.data.frame(hierarchical_values),function(x) {
             species = rownames(hierarchical_values)
 
@@ -293,6 +291,9 @@ compute_hierarchical_compet = function(composition_given_time_step,
 
             # Do not consider "taller" species
             single_trait_diff[single_trait_diff > 0] = 0
+
+            single_trait_diff = (single_trait_diff/max(single_trait_diff))
+            single_trait_diff = single_trait_diff^exponent
 
             rownames(single_trait_diff) = species
             colnames(single_trait_diff) = species

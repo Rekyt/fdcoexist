@@ -5,8 +5,8 @@
 \title{Function to run the simulation}
 \usage{
 multigen(traits, trait_weights, env, time, species, patches, composition,
-  A = A, B = B, d, k, width, H, th_max, th_min, h_fun = "+",
-  di_thresh = th_max - th_min)
+  A = A, B = B, d, k, width, H, h_fun = "+", di_thresh = 24,
+  exponent = 1)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
@@ -46,17 +46,14 @@ environment}
 
 \item{H}{a numeric for hierarchical competition such as H/k <= 1}
 
-\item{th_max}{a numeric for the hierarchical trait value maximizing
-hierarchical competition}
-
-\item{th_min}{a numeric for the hierarchical trait value minimizing
-hierarchical competition}
-
 \item{h_fun}{a function that describes how hierarchical is combined to
 environmental-based growth (default: \code{sum()})}
 
 \item{di_thresh}{dissimilary threshold above which species are considered
 maximally dissimilar}
+
+\item{exponent}{[\code{numeric(1)}] (default: 1)\cr{}
+The exponent used before standardizing the distance}
 }
 \description{
 Using specified parameters this function run the simulation

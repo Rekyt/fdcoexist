@@ -4,7 +4,7 @@
 \alias{compute_compet_distance}
 \title{Compute trait distance between species}
 \usage{
-compute_compet_distance(trait_weights, traits)
+compute_compet_distance(trait_weights, traits, exponent = 1)
 }
 \arguments{
 \item{trait_weights}{data.frame with at least three columns equal to \code{trait}
@@ -16,6 +16,9 @@ trait in competition.}
 \item{traits}{a species-traits data.frame with species as rownames and
 traits as numeric columns with names matching
 \code{trait_weights} column \code{trait}}
+
+\item{exponent}{[\code{numeric(1)}] (default: 1)\cr{}
+The exponent used before standardizing the distance}
 }
 \value{
 an euclidean distance matrix (of type matrix)
@@ -24,5 +27,6 @@ an euclidean distance matrix (of type matrix)
 This function compute trait distance between species using a trait matrix and
 a trait weights data.frame. For all the traits with competition weights not
 equal to zero, it computes a weighted 'composite trait' that is then used to
-compute euclidean trait distance between species.
+compute euclidean trait distance between species. Trait distance is first
+exponentiated then standardized between 0 and 1.
 }
