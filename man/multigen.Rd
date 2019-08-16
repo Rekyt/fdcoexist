@@ -6,7 +6,7 @@
 \usage{
 multigen(traits, trait_weights, env, time, species, patches, composition,
   A = A, B = B, d, k, width, H, h_fun = "+", di_thresh = 24,
-  exponent = 1)
+  lim_sim_exponent = 2, hierar_exponent = 0.5)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and
@@ -52,8 +52,9 @@ environmental-based growth (default: \code{sum()})}
 \item{di_thresh}{dissimilary threshold above which species are considered
 maximally dissimilar}
 
-\item{exponent}{[\code{numeric(1)}] (default: 1)\cr{}
-The exponent used before standardizing the distance}
+\item{lim_sim_exponent}{exponent to use for limiting similarity distances}
+
+\item{hierar_exponent}{exponent to use for hierarchical compet. distances}
 }
 \description{
 Using specified parameters this function run the simulation

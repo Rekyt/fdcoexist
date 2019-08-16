@@ -7,7 +7,7 @@
 meta_simul(seed_number, given_k = k, given_A = A, given_B = B,
   given_H = H, given_scenars = NULL, given_traits = NULL,
   given_h_fun = "sum", given_di_thresh = 24, given_env,
-  given_composition, given_d, given_env_width = 5, given_exponent = 1)
+  given_composition, given_d, given_env_width = 5)
 }
 \arguments{
 \item{seed_number}{the actual seed used to generate traits}
@@ -40,9 +40,6 @@ to follow population dynamics}
 
 \item{given_env_width}{the fixed strength of environmental filtering across
 patches}
-
-\item{given_exponent}{[\code{numeric(1)}] (default: 1)\cr{}
-The exponent used before standardizing the distance}
 }
 \description{
 Simulations with various parameters

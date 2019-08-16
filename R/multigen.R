@@ -23,12 +23,14 @@
 #'                    environmental-based growth (default: `sum()`)
 #' @param di_thresh   dissimilary threshold above which species are considered
 #'                    maximally dissimilar
-#' @inheritParams compute_compet_distance
+#' @param lim_sim_exponent exponent to use for limiting similarity distances
+#' @param hierar_exponent  exponent to use for hierarchical compet. distances
 #'
 #' @export
 multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, h_fun = "+",
-                     di_thresh = 24, exponent = 1) {
+                     di_thresh = 24, lim_sim_exponent = 2,
+                     hierar_exponent = 0.5) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -40,7 +42,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     check_trait_weights(trait_weights, traits)
 
     # Calculate dist trait
-    disttraits <- compute_compet_distance(trait_weights, traits, exponent)
+    disttraits <- compute_compet_distance(trait_weights, traits,
+                                          lim_sim_exponent)
 
     traits_k <- cbind(traits, k)
 
@@ -75,7 +78,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
             trait_values                = traits,
             trait_weights               = trait_weights,
             H                           = H,
-            exponent                    = exponent)
+            exponent                    = hierar_exponent)
 
         rh_list[[m]] <- R_h
 
@@ -109,5 +112,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     }
     return(list(compo   = composition,
                 rmatrix = Rmatrix,
-                rhlist  = rh_list))
+                rhlist  = rh_list,
+                ls_exponent = lim_sim_exponent,
+                hierar_exponent = hierar_exponent))
 }

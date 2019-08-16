@@ -6,14 +6,12 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_861e53b/"
+main_folder = "inst/job_data/perf_fbebe4f/"
 
-#c(0, 8e-7, 1.6e-6, 3.6e-6, 1e-5, 1.15e-5)
-list_A = 0
+list_A = c(0, 8e-7, 1.6e-6, 3.6e-6, 1e-5, 1.15e-5)
 list_k = 1.3
 list_B = c(0, 10^-(seq(1, 8, length.out = 6)))[4]
 list_H = c(0, 2.16e-5, 4.64e-5, 9.8e-5, 3.1e-4)
-list_exponents = 1
 n_seed = 5
 n_patches = 25
 n_species = 100
@@ -30,8 +28,7 @@ param_sets = list(
     A     = list_A,
     k     = list_k,
     B     = list_B,
-    H     = list_H,
-    expo  = list_exponents) %>%
+    H     = list_H) %>%
     purrr::cross()
 
 # Initial population matrix
@@ -105,8 +102,7 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
                given_env = 1:25,
                given_composition = composition,
                given_d = 0.05,
-               given_env_width = 2,
-               given_exponent = x$expo)
+               given_env_width = 2)
 
     saveRDS(simul_list,
             paste0(main_folder, "simul_cat_", given_n, ".Rds"),
