@@ -86,7 +86,7 @@ seed_df = all_perf_df %>%
 # 0
 target_param = rlang::sym("A")
 
-all_sp_perf_df %>%
+perf_growth = all_sp_perf_df %>%
     filter(R_scenar == 0, A_scenar == 0, H_scenar == 0) %>%
     group_by(exponent, seed, trait_cor, patch, species) %>%
     select(groups(), max_growth_rate, !!target_param) %>%
