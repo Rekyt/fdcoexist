@@ -110,6 +110,7 @@ extract_performances_from_simul = function(simul, trait_list,
         dplyr::inner_join(env_growth_rate, by = c("patch", "species")) %>%
         dplyr::inner_join(optim_dist, by = c("patch", "species")) %>%
         dplyr::mutate(seed      = simul$seed,
+                      exponent  = simul$trait_exponent,
                       trait_cor = simul$traits,
                       h_fun     = simul$h_fun,
                       di_thresh = simul$di_thresh,
