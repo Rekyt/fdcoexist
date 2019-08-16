@@ -6,13 +6,14 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_04c796f/"
+main_folder = "inst/job_data/perf_79cc7d8/"
 
-list_A = c(0, 3.4e-8, 7.3e-8, 1.51e-7, 5.5e-7)
+list_A = c(0, 10^seq(-8, -1))
 list_k = 1.3
 list_B = c(0, 10^-(seq(1, 8, length.out = 6)))[4]
-list_H = c(0, 2.32e-5, 5e-5, 1e-4, 3.7e-4)
-n_seed = 15
+list_H = 0
+list_exponents = c(0.5, 1, 2)
+n_seed = 5
 n_patches = 25
 n_species = 100
 n_gen = 50
@@ -28,7 +29,8 @@ param_sets = list(
     A     = list_A,
     k     = list_k,
     B     = list_B,
-    H     = list_H) %>%
+    H     = list_H,
+    expo  = list_exponents) %>%
     purrr::cross()
 
 # Initial population matrix
@@ -83,7 +85,7 @@ plan(multiprocess, workers = future::availableCores() - 1)
 tictoc::tic()
 var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
     suppressMessages({
-        devtools::load_all()
+        pkgload::load_all()
     })
 
     cat("set: ", given_n, "\n")
@@ -102,7 +104,8 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
                given_env = 1:25,
                given_composition = composition,
                given_d = 0.05,
-               given_env_width = 2)
+               given_env_width = 2,
+               given_exponent = x$expo)
 
     saveRDS(simul_list,
             paste0(main_folder, "simul_cat_", given_n, ".Rds"),

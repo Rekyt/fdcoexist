@@ -230,7 +230,7 @@ compute_compet_distance = function(trait_weights, traits, exponent = 1) {
         # Compute distance matrix
         disttraits <- as.matrix(dist(scaled_compet_traits))^exponent
 
-        disttraits/max(disttraits)
+        disttraits <- disttraits/max(disttraits)
     }
 
     return(disttraits)
@@ -289,11 +289,12 @@ compute_hierarchical_compet = function(composition_given_time_step,
             # Compute the difference of traits between all pairs of species
             single_trait_diff = outer(x, x, "-") / (diff(range(x)))
 
-            # Do not consider "taller" species
+            # Smaller species have no effect in hierarchical competition
             single_trait_diff[single_trait_diff > 0] = 0
 
-            single_trait_diff = (single_trait_diff/max(single_trait_diff))
-            single_trait_diff = single_trait_diff^exponent
+            # Because all differences are negative we need to take absolute
+            # to exponentiate distances
+            single_trait_diff = -(abs(single_trait_diff)^exponent)
 
             rownames(single_trait_diff) = species
             colnames(single_trait_diff) = species
