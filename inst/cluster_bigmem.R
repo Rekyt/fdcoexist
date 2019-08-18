@@ -2,17 +2,17 @@
 library("purrr")
 library("future.apply")
 suppressMessages({
-    devtools::load_all()
+    pkgload::load_all()
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_2994360/"
+main_folder = "inst/job_data/perf_593b34d/"
 
 # A and H values to get a reduction of 20%, 40% and 60% of growth compared to
 # when they are 0
-list_A = c(0, 7.8e-7, 1.58e-6, 6.58e-6, 1.2e-5)
+list_A = c(0, 10^seq(-8, -1, length.out = 16))
 list_k = 1.3
-list_B = c(0, 3.17e-4)
+list_B = c(3.17e-4)
 list_H = 0
 n_seed = 1
 n_patches = 25
@@ -41,7 +41,8 @@ composition = array(NA, dim = c(n_patches, n_species, n_gen),
 composition[,,1] = init_pop
 
 # Traits & Contribution scenarios ----------------------------------------------
-# Generate all trait contribution scenarios
+# Generate all trait contribution scenarios (trait contribution to growth,
+# limiting similarity and hierarchical competition)
 weights = round(seq(0, 100, length.out = 3), digits = 0)
 
 scenar_list = cross(list(R = weights, A = weights, H = weights)) %>%
@@ -50,7 +51,7 @@ scenar_list = cross(list(R = weights, A = weights, H = weights)) %>%
     set_names(nm = cross(list(R = weights, A = weights, H = weights)) %>%
                   map_chr(~paste0("R", .x$R, "A", .x$A, "H", .x$H)))
 
-# Generate sets of traits
+# Generate sets of traits fir each seed
 used_trait_list = lapply(seed_list, function(given_seed) {
     set.seed(given_seed)
     uncor_traits = generate_cor_traits(n_patches, n_species, n_traits - 1,
@@ -68,6 +69,7 @@ used_trait_list = lapply(seed_list, function(given_seed) {
 })
 names(used_trait_list) = seed_list
 
+# Combine traits in a single data.frame
 full_trait_df = map_dfr(used_trait_list,~.x %>%
                             map_dfr(function(x) {
                                 x %>%
@@ -77,13 +79,17 @@ full_trait_df = map_dfr(used_trait_list,~.x %>%
                             .id = "trait_cor"),
                         .id = "seed")
 
+# Save Species Trait Information
 saveRDS(full_trait_df, file = paste0(main_folder, "bigmem_trait_df.Rds"))
 
 # Actual simulations -----------------------------------------------------------
-plan(multiprocess, workers = future::availableCores() - 1)
 
+# Setup parallelization scheme (all cores minus one)
+plan(multisession, workers = future::availableCores() - 1)
+
+# Actually run simulations (tictoc measures execution time)
 tictoc::tic()
-var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
+var_param = future_lapply(seq_along(param_sets), function(given_n) {
     suppressMessages({
         pkgload::load_all()
     })
@@ -92,6 +98,7 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
 
     x = param_sets[[given_n]]
 
+    # Proper simulation
     simul_list = meta_simul(seed_number = x$run_n,
                given_k = x$k,
                given_A = x$A,
@@ -106,17 +113,21 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
                given_d = 0.05,
                given_env_width = 2)
 
+    # Save raw data file
     saveRDS(simul_list,
             paste0(main_folder, "simul_cat_", given_n, ".Rds"),
             compress = TRUE)
 
+    # Extract species performance estimates
     simul_perf = map_dfr(simul_list, function(y) {
         extract_performances_from_simul(
             y, used_trait_list[[as.character(x$run_n)]], TRUE
     )
     })
+
+    # Save species performance files
     saveRDS(simul_perf,
             paste0(main_folder, "perf_df_", given_n, ".Rds"),
             compress = TRUE)
-}, .progress = TRUE)
+})
 tictoc::toc()
