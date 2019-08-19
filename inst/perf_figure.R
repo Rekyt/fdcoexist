@@ -34,7 +34,7 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
 
-main_folder = "inst/job_data/perf_2994360/"
+main_folder = "inst/job_data/perf_709c753/"
 
 all_trait = readRDS(paste0(main_folder, "/bigmem_trait_df.Rds"))
 
@@ -88,16 +88,16 @@ target_param = rlang::sym("H")
 
 perf_growth = all_sp_perf_df %>%
     filter(R_scenar == 0, A_scenar == 0, H_scenar == 0) %>%
-    group_by(seed, trait_cor, patch, species) %>%
+    group_by(B, seed, trait_cor, patch, species) %>%
     select(groups(), max_growth_rate, !!target_param) %>%
     ungroup() %>%
     filter(trait_cor == "uncor") %>%
     mutate(!!target_param := as.numeric(!!target_param)) %>%
-    arrange(seed, patch, species, !!target_param, max_growth_rate) %>%
-    group_by(seed, trait_cor, patch, species) %>%
+    arrange(B, seed, patch, species, !!target_param, max_growth_rate) %>%
+    group_by(B, seed, trait_cor, patch, species) %>%
     mutate(percent_growth = max_growth_rate/first(max_growth_rate)) %>%
-    group_by(trait_cor, !!target_param) %>%
-    summarise(mean(percent_growth, na.rm = TRUE))
+    group_by(B, trait_cor, !!target_param) %>%
+    summarise(rel_growth = mean(percent_growth, na.rm = TRUE))
 
 
 # Figure 2: Abundance environment curve ----------------------------------------

@@ -6,15 +6,15 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_593b34d/"
+main_folder = "inst/job_data/perf_709c753/"
 
 # A and H values to get a reduction of 20%, 40% and 60% of growth compared to
 # when they are 0
-list_A = c(0, 10^seq(-8, -1, length.out = 16))
+list_A = c(0, 1e-7, 5e-7, 1.9e-6)
 list_k = 1.3
-list_B = c(3.17e-4)
-list_H = 0
-n_seed = 1
+list_B = c(0, 1.585e-4, 3.17e-4)
+list_H = c(0, 1e-6, 4e-6, 1.35e-5)
+n_seed = 3
 n_patches = 25
 n_species = 100
 n_gen = 50
