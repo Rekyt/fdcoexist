@@ -6,7 +6,7 @@ suppressMessages({
 })
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_15162ff/"
+main_folder = "inst/job_data/perf_d25d39b/"
 
 # A and H values to get a reduction of 20%, 40% and 60% of growth compared to
 # when they are 0
@@ -14,7 +14,7 @@ list_A = c(0, 1e-7, 5e-7, 1.9e-6)
 list_k = 1.3
 list_B = c(0, 1.585e-4, 3.17e-4)
 list_H = c(0, 1e-6, 4e-6, 1.35e-5)
-n_seed = 3
+n_seed = 15
 n_patches = 25
 n_species = 100
 n_gen = 50
@@ -65,7 +65,9 @@ used_trait_list = lapply(seed_list, function(given_seed) {
                                         n_traits - 1,
                                         cor_coef = -0.3)
 
-    list(uncor  = uncor_traits)
+    list(uncor  = uncor_traits,
+         poscor = poscor_traits,
+         negcor = negcor_traits)
 })
 names(used_trait_list) = seed_list
 
