@@ -29,6 +29,16 @@ landscape_df = function(given_composition, time = 150) {
     return(tidy_compo)
 }
 
+wtd_mean = function(x, w, na.rm = TRUE) {
+
+    if (na.rm) {
+        s <- !is.na(x + w)
+        x <- x[s]
+        w <- w[s]
+    }
+
+    weighted.mean(x, w)
+}
 
 wtd_var = function(x, w, na.rm = TRUE) {
 
