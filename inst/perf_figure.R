@@ -68,22 +68,45 @@ tidy_perf = all_perf_df %>%
 saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_d25d39b.Rds"),
         compress = TRUE)
 
-# Subset data ------------------------------------------------------------------
+# Extract performances in first generations ------------------------------------
+trait_list = split(all_trait, list(all_trait$seed)) %>%
+    lapply(function(z) {
+        z %>%
+            split(list(z$trait_cor)) %>%
+            lapply(function(x) {
+                x %>%
+                    select(-seed, -trait_cor) %>%
+                    tibble::remove_rownames() %>%
+                    tibble::column_to_rownames("species") %>%
+                    as.matrix()
+            })
+})
 
-all_perf_df = all_perf_df %>%
-    inner_join(all_trait %>%
-                   mutate(seed = as.integer(seed)),
-               by = c("species", "seed", "trait_cor"))
+tictoc::tic()
+list.files(main_folder, "simul_cat_*", full.names = TRUE) %>%
+    future_walk(function(x) {
 
-# Single Parameter Set CWMs
-single_cwm = tidy_perf %>%
-    filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B > 2.5e-7, B < 2.6e-7, H == 1e-4,
-           trait_cor == "uncor", patch >= 5, patch <= 20,
-           comperf_name == "cwm")
+        pkgload::load_all()
 
-seed_df = all_perf_df %>%
-    distinct(seed) %>%
-    slice(1:10)
+        debug(extract_performances_from_simul)
+
+        perf_df = x %>%
+            readRDS() %>%
+            purrr::map_dfr(function(y) {
+
+                extract_performances_from_simul(
+                    y, trait_list[[as.character(y$seed)]], TRUE,
+                    chosen_time = 10
+                )})
+
+        saveRDS(perf_df, gsub("simul_cat_", "t10_perf_df_", x),
+                compress = TRUE)
+
+        perf_df %>%
+            compute_weighted_performance(all_trait) %>%
+            saveRDS(gsub("simul_cat_", "t10_cwm_df_", x), compress = TRUE)
+    }, .progress = TRUE)
+tictoc::toc()
 
 # Compare Avg. Growth Rate wit various param -----------------------------------
 # Compare values of average growth rate per patch when param. equals 0 or ≠ than
