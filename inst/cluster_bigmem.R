@@ -10,11 +10,9 @@ main_folder = "inst/job_data/perf_d25d39b/"
 
 # A and H values to get a reduction of 20%, 40%, 60%, and 80% of growth compared
 # to when B = 0 and they are respectively equal to 0
-old_A = c(0, 1e-7, 5e-7, 1.9e-6)
 list_A = c(0, 1e-7, 5e-7, 1.9e-6, 6.92e-6)
 list_k = 1.3
 list_B = c(0, 1.585e-4, 3.17e-4)
-old_H  = c(0, 1e-6, 4e-6, 1.35e-5)
 list_H = c(0, 1e-6, 4e-6, 1.35e-5, 4.05e-5)
 n_seed = 15
 n_patches = 25
@@ -34,16 +32,6 @@ param_sets = list(
     B     = list_B,
     H     = list_H) %>%
     purrr::cross()
-
-old_param_sets = list(
-    run_n = seed_list,
-    A     = old_A,
-    k     = list_k,
-    B     = list_B,
-    H     = old_H) %>%
-    purrr::cross()
-
-param_sets = setdiff(param_sets, old_param_sets)
 
 # Initial population matrix
 composition = array(NA, dim = c(n_patches, n_species, n_gen),
@@ -129,7 +117,7 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
 
     # Save raw data file
     saveRDS(simul_list,
-            paste0(main_folder, "simul_cat_add_", given_n, ".Rds"),
+            paste0(main_folder, "simul_cat_", given_n, ".Rds"),
             compress = TRUE)
 
     # Extract species performance estimates
@@ -141,7 +129,7 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
 
     # Save species performance files
     saveRDS(simul_perf,
-            paste0(main_folder, "perf_df_add_", given_n, ".Rds"),
+            paste0(main_folder, "perf_df_", given_n, ".Rds"),
             compress = TRUE)
 }, .progress = TRUE)
 tictoc::toc()
