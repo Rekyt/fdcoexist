@@ -1,11 +1,14 @@
 #' Community Performance Estimators
 #'
 #' Compute for each community all traits:
-#' * trait of best monoculture
-#' * trait of best polyculture
-#' * trait CWM
-#' * weighted trait by monoculture growth
-#' * weighted trait by polyculture growth
+#' * weighted mean of trait by species purely environmental growth rate
+#' `pur_env`,
+#' * weighted mean of trait by species realized growth rate `weighted_growth`,
+#' * weighted mean of trait by species abundance `cwm`,
+#' * trait of species with highest growth rate per community `best_growth`,
+#' * trait of species with highest abundance per community `best_abund`,
+#' * other community weighted moments such as variance, skewness and kurtosis.
+#'
 #' @param perf_df  species performance data frame output by
 #'                 [extract_performances_from_simul()]
 #' @param trait_df trait data.frame containing columns `trait_cor`, `seed` and
@@ -31,38 +34,12 @@ compute_weighted_performance = function(perf_df, trait_df) {
     envbest_growth = perf_df %>%
         filter_top_perf_per_trait(env_growth_rate, envbest_growth)
 
-    # Real Monoculture (A = 0 and H = 0) ---------------------------------------
-    monocult = perf_df %>%
-        filter(A == 0, H == 0) %>%
-        summarise_at(
-            vars(matches("trait[0-9]+")),
-            list(monocult_growth = ~wtd_mean(., max_growth_rate,
-                                                  na.rm = TRUE),
-                 monocult_abund  = ~wtd_mean(., N150, na.rm = TRUE)))
+    # Estimate performance using best perf. species ----------------------------
+    best_growth = perf_df %>%
+        filter_top_perf_per_trait(max_growth_rate, best_growth)
 
-    monobest_growth = perf_df %>%
-        filter(A == 0, H == 0) %>%
-        filter_top_perf_per_trait(max_growth_rate, monobest_growth)
-
-    monobest_abund = perf_df %>%
-        filter(A == 0, H == 0) %>%
-        filter_top_perf_per_trait(N150, monobest_abund)
-
-    # Real Polyculture (A ≠ 0 or H ≠ 0) ----------------------------------------
-    polycult = perf_df %>%
-        filter(A != 0 | H != 0) %>%
-        summarise_at(
-            vars(matches("trait[0-9]+")),
-            list(polycult_growth = ~wtd_mean(., max_growth_rate,
-                                                  na.rm = TRUE)))
-
-    polybest_growth = perf_df %>%
-        filter(A != 0 | H != 0) %>%
-        filter_top_perf_per_trait(max_growth_rate, polybest_growth)
-
-    polybest_abund = perf_df %>%
-        filter(A != 0 | H != 0) %>%
-        filter_top_perf_per_trait(N150, polybest_abund)
+    best_abund = perf_df %>%
+        filter_top_perf_per_trait(N150, best_abund)
 
     # Combine all estimators ---------------------------------------------------
     full_perf = perf_df %>%
@@ -71,20 +48,17 @@ compute_weighted_performance = function(perf_df, trait_df) {
             vars(matches("trait[0-9]+")),
             list(
                 # Consider Only Environmental Fitting
-                pure_env = ~wtd_mean(., env_growth_rate, na.rm = TRUE),
+                pure_env        = ~wtd_mean(., env_growth_rate, na.rm = TRUE),
+                weighted_growth = ~wtd_mean(., max_growth_rate, na.rm = TRUE),
                 # Community Weighted Moments
-                cwm      = ~wtd_mean(.,     N150, na.rm = TRUE),
-                cwv      = ~wtd_var(.,      N150, na.rm = TRUE),
-                cws      = ~wtd_skewness(., N150, na.rm = TRUE),
-                cwk      = ~wtd_kurtosis(., N150, na.rm = TRUE)))
+                cwm             = ~wtd_mean(.,     N150, na.rm = TRUE),
+                cwv             = ~wtd_var(.,      N150, na.rm = TRUE),
+                cws             = ~wtd_skewness(., N150, na.rm = TRUE),
+                cwk             = ~wtd_kurtosis(., N150, na.rm = TRUE)))
     list(full_perf,
          envbest_growth,
-         monocult,
-         monobest_growth,
-         monobest_abund,
-         polycult,
-         polybest_growth,
-         polybest_abund) %>%
+         best_growth,
+         best_abund) %>%
         {Reduce(function(x, y) full_join(x, y, by = c(group_vars(x), "patch")),
                 .)} %>%
         group_by(patch, add = TRUE) %>%

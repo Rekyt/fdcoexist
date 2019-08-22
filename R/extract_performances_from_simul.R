@@ -10,12 +10,17 @@
 #'
 #' @export
 extract_performances_from_simul = function(simul, trait_list,
-                                           realized_growth_rate = TRUE) {
+                                           realized_growth_rate = TRUE,
+                                           chosen_time = NULL) {
 
     # Extract Compositional Data
     given_compo = simul$compo[[1]]
 
-    max_time = dim(given_compo)[3]
+    if (is.null(chosen_time)) {
+        chosen_time = dim(given_compo)[3]
+    }
+
+    max_time = chosen_time
 
     trait_df = trait_list[[simul$traits]]
 
