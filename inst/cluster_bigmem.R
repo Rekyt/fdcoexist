@@ -5,23 +5,21 @@ suppressMessages({
     pkgload::load_all()
 })
 
+
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_f622527/"
+main_folder = "inst/job_data/perf_225384e/"
 
 # A and H values to get a reduction of 20%, 40%, 60%, and 80% of growth compared
 # to when B = 0 and they are respectively equal to 0
-# A_for_k_1.15 = c(0, 2.19e-4, 2.257e-4,  2.44e-4, 2.58e-4)
-# A_for_k_1.3  = c(0,    1e-7,     5e-7,   1.9e-6, 6.92e-6)
-# A_for_k_1.45 = c(0, 2.32e-9,  2.36e-8, 2.155e-7, 1.75e-6)
-list_A = 0
-list_k = 1.45
-# B = c(0, 1.585e-4, 3.17e-4)
-list_B = 0
-# H_for_k_1.15 = c(0, 6.215e-4, 6.48e-4, 6.68e-4, 6.754e-4)
-# H_for_k_1.3  = c(0,     1e-6,    4e-6, 1.35e-5, 4.05e-5)
-# H_for_k_1.45 = c(0,  2.31e-8, 2.31e-7, 1.1e-6,  3e-6)
-list_H = c(0, 10^seq(-10, -1, length.out = 100))
-n_seed = 1
+A_for_k_1.15 = c(0, 2.19e-4, 2.257e-4,  2.44e-4, 2.58e-4)
+A_for_k_1.3  = c(0,   1e-7,     5e-7,   1.9e-6, 6.92e-6)
+A_for_k_1.45 = c(0, 2.32e-9,  2.36e-8, 2.155e-7, 1.75e-6)
+list_k = c(1.15, 1.3, 1.45)
+list_B = c(0, 1.585e-4, 3.17e-4)
+H_for_k_1.15 = c(0, 6.215e-4, 6.48e-4, 6.68e-4, 6.754e-4)
+H_for_k_1.3  = c(0,     1e-6,    4e-6, 1.35e-5, 4.05e-5)
+H_for_k_1.45 = c(0,  2.31e-8, 2.31e-7, 1.1e-6,  3e-6)
+n_seed = 15
 n_patches = 25
 n_species = 100
 n_gen = 50
@@ -31,14 +29,35 @@ init_pop = 50
 set.seed(20190619)
 seed_list = sample(1e6, size = n_seed)
 
-# Sets of all parameters
-param_sets = list(
-    run_n = seed_list,
-    A     = list_A,
-    k     = list_k,
-    B     = list_B,
-    H     = list_H) %>%
-    purrr::cross()
+# Functions --------------------------------------------------------------------
+generate_param_comb = function(
+   given_k, given_A, given_H, given_B = list_B, given_seed = seed_list) {
+    list(
+        run_n = given_seed,
+        A     = given_A,
+        k     = given_k,
+        B     = given_B,
+        H     = given_H) %>%
+        purrr::cross()
+}
+# Sets of all parameters for each value
+param_1.15 = generate_param_comb(
+    given_A = A_for_k_1.15,
+    given_k = 1.15,
+    given_H = H_for_k_1.15)
+
+param_1.3 = generate_param_comb(
+    given_A = A_for_k_1.3,
+    given_k = 1.3,
+    given_H = H_for_k_1.3)
+
+param_1.45 = generate_param_comb(
+    given_A = A_for_k_1.45,
+    given_k = 1.45,
+    given_H = H_for_k_1.45)
+
+param_sets = list(param_1.15, param_1.3, param_1.45) %>%
+    purrr::flatten()
 
 # Initial population matrix
 composition = array(NA, dim = c(n_patches, n_species, n_gen),
