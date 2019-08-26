@@ -49,7 +49,12 @@ compute_weighted_performance = function(perf_df, trait_df) {
             list(
                 # Consider Only Environmental Fitting
                 pure_env        = ~wtd_mean(., env_growth_rate, na.rm = TRUE),
-                weighted_growth = ~wtd_mean(., max_growth_rate, na.rm = TRUE),
+                # Weight traits using growth rate (analogous of CWM but with GR)
+                # need to rescale growth rate between 0 and 1 to account for
+                # negative growth rate in some patches
+                weighted_growth = ~wtd_mean(., max_growth_rate %>%
+                                            scales::rescale(c(0,1)),
+                                            na.rm = TRUE),
                 # Community Weighted Moments
                 cwm             = ~wtd_mean(.,     N150, na.rm = TRUE),
                 cwv             = ~wtd_var(.,      N150, na.rm = TRUE),
@@ -58,7 +63,8 @@ compute_weighted_performance = function(perf_df, trait_df) {
     list(full_perf,
          envbest_growth,
          best_growth,
-         best_abund) %>%
+         best_abund,
+         species_rich) %>%
         {Reduce(function(x, y) full_join(x, y, by = c(group_vars(x), "patch")),
                 .)} %>%
         group_by(patch, add = TRUE) %>%

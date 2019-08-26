@@ -34,7 +34,7 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
 
-main_folder = "inst/job_data/perf_f622527/"
+main_folder = "inst/job_data/perf_933cf3c/"
 
 all_trait = readRDS(paste0(main_folder, "/bigmem_trait_df.Rds"))
 
@@ -65,7 +65,7 @@ tidy_perf = all_perf_df %>%
                     extra = "merge") %>%
     filter(trait == "trait2")
 
-saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_d25d39b.Rds"),
+saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_933cf3c.Rds"),
         compress = TRUE)
 
 # Extract performances in first generations ------------------------------------
