@@ -303,11 +303,36 @@ plot_grid(fig_trait_perf_A, fig_trait_perf_B, fig_trait_perf_H,
 sub_perf = list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
     future_map_dfr(~.x %>%
                        readRDS() %>%
-                       dplyr::filter(k == 1.3, A == 0, B == 0, H == 0,
-                                     R_scenar == 100, A_scenar == 100,
+                       dplyr::filter(R_scenar == 100, A_scenar == 100,
                                      H_scenar == 100, trait_cor == "uncor")) %>%
     inner_join(all_trait %>%
                    mutate(seed = as.integer(seed)))
+
+extract_partial_derivative = function(mod, slope_name) {
+    tibble::tibble(
+        patch = seq(-1.664089, 1.664089, length.out = 50),
+        !!enquo(slope_name) := coef(summary(mod))[2,1] +
+            coef(summary(mod))[4,1] *
+            seq(-1.664089, 1.664089, length.out = 50))
+}
+
+tictoc::tic()
+mod_sub_perf = sub_perf %>%
+    tidyr::nest(patch, species:seed, max_growth_rate_per_capita:trait2) %>%
+    mutate(data = purrr::map(data, ~.x %>%
+                                 mutate(patch_sc = as.numeric(scale(patch)),
+                                        N150_sc = as.numeric(scale(N150)),
+                                        trait2_sc = as.numeric(scale(trait2)))),
+           trait_growth_mod = purrr::map(
+               data, ~lm(max_growth_rate ~ patch_sc * trait2_sc,
+                         data = .x)),
+           trait_abund_mod = purrr::map(
+               data, ~lm(N150_sc ~ scale(patch) * scale(trait2), data = .x)),
+           trait_growth_slope = purrr::map(
+               trait_growth_mod, ~extract_partial_derivative(.x, slope_growth)),
+           trait_abund_slope = purrr::map(
+               trait_abund_mod, ~extract_partial_derivative(.x, slope_abund)))
+tictoc::toc()
 
 
 sub_sub_perf = sub_perf %>%
@@ -335,4 +360,4 @@ nested_sub_perf = sub_perf %>%
 
 
 # From Laughlin code one way of computing partial derivative
-coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[2,1] + coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[4,1]*seq(-1.664089, 1.664089, length.out = 50)
+pred_slope = coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[2,1] + coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[4,1]*seq(-1.664089, 1.664089, length.out = 50)
