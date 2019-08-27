@@ -298,6 +298,41 @@ fig_trait_perf_H = all_sp_perf_df %>%
 plot_grid(fig_trait_perf_A, fig_trait_perf_B, fig_trait_perf_H,
           nrow = 3)
 
-# Other Figures ----------------------------------------------------------------
+# Try fitting Laughlin et al. model --------------------------------------------
+
+sub_perf = list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
+    future_map_dfr(~.x %>%
+                       readRDS() %>%
+                       dplyr::filter(k == 1.3, A == 0, B == 0, H == 0,
+                                     R_scenar == 100, A_scenar == 100,
+                                     H_scenar == 100, trait_cor == "uncor")) %>%
+    inner_join(all_trait %>%
+                   mutate(seed = as.integer(seed)))
 
 
+sub_sub_perf = sub_perf %>%
+    filter(patch == 1, seed == 227470) %>%
+
+    perf_mod = lm(trait2 ~ max_growth_rate, data = sub_sub_perf)
+
+nested_sub_perf = sub_perf %>%
+    tidyr::nest(patch, species:seed, max_growth_rate_per_capita:trait2) %>%
+    mutate(data = purrr::map(data,
+        ~.x %>%
+            mutate(patch_sc = as.numeric(scale(patch)),
+                   trait2_sc = as.numeric(scale(trait2)),
+                   max_growth_rate_sc = as.numeric(scale(max_growth_rate)),
+                   N150_sc = as.numeric(scale(N150)))),
+        trait_growth_mod = purrr::map(
+            data, ~lm(max_growth_rate_sc ~ patch_sc * trait2_sc, data = .x)),
+        trait_abund_mod = purrr::map(
+            data, ~lm(N150_sc ~ patch_sc * trait2_sc, data = .x)),
+        trait_growth_sum = purrr::map(trait_growth_mod, broom::tidy),
+        trait_growth_pred = purrr::map(trait_growth_mod,
+                                       ~broom::augment(.x, newdata = data.frame(patch_sc = seq(-1.664089, 1.664089, length.out = 50),
+                                                                                                        trait2_sc = 0))),
+        trait_abund_sum = purrr::map(trait_abund_mod, broom::tidy))
+
+
+# From Laughlin code one way of computing partial derivative
+coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[2,1] + coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[4,1]*seq(-1.664089, 1.664089, length.out = 50)
