@@ -7,7 +7,7 @@ suppressMessages({
 
 
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_933cf3c/"
+main_folder = "inst/job_data/perf_641867e/"
 
 # A and H values to get a reduction of 20%, 40%, 60%, and 80% of growth compared
 # to when B = 0 and they are respectively equal to 0

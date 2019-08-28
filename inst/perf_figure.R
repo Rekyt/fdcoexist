@@ -34,7 +34,7 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
 
-main_folder = "inst/job_data/perf_933cf3c/"
+main_folder = "inst/job_data/perf_641867e/"
 
 all_trait = readRDS(paste0(main_folder, "/bigmem_trait_df.Rds"))
 
@@ -65,7 +65,7 @@ tidy_perf = all_perf_df %>%
                     extra = "merge") %>%
     filter(trait == "trait2")
 
-saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_933cf3c.Rds"),
+saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_641867e.Rds"),
         compress = TRUE)
 
 # Extract performances in first generations ------------------------------------
@@ -310,24 +310,20 @@ sub_perf = list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
 
 extract_partial_derivative = function(mod, slope_name) {
     tibble::tibble(
-        patch = seq(-1.664089, 1.664089, length.out = 50),
+        patch = 1:25,
         !!enquo(slope_name) := coef(summary(mod))[2,1] +
             coef(summary(mod))[4,1] *
-            seq(-1.664089, 1.664089, length.out = 50))
+            1:25)
 }
 
 tictoc::tic()
 mod_sub_perf = sub_perf %>%
     tidyr::nest(patch, species:seed, max_growth_rate_per_capita:trait2) %>%
-    mutate(data = purrr::map(data, ~.x %>%
-                                 mutate(patch_sc = as.numeric(scale(patch)),
-                                        N150_sc = as.numeric(scale(N150)),
-                                        trait2_sc = as.numeric(scale(trait2)))),
-           trait_growth_mod = purrr::map(
-               data, ~lm(max_growth_rate ~ patch_sc * trait2_sc,
+    mutate(trait_growth_mod = purrr::map(
+               data, ~lm(max_growth_rate ~ patch * trait2,
                          data = .x)),
            trait_abund_mod = purrr::map(
-               data, ~lm(N150_sc ~ scale(patch) * scale(trait2), data = .x)),
+               data, ~lm(N150 ~ patch * trait2, data = .x)),
            trait_growth_slope = purrr::map(
                trait_growth_mod, ~extract_partial_derivative(.x, slope_growth)),
            trait_abund_slope = purrr::map(
@@ -342,20 +338,15 @@ sub_sub_perf = sub_perf %>%
 
 nested_sub_perf = sub_perf %>%
     tidyr::nest(patch, species:seed, max_growth_rate_per_capita:trait2) %>%
-    mutate(data = purrr::map(data,
-        ~.x %>%
-            mutate(patch_sc = as.numeric(scale(patch)),
-                   trait2_sc = as.numeric(scale(trait2)),
-                   max_growth_rate_sc = as.numeric(scale(max_growth_rate)),
-                   N150_sc = as.numeric(scale(N150)))),
+    mutate(
         trait_growth_mod = purrr::map(
-            data, ~lm(max_growth_rate_sc ~ patch_sc * trait2_sc, data = .x)),
+            data, ~lm(max_growth_rate ~ patch * trait2, data = .x)),
         trait_abund_mod = purrr::map(
-            data, ~lm(N150_sc ~ patch_sc * trait2_sc, data = .x)),
+            data, ~lm(N150 ~ patch * trait2, data = .x)),
         trait_growth_sum = purrr::map(trait_growth_mod, broom::tidy),
         trait_growth_pred = purrr::map(trait_growth_mod,
-                                       ~broom::augment(.x, newdata = data.frame(patch_sc = seq(-1.664089, 1.664089, length.out = 50),
-                                                                                                        trait2_sc = 0))),
+                                       ~broom::augment(.x, newdata = data.frame(patch_sc = 1:25,
+                                                                                                        trait2 = 0))),
         trait_abund_sum = purrr::map(trait_abund_mod, broom::tidy))
 
 
