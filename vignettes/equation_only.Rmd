@@ -31,11 +31,12 @@ $$
 
 with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $e_x$ the environmental value of patch $x$ and ${l_x}^2$ the width of the environmental filter in patch $x$.
 
+
 If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
 
 $$
 N_{t+1, i, x} = \frac{
-k \times \exp\left(- \displaystyle\frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) \times N_{t, i, x}}{
+k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right] \times N_{t, i, x}}{
 1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}
 }
 $$
@@ -61,11 +62,20 @@ $$
 
 with $w_c$ the contribution of trait $c$ in limiting similarity and we have $\sum_{c = 1}^{T_c} w_c = 1$.
 
-We use $1 - \delta_{ij}$ in above-mentioned equations to consider limiting similarity (closer species experience higher inter-specific competition) thus we can use a similarity term:
+In order to consider that the effect of limiting similarity is non-linear we use an exponent on distances:
+$$
+\begin{aligned}
+{\delta_{ij}}' &= {\delta_{ij}}^2\\
+               &= \left(\sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}\right)^2 \\
+               &= \sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2
+\end{aligned}
+$$
+
+We use $\max({\delta_{ij}}') - {\delta_{ij}}'$ in above-mentioned equations to consider limiting similarity (closer species experience higher inter-specific competition) thus we can use a similarity term:
 
 $$
 \begin{aligned}
-\sigma_{ij} = \max(\delta_{ij}) - \delta_{ij},\quad \sigma_{ii} = 0 ~\forall~i \in [1, S] \\
+\sigma_{ij} = \max({\delta_{ij}}') - {\delta_{ij}}',\quad \sigma_{ii} = 0 ~\forall~i \in [1, S] \\
 \end{aligned}
 $$
 
@@ -99,71 +109,52 @@ $$
 
 with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T} w_g = 1$), $t_{i, g}$ the trait number $g$ of species $i$.
 
+If want to account for multiple traits contributing to growth the easiest way is to consider composite traits such as:
+
+$$
+t_i = \sum_{g = 1}^T w_g t_g
+$$
+with $w_g$ the contribution of trait to growth such that $\sum w_g = 1$, $t_g$ the $g$th trait, and $T$ the total number of traits.
+
+And thus $R_{i, x}$ becomes:
+
+$$
+R_{i, x} = k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
+$$
+
+
 ## Adding Hierarchical competition
 
-If we add hierarchical competition, the species with the largest trait has an increased growth and species with lowest trait see their growth decreased. We can include this as an additional term in the computation of the growth term $R_{i,x}$ such as:
+We want hierarchical competition to depends on the species present in the community and the distance of species such that smallest species get their growth reduced by tallest species in proportion of their distances and abundances. So the competition term of a species $i$ in patch $x$ at time $t$ can be:
+$$
+H_{tix} = H \sum_{
+                \substack{j = 1\\
+                          t_j \ge t_i}}^S
+           (t_j - t_i) N_{tjx}
+$$
+with $H$ the scale for hierarchical competition $t_j$ the trait of species $j$, $t_i$ the trait of species $i$ and $N_{tjx}$ the abundance of species $j$ at time $t$ in patch $x$. To account for the fact that hierarchical competition has a negative influence on growth we add a minus sign in front of the equation which becomes:
+$$
+H_{tix} = - H \sum_{
+                \substack{j = 1\\
+                          t_j \ge t_i}}^S
+           (t_j - t_i) N_{tjx}
+$$
+If we wabt to consider multiple traits with different contributions we can generalize the equation using the same principle as for limiting similarity:
+$$
+H_{tix} = - H \sum_{h = 1}^T w_h \sum_{
+                \substack{j = 1\\
+                          t_{j, h} \ge t_{i, h}}}^S
+           (t_{j, h} - t_{i, h}) N_{tjx}
+$$
+with $w_h$ the hierarchical weight of trait $h$ among the $T$ traits, with $\sum w_h = 1$.
+
+Finally we can consider that hierarchical competition is not linear with the trait difference but instead that taller species have a saturating influence on smaller species (a tree of 10m or 50m will have almost similar influence for light interception for grasses 0.5m high). To account for that we can scale the distances using a square root:
 
 $$
-\begin{aligned}
-R_{i, x}                   = R_{i, x, \text{env}} + R_{i, x, \text{hierarch.}} \\
-R_{i, x, \text{hierarch.}} = H \sum_{h = 1}^{T} w_h \times f_H(t_{i, h}),
-\end{aligned}
-$$
-
-with $w_g$ the weight of traits contributing to growth, $w_h$ the weight of traits contributing to hierarchical competition (as many as $T$, with $\sum_{h = 1}^{T} w_h = 1$). As a competition function $f_H()$ depends on the abundance of taller species:
-
-$$
-\begin{aligned}
-f_H(t_i) &= 
-    \frac{t_j - t_i}{
-          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
-          &\begin{cases}
-            \in [0, 1] \\
-            0 ~\text{when}~ t_i = t_j \\
-            1 ~\text{when}~ t_i = \min\limits_{i \in [1, S]}(t_i),
-            ~t_j = \max\limits_{i \in [1, S]}(t_i)
-          \end{cases} \\
-f_H(t_i) &= 
-    -\frac{t_j - t_i}{
-          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
-          &\begin{cases}
-            \in [0, -1] \\
-            0 ~\text{when}~ t_i = t_j \\
-            -1 ~\text{when}~ t_i = \min\limits_{i \in [1, S]}(t_i),
-            ~t_j = \max\limits_{i \in [1, S]}(t_i)
-          \end{cases} \\
-          &= 
-    \frac{t_i - t_j}{
-          \max\limits_{i \in [1, S]}(t_i) - \min\limits_{i \in [1, S]}(t_i)}
-          &
-\end{aligned}
-$$
-
-The fraction is in $[0, 1]$, minus the fraction is in $[-1, 0]$.
-Because hierarchical competition depends on all taller species than the focal species we want to consider this function for all taller species and weight this difference by the abundance of non-focal species:
-$$
-\begin{aligned}
-  f_H(t_i) = \sum_{\substack{j = 1\\j \neq i\\t_j > t_i}}^S
-    \frac{t_i - t_j}{\max(t_i) - \min(t_i)} N_{t, j, x}
-\end{aligned}
-$$
-So we consider all traits involved in hierarchical competition:
-
-$$
-\begin{aligned}
-  R_{i, x, \text{hierarch.}}
-    &= H \sum_{h = 1}^{T} w_h \times f_H(t_{i, h})\\
-    &= H \sum_{h = 1}^{T} w_h \times \left[ \sum_{\substack{j = 1\\j \neq i\\t_{j, h} > t_{i, h}}}^S
-      \frac{t_{i, h} - t_{j, h}}{\max(t_{i, h}) - \min(t_{i, h})} N_{t, j, x} \right]
-\end{aligned}
-$$
-
-and the total growth term is:
-
-$$
-R_{i, x} = k \sum_{g = 1}^{T} w_g \times
-           \exp\left(- \frac{(t_{i,g} - e_x)^2}{2\times {l_x}^2} \right) +
-           H \sum_{h = 1}^{T} w_h \times \left[ \sum_{\substack{j = 1\\j \neq i\\t_{j, h} > t_{i, h}}}^S \frac{t_{i, h} - t_{j, h}}{\max(t_{i, h}) - \min(t_{i, h})} N_{t, j, x} \right],
+H_{tix} = - H \sum_{h = 1}^T w_h \sum_{
+                \substack{j = 1\\
+                          t_{j, h} \ge t_{i, h}}}^S
+            N_{tjx} \sqrt{t_{j, h} - t_{i, h}}
 $$
 
 
@@ -200,20 +191,40 @@ $$
 
 ## Final equation
 
-So the final equation looks like the following:
+### Single trait contributing to everything
+
+If a single trait contributes to everything than the equation simplifies as there is no need to to account for the difference in contribution to the different processes the final equation is thus:
 
 $$
-N_{t+1, i, x} = \frac{
-    \left[k \displaystyle\sum_{g = 1}^{T} w_g \times
-           \exp\left(- \frac{(t_{i,g} - e_x)^2}{2\times {l_x}^2} \right)
-          + H \sum_{h = 1}^{T} w_h \times
-            \left[ \sum_{\substack{j = 1\\j \neq i\\t_{j, h} > t_{i, h}}}^S
-                   \frac{t_{i, h} - t_{j, h}}{\max(t_{i, h}) - \min(t_{i, h})}
-                  N_{t, j, x} \right]
-    \right] \times N_{t, i, x}}{
-    1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} \left[ \max(\delta_{ij}) - \underbrace{\sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}}_{\delta_{ij}} ~ \right] +
-B \times N_{t,i,x}
-} + D_{t, i, x}
+\begin{aligned}
+N_{t+1, i, x} &= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N_{t, i, x} + D_{t, i, x}\\
+              &= \frac{
+               \displaystyle k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) - H \sum_{\substack{j = 1\\ t_j > t_i}}^S N_{t, j, x} \sqrt{t_j - t_i}
+               }{
+               \displaystyle 1 +
+               A \left( \sum_{j = 1, j \neq i}^{S} N_{t, j, x} (t_i - t_j)^2\right) +
+               B \times N_{t,i,x}
+               } N_{t, i, x} + D_{t, i, x}
+\end{aligned}
+$$
+
+
+### Multiple traits co-contributing to some processes
+
+To account for the various contributions of multiple processes to the different processes the final equation is:
+
+$$
+\begin{aligned}
+N_{t+1, i, x} &= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N_{t, i, x} + D_{t, i, x}\\
+              &= \frac{
+               \displaystyle k \times \exp\left[- \frac{\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
+               - H \sum_{h = 1}^T \sum_{\substack{j = 1\\ t_{j, h} \ge t_{i, h}}}^S w_h \, N_{tjx} \,\sqrt{t_{j, h} - t_{i, h}}
+               }{
+               \displaystyle 1 +
+               A \left( \sum_{j = 1, j \neq i}^{S} \sum_{c = 1}^{T} w_c \, N_{t, j, x} \, (t_{i, c} - t_{j, c})^2\right) +
+               B \times N_{t,i,x}
+               } N_{t, i, x} + D_{t, i, x}
+\end{aligned}
 $$
 
 with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T$ the number of traits.
