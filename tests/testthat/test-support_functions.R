@@ -2,25 +2,14 @@ context("test support functions")
 
 # Preamble ---------------------------------------------------------------------
 
-sp_traits = matrix(c(1, 2, 1, 1, 2, 0), ncol = 2)
-dimnames(sp_traits) = list(species = paste0("sp", 1:3),
-                           trait   = paste0("trait", 1:2))
-trait_weights = data.frame(trait = paste0("trait", 1:2),
-                           growth_weight    = c(1, 0),
-                           compet_weight    = c(0, 1),
-                           hierarchy_weight = c(0, 1),
-                           stringsAsFactors = FALSE)
+test_that("na_if_null_or_inf works", {
 
+    expect_equal(na_if_null_or_inf(Inf), NA_real_)
+    expect_equal(na_if_null_or_inf(-Inf), NA_real_)
+    expect_equal(na_if_null_or_inf(NA_real_), NA_real_)
+    expect_equal(na_if_null_or_inf(0), 0)
 
-N0 = matrix(rep(c(50, 10), 3, each = TRUE), ncol = 3,
-            dimnames = list(site    = paste0("patches", 1:2),
-                            species = paste0("sp", 1:3)))
-
-given_compo = simplify2array(lapply(seq(1, 0.25, length.out = 5),
-                                    function(x) x * N0))
-# Tests ------------------------------------------------------------------------
-
-test_that("landscape_df() works", {
-
-    expect_silent(landscape_df(list(compo = given_compo), 5))
+    expect_equal(na_if_null_or_inf(c(1, NA, Inf, -Inf, 2)),
+                 c(1, NA_real_, NA_real_, NA_real_, 2))
 })
+
