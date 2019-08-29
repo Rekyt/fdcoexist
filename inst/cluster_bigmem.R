@@ -5,9 +5,8 @@ suppressMessages({
     pkgload::load_all()
 })
 
-
 # Parameters -------------------------------------------------------------------
-main_folder = "inst/job_data/perf_641867e/"
+main_folder = "inst/job_data/perf_c4a9018/"
 
 # A and H values to get a reduction of 20%, 40%, 60%, and 80% of growth compared
 # to when B = 0 and they are respectively equal to 0
@@ -91,11 +90,9 @@ used_trait_list = lapply(seed_list, function(given_seed) {
                                         n_traits - 1,
                                         cor_coef = -0.3)
 
-    # list(uncor  = uncor_traits,
-    #      poscor = poscor_traits,
-    #      negcor = negcor_traits)
-
-    list(uncor  = uncor_traits)
+     list(uncor  = uncor_traits,
+          poscor = poscor_traits,
+          negcor = negcor_traits)
 })
 names(used_trait_list) = seed_list
 
@@ -151,8 +148,8 @@ var_param = furrr::future_walk(seq_along(param_sets), function(given_n) {
     # Extract species performance estimates
     simul_perf = map_dfr(simul_list, function(y) {
         extract_performances_from_simul(
-            y, used_trait_list[[as.character(x$run_n)]], TRUE
-    )
+            y, used_trait_list[[as.character(x$run_n)]]
+        )
     })
 
     # Save species performance files
