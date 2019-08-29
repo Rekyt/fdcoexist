@@ -117,3 +117,7 @@ extract_trait_contrib_from_scenar = function(scenario) {
          A = A_scenar,
          H = H_scenar)
 }
+
+na_if_null_or_inf = function(vect) {
+    ifelse(is.null(vect) | is.infinite(vect), NA_real_, vect)
+}

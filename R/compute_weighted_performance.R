@@ -24,22 +24,28 @@ compute_weighted_performance = function(perf_df, trait_df) {
                        mutate(seed = as.integer(seed)),
                    by = c("trait_cor", "seed", "species")) %>%
         group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed,
-                 patch)
+                 patch, time)
 
     # Species Richness per community
     species_rich = perf_df %>%
-        summarise(species_rich = sum(N150 > 0, na.rm = TRUE))
+        summarise(species_rich = sum(final_abundance > 0, na.rm = TRUE))
 
     # Pure Environmental Filtering ---------------------------------------------
     envbest_growth = perf_df %>%
         filter_top_perf_per_trait(env_growth_rate, envbest_growth)
 
     # Estimate performance using best perf. species ----------------------------
-    best_growth = perf_df %>%
-        filter_top_perf_per_trait(max_growth_rate, best_growth)
+    best_avg_growth = perf_df %>%
+        filter_top_perf_per_trait(avg_growth_rate, best_avg_growth)
+
+    best_max_growth = perf_df %>%
+        filter_top_perf_per_trait(max_growth_rate, best_max_growth)
+
+    best_int_growth = perf_df %>%
+        filter_top_perf_per_trait(int_growth_rate, best_int_growth)
 
     best_abund = perf_df %>%
-        filter_top_perf_per_trait(N150, best_abund)
+        filter_top_perf_per_trait(final_abundance, best_abund)
 
     # Combine all estimators ---------------------------------------------------
     full_perf = perf_df %>%
@@ -52,20 +58,32 @@ compute_weighted_performance = function(perf_df, trait_df) {
                 # Weight traits using growth rate (analogous of CWM but with GR)
                 # need to rescale growth rate between 0 and 1 to account for
                 # negative growth rate in some patches
-                weighted_growth = ~wtd_mean(., max_growth_rate %>%
+                weighted_avg_growth = ~wtd_mean(., avg_growth_rate %>%
+                                                    scales::rescale(c(0,1)),
+                                                na.rm = TRUE),
+                weighted_max_growth = ~wtd_mean(., max_growth_rate %>%
                                             scales::rescale(c(0,1)),
                                             na.rm = TRUE),
+                weighted_int_growth = ~wtd_mean(., int_growth_rate %>%
+                                                    scales::rescale(c(0,1)),
+                                                na.rm = TRUE),
                 # Community Weighted Moments
-                cwm             = ~wtd_mean(.,     N150, na.rm = TRUE),
-                cwv             = ~wtd_var(.,      N150, na.rm = TRUE),
-                cws             = ~wtd_skewness(., N150, na.rm = TRUE),
-                cwk             = ~wtd_kurtosis(., N150, na.rm = TRUE)))
+                cwm             = ~wtd_mean(.,     final_abundance,
+                                            na.rm = TRUE),
+                cwv             = ~wtd_var(.,      final_abundance,
+                                           na.rm = TRUE),
+                cws             = ~wtd_skewness(., final_abundance,
+                                                na.rm = TRUE),
+                cwk             = ~wtd_kurtosis(., final_abundance,
+                                                na.rm = TRUE)))
     list(full_perf,
          envbest_growth,
-         best_growth,
+         best_avg_growth,
+         best_max_growth,
+         best_int_growth,
          best_abund,
          species_rich) %>%
-        {Reduce(function(x, y) full_join(x, y, by = c(group_vars(x), "patch")),
+        {Reduce(function(x, y) full_join(x, y, by = c(group_vars(x), "time")),
                 .)} %>%
         group_by(patch, add = TRUE) %>%
         ungroup()
