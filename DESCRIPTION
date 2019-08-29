@@ -24,10 +24,11 @@ Encoding: UTF-8
 Imports: 
     dplyr,
     matrixStats,
+    rlang,
+    scales,
     tibble,
     tidyr,
-    Weighted.Desc.Stat,
-    scales
+    Weighted.Desc.Stat
 Suggests: 
     testthat,
     knitr,
