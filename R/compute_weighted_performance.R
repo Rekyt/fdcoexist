@@ -15,20 +15,22 @@
 #'                 `species`
 #'
 #' @import dplyr
+#' @importFrom rlang .data
 #' @export
 compute_weighted_performance = function(perf_df, trait_df) {
 
     # Add trait information to performances
     perf_df = perf_df %>%
         inner_join(trait_df %>%
-                       mutate(seed = as.integer(seed)),
+                       mutate(seed = as.integer(.data$seed)),
                    by = c("trait_cor", "seed", "species")) %>%
-        group_by(k, A, B, H, R_scenar, A_scenar, H_scenar, trait_cor, seed,
-                 patch, time)
+        group_by(.data$k, .data$A, .data$B, .data$H, .data$R_scenar,
+                 .data$A_scenar, .data$H_scenar, .data$trait_cor, .data$seed,
+                 .data$patch, .data$time)
 
     # Species Richness per community
     species_rich = perf_df %>%
-        summarise(species_rich = sum(final_abundance > 0, na.rm = TRUE))
+        summarise(species_rich = sum(.data$final_abundance > 0, na.rm = TRUE))
 
     # Pure Environmental Filtering ---------------------------------------------
     envbest_growth = perf_df %>%
@@ -85,25 +87,26 @@ compute_weighted_performance = function(perf_df, trait_df) {
          species_rich) %>%
         {Reduce(function(x, y) full_join(x, y, by = c(group_vars(x), "time")),
                 .)} %>%
-        group_by(patch, add = TRUE) %>%
+        group_by(.data$patch, add = TRUE) %>%
         ungroup()
 }
 
+#' @importFrom rlang .data
 filter_top_perf_per_trait = function(df, wt, given_name) {
 
     df %>%
         tidyr::gather("trait_name", "trait_value", matches("trait[0-9]+")) %>%
-        group_by(trait_name, add = TRUE) %>%
+        group_by(.data$trait_name, add = TRUE) %>%
         # Select first values with maximum weight
         top_n(1, !!enquo(wt)) %>%
-        select(group_vars(.), trait_name, trait_value) %>%
+        select(group_vars(.), .data$trait_name, .data$trait_value) %>%
         # In the highly improbable case of ex-aequo per community compute the
         # average trait
-        summarise(trait_value = mean(trait_value, na.rm = TRUE)) %>%
-        rename(!!enquo(given_name) := trait_value) %>%
+        summarise(trait_value = mean(.data$trait_value, na.rm = TRUE)) %>%
+        rename(!!enquo(given_name) := .data$trait_value) %>%
         # Renaming the column properly
         tidyr::gather("perf_type", "perf_value", !!enquo(given_name)) %>%
-        mutate(perf_type = paste0(trait_name, "_", perf_type)) %>%
-        select(-trait_name) %>%
-        tidyr::spread(perf_type, perf_value)
+        mutate(perf_type = paste0(.data$trait_name, "_", .data$perf_type)) %>%
+        select(-.data$trait_name) %>%
+        tidyr::spread(.data$perf_type, .data$perf_value)
 }

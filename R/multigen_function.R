@@ -111,7 +111,7 @@ env_curve <- function(trait_values, env_value, trait_weights, k = 2,
         given_values <- trait_values[fitness_traits$trait]
 
         # Weight traits to obtain a composite traits
-        composite_trait <- weighted.mean(given_valuen,
+        composite_trait <- weighted.mean(given_value,
                                          fitness_traits$growth_weight)
 
         # Each trait has similar impact

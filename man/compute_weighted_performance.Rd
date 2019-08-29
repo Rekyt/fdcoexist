@@ -16,10 +16,12 @@ compute_weighted_performance(perf_df, trait_df)
 \description{
 Compute for each community all traits:
 \itemize{
-\item trait of best monoculture
-\item trait of best polyculture
-\item trait CWM
-\item weighted trait by monoculture growth
-\item weighted trait by polyculture growth
+\item weighted mean of trait by species purely environmental growth rate
+\code{pur_env},
+\item weighted mean of trait by species realized growth rate \code{weighted_growth},
+\item weighted mean of trait by species abundance \code{cwm},
+\item trait of species with highest growth rate per community \code{best_growth},
+\item trait of species with highest abundance per community \code{best_abund},
+\item other community weighted moments such as variance, skewness and kurtosis.
 }
 }

@@ -4,8 +4,7 @@
 \alias{extract_performances_from_simul}
 \title{Extract Performance Estimators From Simulations}
 \usage{
-extract_performances_from_simul(simul, trait_list,
-  realized_growth_rate = TRUE)
+extract_performances_from_simul(simul, trait_list, chosen_time = NULL)
 }
 \arguments{
 \item{simul}{[\code{list(1+)}]\cr{}
@@ -15,8 +14,8 @@ single simulation from \code{\link[=multigen]{multigen()}}}
 a nested list of trait ordered by seeds used as well as
 trait correlation name}
 
-\item{realized_growth_rate}{[\code{boolean(1)}]\cr{}
-should realized growth rate be computed}
+\item{chosen_time}{[\code{integer(1)}]\cr{}
+generation which should be used to get final abundance}
 }
 \description{
 Extract Performance Estimators From Simulations

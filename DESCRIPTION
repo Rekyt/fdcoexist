@@ -26,7 +26,8 @@ Imports:
     matrixStats,
     tibble,
     tidyr,
-    Weighted.Desc.Stat
+    Weighted.Desc.Stat,
+    scales
 Suggests: 
     testthat,
     knitr,

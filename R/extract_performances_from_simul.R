@@ -8,6 +8,8 @@
 #' @param chosen_time \[`integer(1)`\]\cr{}
 #'                    generation which should be used to get final abundance
 #'
+#'
+#' @importFrom stats coef lm
 #' @export
 extract_performances_from_simul = function(simul, trait_list,
                                            chosen_time = NULL) {
