@@ -34,7 +34,7 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
 # Load Data --------------------------------------------------------------------
 # Select data for k = 1.3 A = 2.5e-7, B = 6.3e-6 and variable H (not 0 nor 1e-8)
 
-main_folder = "inst/job_data/perf_641867e/"
+main_folder = "inst/job_data/perf_c4a9018/"
 
 all_trait = readRDS(paste0(main_folder, "/bigmem_trait_df.Rds"))
 
@@ -65,7 +65,7 @@ tidy_perf = all_perf_df %>%
                     extra = "merge") %>%
     filter(trait == "trait2")
 
-saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_641867e.Rds"),
+saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_c4a9018.Rds"),
         compress = TRUE)
 
 # Extract performances in first generations ------------------------------------
@@ -126,229 +126,258 @@ perf_growth = all_sp_perf_df %>%
     group_by(B, trait_cor, !!target_param) %>%
     summarise(rel_growth = mean(percent_growth, na.rm = TRUE))
 
+# Reproducing preliminary figures ----------------------------------------------
 
-# Figure 2: Abundance environment curve ----------------------------------------
-# Effect of simulation parameters on single species abundance along the
-# environment.
-# (Abundance vs. Patch in function of values of parameters for a fixed trait
-# contribution scenario)
-# Four panels figure: color code for parameter values k, A, B, H
-subset_perf = all_sp_perf_df %>%
-    filter(trait_cor == "uncor", species == "species67",
-           R_scenar == 0, A_scenar == 0, H_scenar == 0)
+perf_estimate = c(
+    cwm                 = "CWM",
+    cwv                 = "CWV",
+    cws                 = "CWS",
+    cwk                 = "CWK",
+    pure_env            = "Weighted Th. GR",
+    weighted_avg_growth = "Weighted Avg. GR",
+    weighted_int_growth = "Weighted. Int. GR (exp. model)",
+    weighted_max_growth = "Weighted Max.GR"
+)
 
-fig_env_abund_k = plot_env_abund(subset_perf, "k", "Max. Growth Rate")
-fig_env_abund_A = plot_env_abund(subset_perf, "A", "Limiting. Sim.\nIntensity")
-fig_env_abund_B = plot_env_abund(subset_perf, "B", "Intrasp. Compet.\nIntensity")
-fig_env_abund_H = plot_env_abund(subset_perf, "H", "Hierach. Compet.\nIntensity")
+A_for_k_1.15 = c(0, 2.19e-4, 2.257e-4,  2.44e-4, 2.58e-4)
+A_for_k_1.3  = c(0,   1e-7,     5e-7,   1.9e-6, 6.92e-6)
+A_for_k_1.45 = c(0, 2.32e-9,  2.36e-8, 2.155e-7, 1.75e-6)
+list_k = c(1.15, 1.3, 1.45)
+list_B = c(0, 1.585e-4, 3.17e-4)
+H_for_k_1.15 = c(0, 6.215e-4, 6.48e-4, 6.68e-4, 6.754e-4)
+H_for_k_1.3  = c(0,     1e-6,    4e-6, 1.35e-5, 4.05e-5)
+H_for_k_1.45 = c(0,  2.31e-8, 2.31e-7, 1.1e-6,  3e-6)
 
-fig_env_abund = plot_grid(fig_env_abund_k, fig_env_abund_A,
-                          fig_env_abund_B, fig_env_abund_H,
-                          ncol = 2, labels = c("k", "A", "B", "H"))
+a_values = data.frame(
+    k = rep(c(1.15, 1.3, 1.45), each = 5),
+    A = c(A_for_k_1.15, A_for_k_1.3, A_for_k_1.45),
+    A_red = rep(c(0, 0.2, 0.4, 0.6, 0.8), 3)
+)
 
-# Abundance of species in a patch in function of H
-all_perf_df %>%
-    filter(seed == 227470, trait_cor == "uncor",
-           R_scenar == 0, A_scenar == 50, H_scenar == 0, patch == 12,
-           N150 > 0)  %>%
-    select(H, species, N150) %>%
-    arrange(H, desc(N150)) %>%
-    ggplot(aes(H, N150, color = species)) +
-    geom_line(size = 1) +
-    scale_x_log10() +
-    scale_y_log10()
+h_values = data.frame(
+    k = rep(c(1.15, 1.3, 1.45), each =  5),
+    H = c(H_for_k_1.15, H_for_k_1.3, H_for_k_1.45),
+    H_red = rep(c(0, 0.2, 0.4, 0.6, 0.8), 3)
+)
 
-# Figure 3: CWM-Environment figure ---------------------------------------------
-# Effect of Trait contribution scenario on CWM_Trait2-Environment Relationship
-# (CWM vs. Patch, 9 panels, R_scenar on rows, A_scenar on columns,
-# H_scenar color, for a fixed simulation parameter set)
-single_cwm %>%
-    filter(patch >= 5, patch <= 20, trait == "trait2") %>%
-    ggplot(aes(patch, comperf_value, color = as.factor(H_scenar),
-               # specify interaction otherwise it messes with groups
-               group = interaction(as.factor(H_scenar), seed))) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_line(size = 1, alpha = 1/20) +
-    geom_smooth(size = 1, method = "lm", se = FALSE, aes(group = NULL)) +
-    ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
-                          formula = y ~ x, parse = TRUE, size = 3,
-                          label.y.npc = "bottom", label.x.npc = "right",
-                          coef.digits = 2) +
-    facet_grid(vars(R_scenar), vars(A_scenar),
-               labeller = labeller(
-                   R_scenar = function(x) paste0("Trait 2 Contrib.\n",
-                                                 "to Growth : ", x, "%"),
-                   A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
-                                                 "Compet. : ", x, "%"),
-                   .default = label_both)) +
-    scale_color_viridis_d() +
-    labs(x = "Environmental Variable",
-         y = "CWM of Trait 2",
-         color = "Trait 2 contrib. to Hierarch. Compet.",
-         subtitle = expression("Trait 2 CWM <-> Environment (t"["opt"] *
-                                   ") relationship")) +
-    theme(aspect.ratio = 1,
-          legend.position = "top")
+base_scenario = tidy_perf %>%
+    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
+           trait_cor == "uncor") %>%
+    mutate(perf_minus_expect = comperf_value - patch)
 
-# Test the influence of parameters
-all_perf_df %>%
-    filter(k == 1.3, A > 2.5e-7, A < 2.6e-7, B >  2.5e-7, B <  2.6e-7,
-           H > 3.16e-5, H < 3.17e-5, trait_cor == "uncor", patch >= 5,
-           patch <= 20) %>%
-    ggplot(aes(patch, cwm_trait2, color = as.factor(H_scenar),
-               # specify interaction otherwise it messes with groups
-               group = interaction(as.factor(H_scenar), seed))) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_line(size = 1, alpha = 1/20) +
-    geom_smooth(size = 1, method = "lm", se = FALSE, aes(group = NULL)) +
-    ggpmisc::stat_poly_eq(aes(label = ..eq.label.., group = NULL),
-                          formula = y ~ x, parse = TRUE, size = 3,
-                          label.y.npc = "bottom", label.x.npc = "right",
-                          coef.digits = 2) +
-    facet_grid(vars(R_scenar), vars(A_scenar),
-               labeller = labeller(
-                   R_scenar = function(x) paste0("Trait 2 Contrib.\n",
-                                                 "to Growth : ", x, "%"),
-                   A_scenar = function(x) paste0("Trait 2 Contrib.\nto ",
-                                                 "Compet. : ", x, "%"),
-                   .default = label_both)) +
-    scale_color_viridis_d() +
-    labs(x = "Environmental Variable",
-         y = "CWM of Trait 2",
-         color = "Trait 2 contrib. to Hierarch. Compet.",
-         subtitle = expression("Trait 2 CWM <-> Environment (t"["opt"] *
-                                   ") relationship")) +
-    theme(aspect.ratio = 1,
-          legend.position = "top")
+other_base = tidy_perf %>%
+    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
+           trait_cor == "uncor") %>%
+    tidyr::spread(comperf_name, comperf_value) %>%
+    tidyr::gather("comperf_name", "comperf_value",
+                  best_abund:weighted_max_growth, -pure_env) %>%
+    mutate(perf_minus_th_value = comperf_value - pure_env)
 
-# Figure 4: Effect of Param. Values on Estimators of TxE relationship -----------
-# Difference in performance indices affected by the intensity of ecological
-# processes
+only_growth = base_scenario %>%
+    filter(A == 0, B == 0, H == 0)
 
-tidy_perf %>%
-    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
-           !(comperf_name %in% c("monocult", "polycult"))) %>%
-    ggplot(aes(patch, comperf_value, color = comperf_name)) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2) +
-    geom_point(alpha = 1/50) +
-    stat_smooth(se = FALSE, geom = "line", size = 1,
-                alpha = 1/10, aes(group = interaction(seed, comperf_name))) +
-    stat_smooth(se = FALSE, geom = "line", size = 1.3,
-                alpha = 1/2) +
-    facet_grid(vars(A, B), vars(H),
-               labeller = labeller(H = function(x) scientific_notation(x, "H"),
-                                   A = function(x) scientific_notation(x, "A"),
-                                   B = function(x) scientific_notation(x, "B"))) +
-    guides()
+# Base figure: No competition --------------------------------------------------
+# Figure in the absence of any competition
+fig_no_competition = only_growth %>%
+    filter(!grepl("cw[vsk]|best", comperf_name)) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), labeller = label_both) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
     labs(x = "Environment",
-         y = "Performance Value") +
-    theme_bw() +
-    theme(aspect.ratio = 1)
-# Figure 5: Higher-order moments CWV & CWS -------------------------------------
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "No competition",
+         caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
 
-# Figure 6: Single Patch Trait-Perforamance relationship -----------------------
-fig_trait_perf_A = all_sp_perf_df %>%
-    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
-           B > 2e-7, H == 1e-4, seed == 227470, patch == 5) %>%
-    inner_join(all_trait %>%
-                   mutate(seed = as.numeric(seed))) %>%
-    mutate(N150 = log10(N150 + 1)) %>%
-    tidyr::gather("perf_index", "perf_value", N150, max_growth_rate,
-                  env_growth_rate) %>%
-    ggplot(aes(trait2, perf_value, color = as.factor(A))) +
-    geom_point() +
-    geom_line() +
-    facet_wrap(~perf_index, scales = "free_y") +
-    scale_color_viridis_d() +
-    labs(x = "Trait Value",
-         y = "Performance Value")
-
-fig_trait_perf_B = all_sp_perf_df %>%
-    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
-           A > 2e-7, H == 1e-4, seed == 227470, patch == 5) %>%
-    inner_join(all_trait %>%
-                   mutate(seed = as.numeric(seed))) %>%
-    mutate(N150 = log10(N150 + 1)) %>%
-    tidyr::gather("perf_index", "perf_value", N150, max_growth_rate,
-                  env_growth_rate) %>%
-    ggplot(aes(trait2, perf_value, color = as.factor(B))) +
-    geom_point() +
-    geom_line() +
-    facet_wrap(~perf_index, scales = "free_y") +
-    scale_color_viridis_d() +
-    labs(x = "Trait Value",
-         y = "Performance Value")
-
-fig_trait_perf_H = all_sp_perf_df %>%
-    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100, k == 1.3,
-           A > 2e-7, B > 2e-7, seed == 227470, patch == 5) %>%
-    inner_join(all_trait %>%
-                   mutate(seed = as.numeric(seed))) %>%
-    mutate(N150 = log10(N150 + 1)) %>%
-    tidyr::gather("perf_index", "perf_value", N150, max_growth_rate,
-                  env_growth_rate) %>%
-    ggplot(aes(trait2, perf_value, color = as.factor(H))) +
-    geom_point() +
-    geom_line() +
-    facet_wrap(~perf_index, scales = "free_y") +
-    scale_color_viridis_d() +
-    labs(x = "Trait Value",
-         y = "Performance Value")
-
-plot_grid(fig_trait_perf_A, fig_trait_perf_B, fig_trait_perf_H,
-          nrow = 3)
-
-# Try fitting Laughlin et al. model --------------------------------------------
-
-sub_perf = list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
-    future_map_dfr(~.x %>%
-                       readRDS() %>%
-                       dplyr::filter(R_scenar == 100, A_scenar == 100,
-                                     H_scenar == 100, trait_cor == "uncor")) %>%
-    inner_join(all_trait %>%
-                   mutate(seed = as.integer(seed)))
-
-extract_partial_derivative = function(mod, slope_name) {
-    tibble::tibble(
-        patch = 1:25,
-        !!enquo(slope_name) := coef(summary(mod))[2,1] +
-            coef(summary(mod))[4,1] *
-            1:25)
-}
-
-tictoc::tic()
-mod_sub_perf = sub_perf %>%
-    tidyr::nest(patch, species:seed, max_growth_rate_per_capita:trait2) %>%
-    mutate(trait_growth_mod = purrr::map(
-               data, ~lm(max_growth_rate ~ patch * trait2,
-                         data = .x)),
-           trait_abund_mod = purrr::map(
-               data, ~lm(N150 ~ patch * trait2, data = .x)),
-           trait_growth_slope = purrr::map(
-               trait_growth_mod, ~extract_partial_derivative(.x, slope_growth)),
-           trait_abund_slope = purrr::map(
-               trait_abund_mod, ~extract_partial_derivative(.x, slope_abund)))
-tictoc::toc()
+# Figure Intrasp. competition ---------------------------------------------------
+# Figure showing the influence of intra-specific competition only
+fig_intra_competition = base_scenario %>%
+    filter(A == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), vars(B), labeller = label_both) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Intra-specific competition only",
+         caption = "A = 0; H = 0; uncorrelated traits; N = 15 CI ±95%")
 
 
-sub_sub_perf = sub_perf %>%
-    filter(patch == 1, seed == 227470) %>%
+# Figure Limiting Similarity ---------------------------------------------
+# Figure showing the influence of limiting similarity only
+fig_lim_sim = base_scenario %>%
+    filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    inner_join(a_values, by = c("k", "A")) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), vars(A_red), labeller = labeller(
+        k     = label_both,
+        A_red = function(x) paste0("Growth Red.: ",
+                                   scales::percent(as.numeric(x), accuracy = 1))
+    )) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Limiting similarity only",
+         caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
 
-    perf_mod = lm(trait2 ~ max_growth_rate, data = sub_sub_perf)
+# Figure Hierarchical competition ----------------------------------------------
+# Figure showing the effect of hierarchical competition
+fig_hierarch_comp = base_scenario %>%
+    filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    inner_join(h_values, by = c("k", "H")) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), vars(H_red), labeller = labeller(
+        k     = label_both,
+        H_red = function(x) paste0("Growth Red.: ",
+                                   scales::percent(as.numeric(x), accuracy = 1))
+    )) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Hierarchical Competition only",
+         caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
 
-nested_sub_perf = sub_perf %>%
-    tidyr::nest(patch, species:seed, max_growth_rate_per_capita:trait2) %>%
-    mutate(
-        trait_growth_mod = purrr::map(
-            data, ~lm(max_growth_rate ~ patch * trait2, data = .x)),
-        trait_abund_mod = purrr::map(
-            data, ~lm(N150 ~ patch * trait2, data = .x)),
-        trait_growth_sum = purrr::map(trait_growth_mod, broom::tidy),
-        trait_growth_pred = purrr::map(trait_growth_mod,
-                                       ~broom::augment(.x, newdata = data.frame(patch_sc = 1:25,
-                                                                                                        trait2 = 0))),
-        trait_abund_sum = purrr::map(trait_abund_mod, broom::tidy))
+# Figure All competitions ------------------------------------------------------
+fig_both_comp = base_scenario %>%
+    filter(B == 0, A != 0, H != 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    inner_join(h_values, by = c("k", "H")) %>%
+    inner_join(a_values, by = c("k", "A")) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(A_red), vars(k, H_red), labeller = labeller(
+        k     = label_both,
+        H_red = function(x) paste0("Growth Red. (H): ",
+                                   scales::percent(as.numeric(x), accuracy = 1)),
+        A_red = function(x) paste0("Growth Red. (A): ",
+                                   scales::percent(as.numeric(x), accuracy = 1))
+    ), scales = "free_y") +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1,
+          legend.position = "top") +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Hierarchical Competition only",
+         caption = "B = 0; uncorrelated traits; N = 15; CI ±95%")
 
+# Figures Multi-traits ---------------------------------------------------------
 
-# From Laughlin code one way of computing partial derivative
-pred_slope = coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[2,1] + coef(summary(nested_sub_perf$trait_growth_mod[[1]]))[4,1]*seq(-1.664089, 1.664089, length.out = 50)
+multi_base = tidy_perf %>%
+    filter(R_scenar == 50, A_scenar == 100, H_scenar == 100,
+           trait_cor == "uncor") %>%
+    mutate(perf_minus_expect = comperf_value - patch)
+
+fig_multi_no_competition = multi_base %>%
+    filter(A == 0, B == 0, H == 0) %>%
+    filter(!grepl("cw[vsk]|best", comperf_name)) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), labeller = label_both) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Multi-traits (R50%) – No competition",
+         caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
+
+fig_multi_intra_competition = multi_base %>%
+    filter(A == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), vars(B), labeller = label_both) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Multi-traits (R50%) – Intra-specific competition only",
+         caption = "A = 0; H = 0; uncorrelated traits; N = 15 CI ±95%")
+
+fig_multi_lim_sim = multi_base %>%
+    filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    inner_join(a_values, by = c("k", "A")) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), vars(A_red), labeller = labeller(
+        k     = label_both,
+        A_red = function(x) paste0("Growth Red.: ",
+                                   scales::percent(as.numeric(x), accuracy = 1))
+    )) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Multi-traits (R50%) – Limiting similarity only",
+         caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
+
+fig_multi_hierarch_comp = multi_base %>%
+    filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    inner_join(h_values, by = c("k", "H")) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(k), vars(H_red), labeller = labeller(
+        k     = label_both,
+        H_red = function(x) paste0("Growth Red.: ",
+                                   scales::percent(as.numeric(x), accuracy = 1))
+    )) +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1) +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Multi-traits (R50%) – Hierarchical Competition only",
+         caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
+
+fig_multi_both_comp = multi_base %>%
+    filter(B == 0, A != 0, H != 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    inner_join(h_values, by = c("k", "H")) %>%
+    inner_join(a_values, by = c("k", "A")) %>%
+    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    geom_hline(yintercept = 0, linetype = 2) +
+    stat_summary(fun.y = mean, geom = "line") +
+    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+    facet_grid(vars(A_red), vars(k, H_red), labeller = labeller(
+        k     = label_both,
+        H_red = function(x) paste0("Growth Red. (H): ",
+                                   scales::percent(as.numeric(x), accuracy = 1)),
+        A_red = function(x) paste0("Growth Red. (A): ",
+                                   scales::percent(as.numeric(x), accuracy = 1))
+    ), scales = "free_y") +
+    scale_color_discrete(labels = perf_estimate) +
+    theme(aspect.ratio = 1,
+          legend.position = "top") +
+    labs(x = "Environment",
+         y  = "Deviation from expectation",
+         color = "Performance Estimates",
+         title = "Multi-traits (R50%) – Hierarchical Competition only",
+         caption = "B = 0; uncorrelated traits; N = 15; CI ±95%")
