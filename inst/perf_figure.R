@@ -95,8 +95,7 @@ list.files(main_folder, "simul_cat_*", full.names = TRUE) %>%
             purrr::map_dfr(function(y) {
 
                 extract_performances_from_simul(
-                    y, trait_list[[as.character(y$seed)]], TRUE,
-                    chosen_time = 10
+                    y, trait_list[[as.character(y$seed)]],  chosen_time = 4
                 )})
 
         saveRDS(perf_df, gsub("simul_cat_", "t10_perf_df_", x),
@@ -163,7 +162,11 @@ h_values = data.frame(
 base_scenario = tidy_perf %>%
     filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
            trait_cor == "uncor") %>%
-    mutate(perf_minus_expect = comperf_value - patch)
+    mutate(perf_minus_expect = comperf_value - patch,
+           pred_trunc_gaussian = purrr::map_dbl(
+               patch,
+               ~ truncated_gaussian(.x, 2, 1, 25)),
+           perf_minus_trunc_gaussian = comperf_value - pred_trunc_gaussian)
 
 other_base = tidy_perf %>%
     filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
@@ -171,15 +174,13 @@ other_base = tidy_perf %>%
     tidyr::spread(comperf_name, comperf_value) %>%
     tidyr::gather("comperf_name", "comperf_value",
                   best_abund:weighted_max_growth, -pure_env) %>%
-    mutate(perf_minus_th_value = comperf_value - pure_env)
-
-only_growth = base_scenario %>%
-    filter(A == 0, B == 0, H == 0)
+    mutate(pred_trunc_gaussian = truncated_gaussian(patch, 2, 1, 25),
+           perf_minus_trunc_gaussian = comperf_value - pred_trunc_gaussian)
 
 # Base figure: No competition --------------------------------------------------
 # Figure in the absence of any competition
-fig_no_competition = only_growth %>%
-    filter(!grepl("cw[vsk]|best", comperf_name)) %>%
+fig_no_competition = base_scenario %>%
+    filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
