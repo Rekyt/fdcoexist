@@ -55,8 +55,11 @@ tictoc::toc()
 all_sp_perf_df = list.files(main_folder, "perf_df_*", full.names = TRUE) %>%
     purrr::map_dfr(readRDS)
 
-all_perf_df = list.files(main_folder, "cwm_df_*", full.names = TRUE) %>%
+all_perf_df = list.files(main_folder, "^cwm_df_*", full.names = TRUE) %>%
     purrr::map_dfr(readRDS)
+
+
+
 
 tidy_perf = all_perf_df %>%
     filter(trait_cor == "uncor") %>%
@@ -67,7 +70,6 @@ tidy_perf = all_perf_df %>%
 
 saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_c4a9018.Rds"),
         compress = TRUE)
-
 # Extract performances in first generations ------------------------------------
 trait_list = split(all_trait, list(all_trait$seed)) %>%
     lapply(function(z) {
@@ -88,8 +90,6 @@ list.files(main_folder, "simul_cat_*", full.names = TRUE) %>%
 
         pkgload::load_all()
 
-        debug(extract_performances_from_simul)
-
         perf_df = x %>%
             readRDS() %>%
             purrr::map_dfr(function(y) {
@@ -106,6 +106,23 @@ list.files(main_folder, "simul_cat_*", full.names = TRUE) %>%
             saveRDS(gsub("simul_cat_", "t10_cwm_df_", x), compress = TRUE)
     }, .progress = TRUE)
 tictoc::toc()
+
+all_perf_t4_df = list.files(main_folder, "^t10_cwm_df_*", full.names = TRUE) %>%
+    purrr::map_dfr(readRDS)
+
+tidy_perf_t4 = all_perf_t4_df %>%
+    filter(trait_cor == "uncor") %>%
+    tidyr::gather("comperf_name", "comperf_value", matches("trait[12]")) %>%
+    tidyr::separate("comperf_name", c("trait", "comperf_name"), sep = "_",
+                    extra = "merge") %>%
+    filter(trait == "trait2")
+
+saveRDS(tidy_perf_t4, paste0(main_folder, "tidy_perf_t4_c4a9018.Rds"),
+        compress = TRUE)
+
+# Combine Estimates at all times -----------------------------------------------
+
+tidy_perf_all = bind_rows(tidy_perf, tidy_perf_t4)
 
 # Compare Avg. Growth Rate wit various param -----------------------------------
 # Compare values of average growth rate per patch when param. equals 0 or ≠ than
@@ -159,40 +176,31 @@ h_values = data.frame(
     H_red = rep(c(0, 0.2, 0.4, 0.6, 0.8), 3)
 )
 
-base_scenario = tidy_perf %>%
+base_scenario = tidy_perf_all %>%
     filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
            trait_cor == "uncor") %>%
     mutate(perf_minus_expect = comperf_value - patch,
            pred_trunc_gaussian = purrr::map_dbl(
                patch,
-               ~ truncated_gaussian(.x, 2, 1, 25)),
-           perf_minus_trunc_gaussian = comperf_value - pred_trunc_gaussian)
-
-other_base = tidy_perf %>%
-    filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
-           trait_cor == "uncor") %>%
-    tidyr::spread(comperf_name, comperf_value) %>%
-    tidyr::gather("comperf_name", "comperf_value",
-                  best_abund:weighted_max_growth, -pure_env) %>%
-    mutate(pred_trunc_gaussian = truncated_gaussian(patch, 2, 1, 25),
+               ~truncated_gaussian(.x, 2, 1, 25)),
            perf_minus_trunc_gaussian = comperf_value - pred_trunc_gaussian)
 
 # Base figure: No competition --------------------------------------------------
 # Figure in the absence of any competition
 fig_no_competition = base_scenario %>%
     filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), labeller = label_both) +
+    facet_grid(vars(k), vars(time), labeller = label_both) +
     scale_color_discrete(labels = perf_estimate) +
     theme(aspect.ratio = 1) +
     labs(x = "Environment",
          y  = "Deviation from expectation",
          color = "Performance Estimates",
          title = "No competition",
-         caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
+         caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI±95%")
 
 # Figure Intrasp. competition ---------------------------------------------------
 # Figure showing the influence of intra-specific competition only
@@ -202,7 +210,7 @@ fig_intra_competition = base_scenario %>%
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), vars(B), labeller = label_both) +
+    facet_grid(vars(k), vars(B, time), labeller = label_both) +
     scale_color_discrete(labels = perf_estimate) +
     theme(aspect.ratio = 1) +
     labs(x = "Environment",
@@ -221,7 +229,7 @@ fig_lim_sim = base_scenario %>%
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), vars(A_red), labeller = labeller(
+    facet_grid(vars(k), vars(A_red, time), labeller = labeller(
         k     = label_both,
         A_red = function(x) paste0("Growth Red.: ",
                                    scales::percent(as.numeric(x), accuracy = 1))
@@ -243,7 +251,7 @@ fig_hierarch_comp = base_scenario %>%
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), vars(H_red), labeller = labeller(
+    facet_grid(vars(k), vars(H_red, time), labeller = labeller(
         k     = label_both,
         H_red = function(x) paste0("Growth Red.: ",
                                    scales::percent(as.numeric(x), accuracy = 1))
@@ -258,19 +266,19 @@ fig_hierarch_comp = base_scenario %>%
 
 # Figure All competitions ------------------------------------------------------
 fig_both_comp = base_scenario %>%
-    filter(B == 0, A != 0, H != 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+    filter(B == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(h_values, by = c("k", "H")) %>%
     inner_join(a_values, by = c("k", "A")) %>%
     ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(A_red), vars(k, H_red), labeller = labeller(
+    facet_grid(vars(A_red, time), vars(k, H_red), labeller = labeller(
         k     = label_both,
         H_red = function(x) paste0("Growth Red. (H): ",
-                                   scales::percent(as.numeric(x), accuracy = 1)),
+                                   scales::percent(as.numeric(x), acc = 1)),
         A_red = function(x) paste0("Growth Red. (A): ",
-                                   scales::percent(as.numeric(x), accuracy = 1))
+                                   scales::percent(as.numeric(x), acc = 1))
     ), scales = "free_y") +
     scale_color_discrete(labels = perf_estimate) +
     theme(aspect.ratio = 1,
@@ -283,19 +291,23 @@ fig_both_comp = base_scenario %>%
 
 # Figures Multi-traits ---------------------------------------------------------
 
-multi_base = tidy_perf %>%
+multi_base = tidy_perf_all %>%
     filter(R_scenar == 50, A_scenar == 100, H_scenar == 100,
            trait_cor == "uncor") %>%
-    mutate(perf_minus_expect = comperf_value - patch)
+    mutate(perf_minus_expect = comperf_value - patch,
+           pred_trunc_gaussian = purrr::map_dbl(
+               patch,
+               ~truncated_gaussian(.x, 2, 1, 25)),
+           perf_minus_trunc_gaussian = comperf_value - pred_trunc_gaussian)
 
 fig_multi_no_competition = multi_base %>%
     filter(A == 0, B == 0, H == 0) %>%
     filter(!grepl("cw[vsk]|best", comperf_name)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), labeller = label_both) +
+    facet_grid(vars(k), vars(time), labeller = label_both) +
     scale_color_discrete(labels = perf_estimate) +
     theme(aspect.ratio = 1) +
     labs(x = "Environment",
@@ -306,11 +318,11 @@ fig_multi_no_competition = multi_base %>%
 
 fig_multi_intra_competition = multi_base %>%
     filter(A == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), vars(B), labeller = label_both) +
+    facet_grid(vars(k), vars(B, time), labeller = label_both) +
     scale_color_discrete(labels = perf_estimate) +
     theme(aspect.ratio = 1) +
     labs(x = "Environment",
@@ -322,11 +334,11 @@ fig_multi_intra_competition = multi_base %>%
 fig_multi_lim_sim = multi_base %>%
     filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(a_values, by = c("k", "A")) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), vars(A_red), labeller = labeller(
+    facet_grid(vars(k), vars(A_red, time), labeller = labeller(
         k     = label_both,
         A_red = function(x) paste0("Growth Red.: ",
                                    scales::percent(as.numeric(x), accuracy = 1))
@@ -342,11 +354,11 @@ fig_multi_lim_sim = multi_base %>%
 fig_multi_hierarch_comp = multi_base %>%
     filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(h_values, by = c("k", "H")) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(k), vars(H_red), labeller = labeller(
+    facet_grid(vars(k), vars(H_red, time), labeller = labeller(
         k     = label_both,
         H_red = function(x) paste0("Growth Red.: ",
                                    scales::percent(as.numeric(x), accuracy = 1))
@@ -363,16 +375,16 @@ fig_multi_both_comp = multi_base %>%
     filter(B == 0, A != 0, H != 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(h_values, by = c("k", "H")) %>%
     inner_join(a_values, by = c("k", "A")) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(A_red), vars(k, H_red), labeller = labeller(
+    facet_grid(vars(A_red, time), vars(k, H_red), labeller = labeller(
         k     = label_both,
         H_red = function(x) paste0("Growth Red. (H): ",
-                                   scales::percent(as.numeric(x), accuracy = 1)),
+                                   scales::percent(as.numeric(x), acc = 1)),
         A_red = function(x) paste0("Growth Red. (A): ",
-                                   scales::percent(as.numeric(x), accuracy = 1))
+                                   scales::percent(as.numeric(x), acc = 1))
     ), scales = "free_y") +
     scale_color_discrete(labels = perf_estimate) +
     theme(aspect.ratio = 1,
