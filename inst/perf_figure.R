@@ -176,6 +176,11 @@ h_values = data.frame(
     H_red = rep(c(0, 0.2, 0.4, 0.6, 0.8), 3)
 )
 
+list(k = c(`1.15` = "Low Basal Growth Rate",
+           `1.45` = "High Basal Growth Rate"),
+     time = c(`4` = "Early Dynamics",
+              `50` = "Equilibrium"))
+
 base_scenario = tidy_perf_all %>%
     filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
            trait_cor == "uncor") %>%
@@ -379,7 +384,7 @@ fig_multi_both_comp = multi_base %>%
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_grid(vars(A_red, time), vars(k, H_red), labeller = labeller(
+    facet_grid(vars(k, A_red), vars(H_red, time), labeller = labeller(
         k     = label_both,
         H_red = function(x) paste0("Growth Red. (H): ",
                                    scales::percent(as.numeric(x), acc = 1)),
