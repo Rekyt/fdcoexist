@@ -5,7 +5,7 @@ library("furrr")
 library("cowplot")
 pkgload::load_all()
 
-plan(multiprocess, workers = 15)
+# This script also rely on some functions of the 'ggforce' package
 
 # Functions ---------------------------------------------------------------------
 theme_set(theme_bw(14))
@@ -29,6 +29,124 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
              color = legend_label) +
         theme(aspect.ratio = 1,
               legend.position = "top")
+}
+
+plot_no_comp_single = function(given_page = 1) {
+    base_scenario %>%
+        filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
+               k != 1.3) %>%
+        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        geom_hline(yintercept = 0, linetype = 2) +
+        stat_summary(fun.y = mean, geom = "line") +
+        stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+        ggforce::facet_wrap_paginate(
+            vars(k, time),
+            labeller = labeller(
+                k = c(`1.15` = "Low Basal Growth Rate",
+                      `1.45` = "High Basal Growth Rate"),
+                time = c(`4` = "Early Dynamics",
+                         `50` = "Equilibrium")),
+            nrow = 1, ncol = 1, page = given_page) +
+        scale_color_discrete(labels = perf_estimate) +
+        theme(panel.grid = element_blank(),
+              aspect.ratio = 1) +
+        labs(x = "Environment",
+             y  = "Deviation from expectation",
+             color = "Performance Estimates",
+             title = "No competition",
+             caption = paste0("A = 0; B = 0; H = 0; uncorrelated traits; ",
+                              "N = 15; CI±95%"))
+}
+
+plot_lim_sim_single = function(given_page = 1) {
+    base_scenario %>%
+        filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name), k != 1.3) %>%
+        inner_join(a_values, by = c("k", "A")) %>%
+        filter(A_red %in% c(0, 0.8)) %>%
+        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        geom_hline(yintercept = 0, linetype = 2) +
+        stat_summary(fun.y = mean, geom = "line") +
+        stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+        ggforce::facet_wrap_paginate(vars(k, A_red, time), labeller = labeller(
+            k = c(`1.15` = "Low Basal Growth Rate",
+                  `1.45` = "High Basal Growth Rate"),
+            time = c(`4` = "Early Dynamics",
+                     `50` = "Equilibrium"),
+            A_red = function(x) paste0("Growth Red.: ",
+                                       scales::percent(as.numeric(x),
+                                                       accuracy = 1))
+        ), ncol = 1, nrow = 1, page = given_page) +
+        scale_color_discrete(labels = perf_estimate) +
+        theme(aspect.ratio = 1,
+              panel.grid = element_blank()) +
+        labs(x = "Environment",
+             y  = "Deviation from expectation",
+             color = "Performance Estimates",
+             title = "Limiting similarity only",
+             caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
+}
+
+plot_hierarch_comp_single = function(given_page = 1) {
+    base_scenario %>%
+        filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+        inner_join(h_values, by = c("k", "H")) %>%
+        filter(k != 1.3, H_red %in% c(0, 0.8)) %>%
+        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        geom_hline(yintercept = 0, linetype = 2) +
+        stat_summary(fun.y = mean, geom = "line") +
+        stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+        ggforce::facet_wrap_paginate(vars(k, H_red, time), labeller = labeller(
+            k = c(`1.15` = "Low Basal Growth Rate",
+                  `1.45` = "High Basal Growth Rate"),
+            time = c(`4` = "Early Dynamics",
+                     `50` = "Equilibrium"),
+            H_red = function(x)
+                paste0("Growth Red.: ",
+                       scales::percent(as.numeric(x), accuracy = 1))
+        ), nrow = 1, ncol = 1, page = given_page) +
+        scale_color_discrete(labels = perf_estimate) +
+        theme(aspect.ratio = 1,
+              panel.grid = element_blank()) +
+        labs(x = "Environment",
+             y  = "Deviation from expectation",
+             color = "Performance Estimates",
+             title = "Hierarchical Competition only",
+             caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
+}
+
+plot_both_comp_single = function(given_page = 1) {
+    base_scenario %>%
+        filter(B == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+        inner_join(h_values, by = c("k", "H")) %>%
+        inner_join(a_values, by = c("k", "A")) %>%
+        filter(k != 1.3, A_red %in% c(0, 0.8), H_red %in% c(0, 0.8)) %>%
+        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        geom_hline(yintercept = 0, linetype = 2) +
+        stat_summary(fun.y = mean, geom = "line") +
+        stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
+        ggforce::facet_wrap_paginate(
+            vars(k, H_red, A_red, time),
+            labeller = labeller(
+                k = c(`1.15` = "Low Basal Growth Rate",
+                      `1.45` = "High Basal Growth Rate"),
+                time = c(`4` = "Early Dynamics",
+                         `50` = "Equilibrium"),
+                H_red = function(x) paste0("Growth Red. (H): ",
+                                           scales::percent(as.numeric(x),
+                                                           acc = 1)),
+                A_red = function(x) paste0("Growth Red. (A): ",
+                                           scales::percent(as.numeric(x),
+                                                           acc = 1))
+            ), scales = "free_y", ncol = 1, nrow = 1, page = given_page) +
+        scale_color_discrete(labels = perf_estimate) +
+        theme(aspect.ratio = 1,
+              legend.position = "top",
+              panel.grid = element_blank()) +
+        labs(x = "Environment",
+             y  = "Deviation from expectation",
+             color = "Performance Estimates",
+             title = "Hierarchical Competition only",
+             caption = "B = 0; uncorrelated traits; N = 15; CI ±95%")
 }
 
 # Load Data --------------------------------------------------------------------
@@ -71,6 +189,8 @@ tidy_perf = all_perf_df %>%
 saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_c4a9018.Rds"),
         compress = TRUE)
 # Extract performances in first generations ------------------------------------
+
+# Reconstruct trait list
 trait_list = split(all_trait, list(all_trait$seed)) %>%
     lapply(function(z) {
         z %>%
@@ -83,6 +203,9 @@ trait_list = split(all_trait, list(all_trait$seed)) %>%
                     as.matrix()
             })
     })
+
+# Extract performance estimates at early timesteps
+plan(multiprocess, workers = 15)
 
 tictoc::tic()
 list.files(main_folder, "simul_cat_*", full.names = TRUE) %>%
@@ -98,7 +221,7 @@ list.files(main_folder, "simul_cat_*", full.names = TRUE) %>%
                     y, trait_list[[as.character(y$seed)]],  chosen_time = 4
                 )})
 
-        saveRDS(perf_df, gsub("simul_cat_", "t10_perf_df_", x),
+        saveRDS(perf_df, gsub("simul_cat_", "t4_perf_df_", x),
                 compress = TRUE)
 
         perf_df %>%
@@ -207,69 +330,13 @@ fig_no_competition = base_scenario %>%
          title = "No competition",
          caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI±95%")
 
-fig_talk_no_compet = base_scenario %>%
-    filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
-           k != 1.3) %>%
-    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
-    geom_hline(yintercept = 0, linetype = 2) +
-    stat_summary(fun.y = mean, geom = "line") +
-    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    ggforce::facet_wrap_paginate(vars(k, time),
-                                 labeller = labeller(
-                                     k = c(`1.15` = "Low Basal Growth Rate",
-                                           `1.45` = "High Basal Growth Rate"),
-                                     time = c(`4` = "Early Dynamics",
-                                              `50` = "Equilibrium")),
-                                 nrow = 1, ncol = 1) +
-    scale_color_discrete(labels = perf_estimate) +
-    theme(panel.grid = element_blank(),
-          aspect.ratio = 1) +
-    labs(x = "Environment",
-         y  = "Deviation from expectation",
-         color = "Performance Estimates",
-         title = "No competition",
-         caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI±95%")
 
-fig_talk_no_compet_all = lapply(
-    seq(1, ggforce::n_pages(fig_talk_no_compet)),
-    function(x) {
-        base_scenario %>%
-            filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
-                   k != 1.3) %>%
-            ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
-            geom_hline(yintercept = 0, linetype = 2) +
-            stat_summary(fun.y = mean, geom = "line") +
-            stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-            ggforce::facet_wrap_paginate(vars(k, time),
-                                         labeller = labeller(
-                                             k = c(`1.15` = "Low Basal Growth Rate",
-                                                   `1.45` = "High Basal Growth Rate"),
-                                             time = c(`4` = "Early Dynamics",
-                                                      `50` = "Equilibrium")),
-                                         nrow = 1, ncol = 1, page = x) +
-            scale_color_discrete(labels = perf_estimate) +
-            theme(panel.grid = element_blank(),
-                  aspect.ratio = 1) +
-            labs(x = "Environment",
-                 y  = "Deviation from expectation",
-                 color = "Performance Estimates",
-                 title = "No competition",
-                 caption = "A = 0; B = 0; H = 0; uncorrelated traits; N = 15; CI±95%")
-    })
-
-fig_talk_no_compet_all %>%
-    purrr::set_names(c("low_early", "low_equilibrium", "high_early",
-                       "high_equilibrium")) %>%
-    purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/no_compet_", .y,
-                                ".png"), .x,
-                         width = 8.35, height = 6.7, units = "in",
-                         dpi = 150))
 
 # Figure Intrasp. competition ---------------------------------------------------
 # Figure showing the influence of intra-specific competition only
 fig_intra_competition = base_scenario %>%
     filter(A == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -288,7 +355,7 @@ fig_intra_competition = base_scenario %>%
 fig_lim_sim = base_scenario %>%
     filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(a_values, by = c("k", "A")) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -305,77 +372,14 @@ fig_lim_sim = base_scenario %>%
          title = "Limiting similarity only",
          caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
 
-fig_talk_lim_sim = base_scenario %>%
-    filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name), k != 1.3) %>%
-    inner_join(a_values, by = c("k", "A")) %>%
-    filter(A_red %in% c(0, 0.8)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
-    geom_hline(yintercept = 0, linetype = 2) +
-    stat_summary(fun.y = mean, geom = "line") +
-    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_wrap_paginate(vars(k, A_red, time), labeller = labeller(
-        k = c(`1.15` = "Low Basal Growth Rate",
-              `1.45` = "High Basal Growth Rate"),
-        time = c(`4` = "Early Dynamics",
-                 `50` = "Equilibrium"),
-        A_red = function(x) paste0("Growth Red.: ",
-                                   scales::percent(as.numeric(x), accuracy = 1))
-    ), ncol = 1, nrow = 1) +
-    scale_color_discrete(labels = perf_estimate) +
-    theme(aspect.ratio = 1) +
-    labs(x = "Environment",
-         y  = "Deviation from expectation",
-         color = "Performance Estimates",
-         title = "Limiting similarity only",
-         caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
 
-fig_talk_lim_sim_all = lapply(
-    seq.int(n_pages(fig_talk_lim_sim)),
-    function(i) {
-        base_scenario %>%
-            filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name), k != 1.3) %>%
-            inner_join(a_values, by = c("k", "A")) %>%
-            filter(A_red %in% c(0, 0.8)) %>%
-            ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
-            geom_hline(yintercept = 0, linetype = 2) +
-            stat_summary(fun.y = mean, geom = "line") +
-            stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-            facet_wrap_paginate(vars(k, A_red, time), labeller = labeller(
-                k = c(`1.15` = "Low Basal Growth Rate",
-                      `1.45` = "High Basal Growth Rate"),
-                time = c(`4` = "Early Dynamics",
-                         `50` = "Equilibrium"),
-                A_red = function(x) paste0("Growth Red.: ",
-                                           scales::percent(as.numeric(x),
-                                                           accuracy = 1))
-            ), ncol = 1, nrow = 1, page = i) +
-            scale_color_discrete(labels = perf_estimate) +
-            theme(aspect.ratio = 1) +
-            labs(x = "Environment",
-                 y  = "Deviation from expectation",
-                 color = "Performance Estimates",
-                 title = "Limiting similarity only",
-                 caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
-    })
-
-lim_sim_names = purrr::cross(list(c("early", "equilibrium"),
-                                  c("no_compet", "high_compet"),
-                                  c("low", "high"))) %>%
-    purrr::map_chr(~paste(.x, collapse = "_"))
-
-fig_talk_lim_sim_all %>%
-    purrr::set_names(lim_sim_names) %>%
-    purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/limiting_sim_", .y,
-                                ".png"), .x,
-                         width = 8.35, height = 6.7, units = "in",
-                         dpi = 150))
 
 # Figure Hierarchical competition ----------------------------------------------
 # Figure showing the effect of hierarchical competition
 fig_hierarch_comp = base_scenario %>%
     filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(h_values, by = c("k", "H")) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -392,72 +396,14 @@ fig_hierarch_comp = base_scenario %>%
          title = "Hierarchical Competition only",
          caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
 
-fig_talk_hierarch_comp = base_scenario %>%
-    filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-    inner_join(h_values, by = c("k", "H")) %>%
-    filter(k != 1.3, H_red %in% c(0, 0.8)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
-    geom_hline(yintercept = 0, linetype = 2) +
-    stat_summary(fun.y = mean, geom = "line") +
-    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_wrap_paginate(vars(k, H_red, time), labeller = labeller(
-        k = c(`1.15` = "Low Basal Growth Rate",
-              `1.45` = "High Basal Growth Rate"),
-        time = c(`4` = "Early Dynamics",
-                 `50` = "Equilibrium"),
-        H_red = function(x) paste0("Growth Red.: ",
-                                   scales::percent(as.numeric(x), accuracy = 1))
-    ), nrow = 1, ncol = 1) +
-    scale_color_discrete(labels = perf_estimate) +
-    theme(aspect.ratio = 1) +
-    labs(x = "Environment",
-         y  = "Deviation from expectation",
-         color = "Performance Estimates",
-         title = "Hierarchical Competition only",
-         caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
 
-fig_talk_hierarch_comp_all = lapply(
-    seq.int(n_pages(fig_talk_hierarch_comp)),
-    function(i) {
-        base_scenario %>%
-            filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-            inner_join(h_values, by = c("k", "H")) %>%
-            filter(k != 1.3, H_red %in% c(0, 0.8)) %>%
-            ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
-            geom_hline(yintercept = 0, linetype = 2) +
-            stat_summary(fun.y = mean, geom = "line") +
-            stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-            facet_wrap_paginate(vars(k, H_red, time), labeller = labeller(
-                k = c(`1.15` = "Low Basal Growth Rate",
-                      `1.45` = "High Basal Growth Rate"),
-                time = c(`4` = "Early Dynamics",
-                         `50` = "Equilibrium"),
-                H_red = function(x) paste0("Growth Red.: ",
-                                           scales::percent(as.numeric(x),
-                                                           accuracy = 1))
-            ), nrow = 1, ncol = 1, page = i) +
-            scale_color_discrete(labels = perf_estimate) +
-            theme(aspect.ratio = 1) +
-            labs(x = "Environment",
-                 y  = "Deviation from expectation",
-                 color = "Performance Estimates",
-                 title = "Hierarchical Competition only",
-                 caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
-    })
-
-fig_talk_hierarch_comp_all %>%
-    purrr::set_names(lim_sim_names) %>%
-    purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/hierarchical_comp_",
-                                .y, ".png"), .x,
-                         width = 8.35, height = 6.7, units = "in",
-                         dpi = 150))
 
 # Figure All competitions ------------------------------------------------------
 fig_both_comp = base_scenario %>%
     filter(B == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
     inner_join(h_values, by = c("k", "H")) %>%
     inner_join(a_values, by = c("k", "A")) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
+    ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
     geom_hline(yintercept = 0, linetype = 2) +
     stat_summary(fun.y = mean, geom = "line") +
     stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -480,69 +426,69 @@ fig_both_comp = base_scenario %>%
          title = "Hierarchical Competition only",
          caption = "B = 0; uncorrelated traits; N = 15; CI ±95%")
 
-fig_talk_both_comp = base_scenario %>%
-    filter(B == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-    inner_join(h_values, by = c("k", "H")) %>%
-    inner_join(a_values, by = c("k", "A")) %>%
-    filter(k != 1.3, A_red %in% c(0, 0.8), H_red %in% c(0, 0.8)) %>%
-    ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
-    geom_hline(yintercept = 0, linetype = 2) +
-    stat_summary(fun.y = mean, geom = "line") +
-    stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-    facet_wrap_paginate(vars(k, H_red, A_red, time), labeller = labeller(
-        k = c(`1.15` = "Low Basal Growth Rate",
-              `1.45` = "High Basal Growth Rate"),
-        time = c(`4` = "Early Dynamics",
-                 `50` = "Equilibrium"),
-        H_red = function(x) paste0("Growth Red. (H): ",
-                                   scales::percent(as.numeric(x), acc = 1)),
-        A_red = function(x) paste0("Growth Red. (A): ",
-                                   scales::percent(as.numeric(x), acc = 1))
-    ), scales = "free_y", ncol = 1, nrow = 1) +
-    scale_color_discrete(labels = perf_estimate) +
-    theme(aspect.ratio = 1,
-          legend.position = "top") +
-    labs(x = "Environment",
-         y  = "Deviation from expectation",
-         color = "Performance Estimates",
-         title = "Hierarchical Competition only",
-         caption = "B = 0; uncorrelated traits; N = 15; CI ±95%")
+# Simplified Figures for Talk --------------------------------------------------
+
+# No Competition
+fig_talk_no_compet = plot_no_comp_single()
+
+fig_talk_no_compet_all = lapply(
+    seq(1, ggforce::n_pages(fig_talk_no_compet)),
+    function(x) {
+        plot_no_comp_single(x)
+    })
+
+fig_talk_no_compet_all %>%
+    purrr::set_names(c("low_early", "low_equilibrium", "high_early",
+                       "high_equilibrium")) %>%
+    purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/no_compet_", .y,
+                                ".pdf"), .x,
+                         width = 8.35, height = 6.7, units = "in",
+                         dpi = 150))
+
+# Limiting Similarity
+fig_talk_lim_sim = plot_lim_sim_single()
+
+fig_talk_lim_sim_all = lapply(
+    seq.int(ggforce::n_pages(fig_talk_lim_sim)),
+    function(i) {
+        plot_lim_sim_single(i)
+    })
+
+lim_sim_names = purrr::cross(list(c("early", "equilibrium"),
+                                  c("no_compet", "high_compet"),
+                                  c("low", "high"))) %>%
+    purrr::map_chr(~paste(.x, collapse = "_"))
+
+fig_talk_lim_sim_all %>%
+    purrr::set_names(lim_sim_names) %>%
+    purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/limiting_sim_", .y,
+                                ".pdf"), .x,
+                         width = 8.35, height = 6.7, units = "in",
+                         dpi = 150))
+
+# Hierarchical Competition
+fig_talk_hierarch_comp = plot_hierarch_comp_single()
+
+fig_talk_hierarch_comp_all = lapply(
+    seq.int(ggforce::n_pages(fig_talk_hierarch_comp)),
+    function(i) {
+        plot_hierarch_comp_single(i)
+    })
+
+fig_talk_hierarch_comp_all %>%
+    purrr::set_names(lim_sim_names) %>%
+    purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/hierarchical_comp_",
+                                .y, ".pdf"), .x,
+                         width = 8.35, height = 6.7, units = "in",
+                         dpi = 150))
+
+# All Competition
+fig_talk_both_comp = plot_both_comp_single()
 
 fig_talk_both_comp_all = lapply(
-    seq.int(n_pages(fig_talk_both_comp)),
+    seq.int(ggforce::n_pages(fig_talk_both_comp)),
     function(i) {
-        base_scenario %>%
-            filter(B == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
-            inner_join(h_values, by = c("k", "H")) %>%
-            inner_join(a_values, by = c("k", "A")) %>%
-            filter(k != 1.3, A_red %in% c(0, 0.8), H_red %in% c(0, 0.8)) %>%
-            ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
-            geom_hline(yintercept = 0, linetype = 2) +
-            stat_summary(fun.y = mean, geom = "line") +
-            stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
-            facet_wrap_paginate(
-                vars(k, H_red, A_red, time),
-                labeller = labeller(
-                    k = c(`1.15` = "Low Basal Growth Rate",
-                          `1.45` = "High Basal Growth Rate"),
-                    time = c(`4` = "Early Dynamics",
-                             `50` = "Equilibrium"),
-                    H_red = function(x) paste0(
-                        "Growth Red. (H): ",
-                        scales::percent(as.numeric(x), acc = 1)),
-                    A_red = function(x) paste0(
-                        "Growth Red. (A): ",
-                        scales::percent(as.numeric(x), acc = 1))
-                ), scales = "free_y", ncol = 1, nrow = 1, page = i) +
-            scale_color_discrete(labels = perf_estimate) +
-            guides(color = guide_legend(nrow = 2)) +
-            theme(aspect.ratio = 1,
-                  legend.position = "top") +
-            labs(x = "Environment",
-                 y  = "Deviation from expectation",
-                 color = "Performance Estimates",
-                 title = "Hierarchical Competition only",
-                 caption = "B = 0; uncorrelated traits; N = 15; CI ±95%")
+        plot_both_comp_single(i)
     })
 
 both_comp_names = purrr::cross(list(c("early", "equilibrium"),
@@ -554,7 +500,7 @@ both_comp_names = purrr::cross(list(c("early", "equilibrium"),
 fig_talk_both_comp_all %>%
     purrr::set_names(both_comp_names) %>%
     purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/both_comp_",
-                                .y, ".png"), .x,
+                                .y, ".pdf"), .x,
                          width = 8.35, height = 6.7, units = "in",
                          dpi = 150))
 
@@ -667,10 +613,88 @@ fig_multi_both_comp = multi_base %>%
 
 # Linear models of performance estimates ---------------------------------------
 
-lin_mod = base_scenario %>%
-    filter(time == 50) %>%
-    tidyr::nest(-comperf_name) %>%
-    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian  ~
-                                             patch + k*A*B*H, data = .x)),
+
+no_compet_lin_mod = base_scenario %>%
+    filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
+           R_scenar == 100, A_scenar == 100, H_scenar == 100, k != 1.3) %>%
+    tidyr::nest(-comperf_name, -time, -k) %>%
+    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+                                             patch, data = .x)),
            lm_sum = purrr::map(lm_mod, broom::tidy),
            lm_gl = purrr::map(lm_mod, broom::glance))
+
+lim_sim_lin_mod = base_scenario %>%
+    inner_join(a_values, by = c("A", "k")) %>%
+    filter(A_red == 0.8, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
+           R_scenar == 100, A_scenar == 100, H_scenar == 100, k != 1.3) %>%
+    tidyr::nest(-comperf_name, -time, -k) %>%
+    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+                                             patch, data = .x)),
+           lm_sum = purrr::map(lm_mod, broom::tidy),
+           lm_gl = purrr::map(lm_mod, broom::glance))
+
+hierarch_comp_lin_mod = base_scenario %>%
+    inner_join(h_values, by = c("H", "k")) %>%
+    filter(H_red == 0.8, B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name),
+           R_scenar == 100, A_scenar == 100, H_scenar == 100, k != 1.3) %>%
+    tidyr::nest(-comperf_name, -time, -k) %>%
+    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+                                             patch, data = .x)),
+           lm_sum = purrr::map(lm_mod, broom::tidy),
+           lm_gl = purrr::map(lm_mod, broom::glance))
+
+both_comp_lin_mod = base_scenario %>%
+    inner_join(a_values, by = c("A", "k")) %>%
+    inner_join(h_values, by = c("H", "k")) %>%
+    filter(B == 0, A_red %in% c(0, 0.8), H_red %in% c(0, 0.8),
+           !grepl("cw[vsk]|best", comperf_name), R_scenar == 100,
+           A_scenar == 100, H_scenar == 100, k != 1.3) %>%
+    tidyr::nest(-comperf_name, -time, -k, -A_red, -H_red) %>%
+    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+                                             patch, data = .x)),
+           lm_sum = purrr::map(lm_mod, broom::tidy),
+           lm_gl = purrr::map(lm_mod, broom::glance)) %>%
+    mutate(
+        file_name = paste0("both_comp_",
+                           comperf_name, "_",
+                           case_when(
+                               time == 4 ~ "early",
+                               time == 50 ~ "equilibrium"
+                           ), "_",
+                           case_when(
+                               A_red == 0 ~ "no_limsim",
+                               A_red == 0.8 ~ "high_limsim"
+                           ), "_",
+                           case_when(
+                               H_red == 0 ~ "no_hierarcomp",
+                               H_red == 0.8 ~ "high_hierarcomp"
+                           ), "_",
+                           case_when(
+                               k == 1.15 ~ "low",
+                               k == 1.45 ~ "high"
+                           )))
+
+both_comp_all_lm = both_comp_lin_mod$lm_mod %>%
+    purrr::set_names(both_comp_lin_mod$file_name)
+
+
+full_model = base_scenario %>%
+    inner_join(a_values, by = c("A", "k")) %>%
+    inner_join(h_values, by = c("H", "k")) %>%
+    filter(!grepl("cw[vsk]|best", comperf_name),
+           R_scenar == 100, A_scenar == 100, H_scenar == 100) %>%
+    tidyr::nest(-comperf_name, -time) %>%
+    mutate(lm_mod = purrr::map(data,
+                               ~lm(comperf_value ~ patch + k*A_red*H_red*B,
+                                   data = .x)),
+           mod_name = paste0("full_", comperf_name, "_",
+                             case_when(time == 50 ~ "equilibrium",
+                                       time == 4  ~ "early")))
+
+full_lm = full_model$lm_mod %>%
+    purrr::set_names(full_model$mod_name)
+
+saveRDS(both_comp_all_lm, "inst/figures/caroline_talk/all_lm_perf_expect.rds",
+        compress = TRUE)
+
+saveRDS(full_lm, "inst/figures/caroline_talk/full_lm.rds", compress = TRUE)
