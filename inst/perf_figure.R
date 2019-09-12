@@ -31,11 +31,18 @@ plot_env_abund = function(perf_df, variable = "H", legend_label) {
               legend.position = "top")
 }
 
-plot_no_comp_single = function(given_page = 1) {
+plot_no_comp_single = function(given_page = 1, cut_patch = FALSE) {
+
+    patch_range = c(1, 25)
+
+    if (cut_patch) {
+        patch_range = c(5, 20)
+    }
+
     base_scenario %>%
-        filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
-               k != 1.3) %>%
-        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        filter(A == 0, B == 0, H == 0, grepl("cwm", comperf_name),
+               k == 1.15, between(patch, patch_range[1], patch_range[2])) %>%
+        ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
         geom_hline(yintercept = 0, linetype = 2) +
         stat_summary(fun.y = mean, geom = "line") +
         stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -49,6 +56,7 @@ plot_no_comp_single = function(given_page = 1) {
             nrow = 1, ncol = 1, page = given_page) +
         scale_color_discrete(labels = perf_estimate) +
         theme(panel.grid = element_blank(),
+              strip.background = element_blank(),
               aspect.ratio = 1) +
         labs(x = "Environment",
              y  = "Deviation from expectation",
@@ -58,12 +66,20 @@ plot_no_comp_single = function(given_page = 1) {
                               "N = 15; CI±95%"))
 }
 
-plot_lim_sim_single = function(given_page = 1) {
+plot_lim_sim_single = function(given_page = 1, cut_patch = FALSE) {
+
+    patch_range = c(1, 25)
+
+    if (cut_patch) {
+        patch_range = c(5, 20)
+    }
+
     base_scenario %>%
-        filter(B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name), k != 1.3) %>%
+        filter(B == 0, H == 0, grepl("cwm", comperf_name), k == 1.15,
+               between(patch, patch_range[1], patch_range[2])) %>%
         inner_join(a_values, by = c("k", "A")) %>%
-        filter(A_red %in% c(0, 0.8)) %>%
-        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        filter(A_red %in% c(0, 0.8), time == 50) %>%
+        ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
         geom_hline(yintercept = 0, linetype = 2) +
         stat_summary(fun.y = mean, geom = "line") +
         stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -78,7 +94,8 @@ plot_lim_sim_single = function(given_page = 1) {
         ), ncol = 1, nrow = 1, page = given_page) +
         scale_color_discrete(labels = perf_estimate) +
         theme(aspect.ratio = 1,
-              panel.grid = element_blank()) +
+              panel.grid = element_blank(),
+              strip.background = element_blank()) +
         labs(x = "Environment",
              y  = "Deviation from expectation",
              color = "Performance Estimates",
@@ -86,12 +103,20 @@ plot_lim_sim_single = function(given_page = 1) {
              caption = "B = 0; H = 0; uncorrelated traits; N = 15; CI ±95%")
 }
 
-plot_hierarch_comp_single = function(given_page = 1) {
+plot_hierarch_comp_single = function(given_page = 1, cut_patch = FALSE) {
+
+    patch_range = c(1, 25)
+
+    if (cut_patch) {
+        patch_range = c(5, 20)
+    }
+
     base_scenario %>%
-        filter(B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+        filter(B == 0, A == 0, grepl("cwm", comperf_name),
+               between(patch, patch_range[1], patch_range[2])) %>%
         inner_join(h_values, by = c("k", "H")) %>%
-        filter(k != 1.3, H_red %in% c(0, 0.8)) %>%
-        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        filter(k == 1.15, H_red %in% c(0, 0.8), time == 50) %>%
+        ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
         geom_hline(yintercept = 0, linetype = 2) +
         stat_summary(fun.y = mean, geom = "line") +
         stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -106,7 +131,8 @@ plot_hierarch_comp_single = function(given_page = 1) {
         ), nrow = 1, ncol = 1, page = given_page) +
         scale_color_discrete(labels = perf_estimate) +
         theme(aspect.ratio = 1,
-              panel.grid = element_blank()) +
+              panel.grid = element_blank(),
+              strip.background = element_blank()) +
         labs(x = "Environment",
              y  = "Deviation from expectation",
              color = "Performance Estimates",
@@ -114,13 +140,20 @@ plot_hierarch_comp_single = function(given_page = 1) {
              caption = "B = 0; A = 0; uncorrelated traits; N = 15; CI ±95%")
 }
 
-plot_both_comp_single = function(given_page = 1) {
+plot_both_comp_single = function(given_page = 1, cut_patch = FALSE) {
+    patch_range = c(1, 25)
+
+    if (cut_patch) {
+        patch_range = c(5, 20)
+    }
+
     base_scenario %>%
-        filter(B == 0, !grepl("cw[vsk]|best", comperf_name)) %>%
+        filter(B == 0, grepl("cwm", comperf_name), between(patch, patch_range[1], patch_range[2])) %>%
         inner_join(h_values, by = c("k", "H")) %>%
         inner_join(a_values, by = c("k", "A")) %>%
-        filter(k != 1.3, A_red %in% c(0, 0.8), H_red %in% c(0, 0.8)) %>%
-        ggplot(aes(patch, perf_minus_trunc_gaussian, color = comperf_name)) +
+        filter(k == 1.15, A_red %in% c(0, 0.8), H_red %in% c(0, 0.8),
+               time == 50) %>%
+        ggplot(aes(patch, perf_minus_expect, color = comperf_name)) +
         geom_hline(yintercept = 0, linetype = 2) +
         stat_summary(fun.y = mean, geom = "line") +
         stat_summary(fun.data = mean_cl_boot, alpha = 1/5) +
@@ -141,7 +174,8 @@ plot_both_comp_single = function(given_page = 1) {
         scale_color_discrete(labels = perf_estimate) +
         theme(aspect.ratio = 1,
               legend.position = "top",
-              panel.grid = element_blank()) +
+              panel.grid = element_blank(),
+              strip.background = element_blank()) +
         labs(x = "Environment",
              y  = "Deviation from expectation",
              color = "Performance Estimates",
@@ -177,8 +211,6 @@ all_perf_df = list.files(main_folder, "^cwm_df_*", full.names = TRUE) %>%
     purrr::map_dfr(readRDS)
 
 
-
-
 tidy_perf = all_perf_df %>%
     filter(trait_cor == "uncor") %>%
     tidyr::gather("comperf_name", "comperf_value", matches("trait[12]")) %>%
@@ -188,6 +220,26 @@ tidy_perf = all_perf_df %>%
 
 saveRDS(tidy_perf, paste0(main_folder, "tidy_perf_c4a9018.Rds"),
         compress = TRUE)
+
+# Compare Avg. Growth Rate wit various param -----------------------------------
+# Compare values of average growth rate per patch when param. equals 0 or ≠ than
+# 0
+target_param = rlang::sym("A")
+
+perf_growth = all_sp_perf_df %>%
+    filter(R_scenar == 0, A_scenar == 0, H_scenar == 0) %>%
+    group_by(B, seed, trait_cor, patch, species) %>%
+    select(groups(), max_growth_rate, !!target_param) %>%
+    ungroup() %>%
+    filter(trait_cor == "uncor") %>%
+    mutate(!!target_param := as.numeric(!!target_param)) %>%
+    arrange(B, seed, patch, species, !!target_param, max_growth_rate) %>%
+    group_by(B, seed, trait_cor, patch, species) %>%
+    mutate(percent_growth = max_growth_rate/first(max_growth_rate)) %>%
+    group_by(B, trait_cor, !!target_param) %>%
+    summarise(rel_growth = mean(percent_growth, na.rm = TRUE))
+
+
 # Extract performances in first generations ------------------------------------
 
 # Reconstruct trait list
@@ -246,24 +298,6 @@ saveRDS(tidy_perf_t4, paste0(main_folder, "tidy_perf_t4_c4a9018.Rds"),
 # Combine Estimates at all times -----------------------------------------------
 
 tidy_perf_all = bind_rows(tidy_perf, tidy_perf_t4)
-
-# Compare Avg. Growth Rate wit various param -----------------------------------
-# Compare values of average growth rate per patch when param. equals 0 or ≠ than
-# 0
-target_param = rlang::sym("A")
-
-perf_growth = all_sp_perf_df %>%
-    filter(R_scenar == 0, A_scenar == 0, H_scenar == 0) %>%
-    group_by(B, seed, trait_cor, patch, species) %>%
-    select(groups(), max_growth_rate, !!target_param) %>%
-    ungroup() %>%
-    filter(trait_cor == "uncor") %>%
-    mutate(!!target_param := as.numeric(!!target_param)) %>%
-    arrange(B, seed, patch, species, !!target_param, max_growth_rate) %>%
-    group_by(B, seed, trait_cor, patch, species) %>%
-    mutate(percent_growth = max_growth_rate/first(max_growth_rate)) %>%
-    group_by(B, trait_cor, !!target_param) %>%
-    summarise(rel_growth = mean(percent_growth, na.rm = TRUE))
 
 # Reproducing preliminary figures ----------------------------------------------
 
@@ -431,15 +465,23 @@ fig_both_comp = base_scenario %>%
 # No Competition
 fig_talk_no_compet = plot_no_comp_single()
 
-fig_talk_no_compet_all = lapply(
+fig_talk_no_compet_uncut = lapply(
     seq(1, ggforce::n_pages(fig_talk_no_compet)),
     function(x) {
-        plot_no_comp_single(x)
+        plot_no_comp_single(x, cut_patch = FALSE)
     })
 
-fig_talk_no_compet_all %>%
-    purrr::set_names(c("low_early", "low_equilibrium", "high_early",
-                       "high_equilibrium")) %>%
+fig_talk_no_compet_cut = lapply(
+    seq(1, ggforce::n_pages(fig_talk_no_compet)),
+    function(x) {
+        plot_no_comp_single(x, cut_patch = TRUE)
+    })
+
+list(fig_talk_no_compet_uncut,
+     fig_talk_no_compet_cut) %>%
+    purrr::flatten() %>%
+    purrr::set_names(c("uncut_early", "uncut_equilibrium",
+                       "cut_early", "cut_equilibrium")) %>%
     purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/no_compet_", .y,
                                 ".pdf"), .x,
                          width = 8.35, height = 6.7, units = "in",
@@ -448,18 +490,27 @@ fig_talk_no_compet_all %>%
 # Limiting Similarity
 fig_talk_lim_sim = plot_lim_sim_single()
 
-fig_talk_lim_sim_all = lapply(
+fig_talk_lim_sim_uncut = lapply(
     seq.int(ggforce::n_pages(fig_talk_lim_sim)),
     function(i) {
-        plot_lim_sim_single(i)
-    })
+        plot_lim_sim_single(i, cut_patch = FALSE)
+})
 
-lim_sim_names = purrr::cross(list(c("early", "equilibrium"),
+fig_talk_lim_sim_cut = lapply(
+    seq.int(ggforce::n_pages(fig_talk_lim_sim)),
+    function(i) {
+        plot_lim_sim_single(i, cut_patch = TRUE)
+})
+
+lim_sim_names = purrr::cross(list(c("equilibrium"),
                                   c("no_compet", "high_compet"),
-                                  c("low", "high"))) %>%
+                                  c("low"),
+                                  c("uncut", "cut"))) %>%
     purrr::map_chr(~paste(.x, collapse = "_"))
 
-fig_talk_lim_sim_all %>%
+list(fig_talk_lim_sim_uncut,
+     fig_talk_lim_sim_cut) %>%
+    purrr::flatten() %>%
     purrr::set_names(lim_sim_names) %>%
     purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/limiting_sim_", .y,
                                 ".pdf"), .x,
@@ -469,13 +520,21 @@ fig_talk_lim_sim_all %>%
 # Hierarchical Competition
 fig_talk_hierarch_comp = plot_hierarch_comp_single()
 
-fig_talk_hierarch_comp_all = lapply(
+fig_talk_hierarch_comp_uncut = lapply(
     seq.int(ggforce::n_pages(fig_talk_hierarch_comp)),
     function(i) {
-        plot_hierarch_comp_single(i)
+        plot_hierarch_comp_single(i, cut_patch = FALSE)
+})
+
+fig_talk_hierarch_comp_cut = lapply(
+    seq.int(ggforce::n_pages(fig_talk_hierarch_comp)),
+    function(i) {
+        plot_hierarch_comp_single(i, cut_patch = TRUE)
     })
 
-fig_talk_hierarch_comp_all %>%
+list(fig_talk_hierarch_comp_uncut,
+     fig_talk_hierarch_comp_cut) %>%
+    purrr::flatten() %>%
     purrr::set_names(lim_sim_names) %>%
     purrr::iwalk(~ggsave(paste0("inst/figures/caroline_talk/hierarchical_comp_",
                                 .y, ".pdf"), .x,
