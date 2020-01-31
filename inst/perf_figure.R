@@ -338,6 +338,9 @@ list(k = c(`1.15` = "Low Basal Growth Rate",
      time = c(`4` = "Early Dynamics",
               `50` = "Equilibrium"))
 
+tidy_perf = readRDS("inst/job_data/perf_c4a9018/tidy_perf_c4a9018.Rds")
+tidy_perf_t4 = readRDS("inst/job_data/perf_c4a9018/tidy_perf_t4_c4a9018.Rds")
+
 base_scenario = tidy_perf_all %>%
     filter(R_scenar == 100, A_scenar == 100, H_scenar == 100,
            trait_cor == "uncor") %>%
@@ -677,7 +680,7 @@ no_compet_lin_mod = base_scenario %>%
     filter(A == 0, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
            R_scenar == 100, A_scenar == 100, H_scenar == 100, k != 1.3) %>%
     tidyr::nest(-comperf_name, -time, -k) %>%
-    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+    mutate(lm_mod = purrr::map(data, ~lm(comperf_value ~
                                              patch, data = .x)),
            lm_sum = purrr::map(lm_mod, broom::tidy),
            lm_gl = purrr::map(lm_mod, broom::glance))
@@ -687,7 +690,7 @@ lim_sim_lin_mod = base_scenario %>%
     filter(A_red == 0.8, B == 0, H == 0, !grepl("cw[vsk]|best", comperf_name),
            R_scenar == 100, A_scenar == 100, H_scenar == 100, k != 1.3) %>%
     tidyr::nest(-comperf_name, -time, -k) %>%
-    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+    mutate(lm_mod = purrr::map(data, ~lm(comperf_value ~
                                              patch, data = .x)),
            lm_sum = purrr::map(lm_mod, broom::tidy),
            lm_gl = purrr::map(lm_mod, broom::glance))
@@ -697,7 +700,7 @@ hierarch_comp_lin_mod = base_scenario %>%
     filter(H_red == 0.8, B == 0, A == 0, !grepl("cw[vsk]|best", comperf_name),
            R_scenar == 100, A_scenar == 100, H_scenar == 100, k != 1.3) %>%
     tidyr::nest(-comperf_name, -time, -k) %>%
-    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+    mutate(lm_mod = purrr::map(data, ~lm(comperf_value ~
                                              patch, data = .x)),
            lm_sum = purrr::map(lm_mod, broom::tidy),
            lm_gl = purrr::map(lm_mod, broom::glance))
@@ -709,7 +712,7 @@ both_comp_lin_mod = base_scenario %>%
            !grepl("cw[vsk]|best", comperf_name), R_scenar == 100,
            A_scenar == 100, H_scenar == 100, k != 1.3) %>%
     tidyr::nest(-comperf_name, -time, -k, -A_red, -H_red) %>%
-    mutate(lm_mod = purrr::map(data, ~lm(perf_minus_trunc_gaussian ~
+    mutate(lm_mod = purrr::map(data, ~lm(comperf_value ~
                                              patch, data = .x)),
            lm_sum = purrr::map(lm_mod, broom::tidy),
            lm_gl = purrr::map(lm_mod, broom::glance)) %>%

@@ -276,9 +276,9 @@ compute_hierarchical_compet = function(composition_given_time_step,
 
     if (nrow(hierarchical_trait) == 0) {
         Rh <- matrix(0,
-                     nrow = nrow(composition_given_time_step[,,1]),
-                     ncol = ncol(composition_given_time_step[,,1]),
-                     dimnames = dimnames(composition_given_time_step[,,1]))
+                     nrow = nrow(composition_given_time_step),
+                     ncol = ncol(composition_given_time_step),
+                     dimnames = dimnames(composition_given_time_step))
     } else {
         hierarchical_values <- trait_values[, hierarchical_trait$trait,
                                             drop = FALSE]
