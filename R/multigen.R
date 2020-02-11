@@ -60,10 +60,10 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     })
 
     # List of alphaterms
-    alphalist = list()
+    alphalist = vector("list", time - 1)
 
     # List of R_h terms (extra growth from hierarchical competiton)
-    rh_list = list()
+    rh_list = vector("list", time - 1,)
 
     for (m in seq(1, time - 1)) {
         # Calculate niche term (alpha) including carrying capacity
@@ -81,6 +81,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
             exponent                    = hierar_exponent)
 
         rh_list[[m]] <- R_h
+
+        rh_list[[m]][composition[,,m] == 0] <- NA
 
         # Total growth
         R_tot <- get(h_fun)(Rmatrix, R_h)
