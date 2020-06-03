@@ -4,6 +4,7 @@
 #'
 #' @param simul results array of a given simulation (a [multigen()] output)
 #' @param n_patches an integer indicating the patch number
+#' @param sp integer for the number of species to consider
 #' @param time an integer indicating the number of time steps
 #' @param plot a boolean determining whether to plot or not the mismatch
 #'
@@ -11,21 +12,22 @@
 #' @export
 #'
 #'
-mismatch <- function(simul, n_patches = 25, time = 50, plot = TRUE){
+mismatch <- function(simul, n_patches = 25, sp, time = 50, plot = TRUE){
     # data.frame with environmental growth per species
-    env_growth <- fdcoexist::r_env(simul, n_patches = n_patches, plot = FALSE)
+    env_growth <- fdcoexist::r_env(simul, sp = sp, n_patches = n_patches,
+                                   plot = FALSE)
 
     # Extract environment where species has its maximal R
     max_r <- env_growth %>%
-        group_by(sp) %>%
-        top_n(1, r_env) %>%
-        as.data.frame() %>%
-        rename(max_r_env = env) %>%
+        distinct(sp, .keep_all = TRUE) %>%
         select(sp, max_r_env)
 
+    # Vector of species
+    sp <- 1:sp
+
     # Remove species absent from any patch
-    dat <- simul$compo[, , time]
-    dat <- dat[, colSums(dat) > 0]
+    dat <- simul$compo[, sp, time]
+    dat <- dat[, colSums(dat) > 0, drop = FALSE]
 
     # data.frame with observed maximal abundances
     max_ab <- apply(dat, 2, which.max)
