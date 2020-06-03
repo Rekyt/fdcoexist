@@ -42,7 +42,7 @@ alphaterm <- function(distance, Nts, A, B, di_thresh) {
     # Similarity is for Inter-specific competition only
     diag(similarity) = 0
 
-    A * (Nts %*% similarity) + B * (Nts)
+    A * (Nts %*% similarity) + B * (Nts)# + (K/(K - Nts))
 }
 
 #' Beverton-Holt function
@@ -62,8 +62,8 @@ alphaterm <- function(distance, Nts, A, B, di_thresh) {
 #'              computation
 #'
 #' @export
-bevHoltFct <- function(R, N, alpha){
-    (R * N)/(1 + alpha)
+bevHoltFct <- function(R, N, alpha, K){
+    ((R * N)/(1 + alpha))/(K/(K - N))
 }
 
 #' Species growth rate for a given trait and environment

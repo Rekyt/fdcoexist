@@ -30,7 +30,7 @@
 multigen <- function(traits, trait_weights, env, time, species, patches,
                      composition, A = A, B = B, d, k, width, H, h_fun = "+",
                      di_thresh = 24, lim_sim_exponent = 2,
-                     hierar_exponent = 0.5) {
+                     hierar_exponent = 0.5, K) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -63,7 +63,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     alphalist = vector("list", time - 1)
 
     # List of R_h terms (extra growth from hierarchical competiton)
-    rh_list = vector("list", time - 1,)
+    rh_list = vector("list", time - 1)
 
     for (m in seq(1, time - 1)) {
         # Calculate niche term (alpha) including carrying capacity
@@ -88,7 +88,7 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         R_tot <- get(h_fun)(Rmatrix, R_h)
 
         # Update composition
-        composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha)
+        composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha, K)
 
         # threshold number of individuals
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
