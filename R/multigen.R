@@ -65,6 +65,12 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
     # List of R_h terms (extra growth from hierarchical competiton)
     rh_list = vector("list", time - 1)
 
+    # Array with same dimension than composition to store total growth rates
+    r_tot <- composition
+
+    # Array with same dimension than composition to store potential abundances
+    env_ab <- composition
+
     for (m in seq(1, time - 1)) {
         # Calculate niche term (alpha) including carrying capacity
         alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B,
@@ -87,12 +93,21 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         # Total growth
         R_tot <- get(h_fun)(Rmatrix, R_h)
 
+        # Store total growth rate
+        r_tot[,, m] <- R_tot
+
         # Update composition
         composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha, K)
 
         # threshold number of individuals
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
                                         composition[,, m + 1])
+
+        # Potential abundances, under the sole effect of environmental filtering
+        env_ab[,, m + 1] <- bevHoltFct(Rmatrix, env_ab[,,m], alpha = 0, K)
+        env_ab[,, m + 1] <- ifelse(env_ab[,, m + 1] < 2, 0,
+                                   env_ab[,, m + 1])
+
         ## Dispersal
         # Probability of dispersal proportional to number of individuals
         # in patch given a certain probability 'd'
@@ -113,6 +128,8 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
                                         composition[,, m + 1])
     }
     return(list(compo   = composition,
+                r_tot   = r_tot,
+                env_ab  = env_ab,
                 rmatrix = Rmatrix,
                 rhlist  = rh_list,
                 ls_exponent = lim_sim_exponent,
