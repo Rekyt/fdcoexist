@@ -103,7 +103,7 @@ extract_growth_rates = function(simul, chosen_time = NULL){
 #' @export
 #'
 #'
-r_env <- function(simul, n_patches, sp, time, plot = TRUE){
+r_env_2 <- function(simul, n_patches, sp, time, plot = TRUE){
     sp <- 1:sp
 
     env_growth <- data.frame(simul[["rmatrix"]][, sp])
@@ -140,7 +140,7 @@ r_env <- function(simul, n_patches, sp, time, plot = TRUE){
 
 r_all <- function(simul, n_patches, sp, time=50, plot = TRUE){
     sp <- 1:sp
-	
+
     env_growth <- data.frame(simul[["r_tot"]][, sp, (time-1)])
     rownames(env_growth) <- rownames(data.frame(simul[["rmatrix"]][, sp]))
     env_growth$env <- 1:n_patches
@@ -157,7 +157,7 @@ r_all <- function(simul, n_patches, sp, time=50, plot = TRUE){
     env_growth <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
         return(env_growth)
     }
-    
+
 r_compo <- function(simul, n_patches, sp, time=50, plot = TRUE){
     sp <- 1:sp
 
@@ -176,8 +176,8 @@ r_compo <- function(simul, n_patches, sp, time=50, plot = TRUE){
 
     env_growth <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
         return(env_growth)
-    }    
-    
+    }
+
 r_envab <- function(simul, n_patches, sp, time=50, plot = TRUE){
     sp <- 1:sp
 
@@ -196,4 +196,4 @@ r_envab <- function(simul, n_patches, sp, time=50, plot = TRUE){
 
     env_growth <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
         return(env_growth)
-    }      
+    }
