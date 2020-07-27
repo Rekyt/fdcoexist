@@ -83,7 +83,7 @@ generate_cor_traits_rand <- function (number_patches, number_species,
 
 
 ###extract growth rates
-r_env <- function(simul, n_patches, sp1, time) {
+r_env_CT <- function(simul, n_patches, sp1, time) {
     sp <- 1:sp1
     env_growth <- data.frame(simul[["rmatrix"]][, sp])
     env_growth$env <- 1:n_patches

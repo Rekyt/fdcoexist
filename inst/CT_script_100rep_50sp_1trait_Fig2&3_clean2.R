@@ -1,46 +1,30 @@
-#FDcoexist June 4 2029
-#C Tucker
-#Generate species level responses to site conditions. Only moderate value of A, H or both used.
-#replicates of each required - currently ~100
-#For plots 2 & 3 (update with st err)
+# FDcoexist June 4 2029
+# C Tucker
+# Generate species level responses to site conditions. Only moderate value of A,
+# H or both used.
+# replicates of each required - currently ~100
+# For plots 2 & 3 (update with st err)
 
-#install, load
-library(devtools)
-#detach(package:ggplot2, unload=TRUE)
-#install_github("Rekyt/fdcoexist", auth_token="c85b375029d9a7696d0e171514db90d5704a19e4", force=TRUE)
-#this installation fails with message Error: (converted from warning) package ‘ggplot2’ was built under R version 3.6.2
-##nearly everytime I load fdcoexist there are problems with dependencies and versions. If not all packages called are necessary...?
-#Rcpp is commonly an issue, as is glue, as is processx
-#install::all() causes my R window to crash, so I have to load a bunch of stuff in the script :(
-
+# Load Packages ----------------------------------------------------------------
 library(dplyr)
 library(cowplot)
 library(tidyr)
-#library(ggpmisc)
 library(RColorBrewer)
 library(sads)
-devtools::load_all()
-
-source('R/plot_env_growth.R', chdir = TRUE)
-source('R/plot_rh.R', chdir = TRUE)
-source('R/mismatch.R', chdir = TRUE) #for generate_cor_traits_rand
-source('R/support_functions.R', chdir = TRUE)
-source('R/generate_traits.R', chdir = TRUE)
-source('R/extract_growth_rates.R', chdir = TRUE)
-source('R/CT_functions.R')
+devtools::load_all()  # Load all functions from package in local repo
 
 
 
-#parameters
-set.seed(1) # set random seed
-n_patches <- 25 # number of patches
-n_species <- 50 # number of species
-n_gen <- 50 # number of time steps
-n_traits <- 2 # number of traits
-init_pop <- 50 # number of individuals at t=0 for each species
-d <- 0.05 # dispersal parameter
-width <- 5 # standard deviation of the Gaussian environmental filtering
-K <- 100 # carrying capacity (per species per patch)
+# Initial Parameters -----------------------------------------------------------
+set.seed(1)      # set random seed
+n_patches <- 25  # number of patches
+n_species <- 50  # number of species
+n_gen <- 50      # number of time steps
+n_traits <- 2    # number of traits
+init_pop <- 50   # number of individuals at t=0 for each species
+d <- 0.05        # dispersal parameter
+width <- 5       # standard deviation of the Gaussian environmental filtering
+K <- 100         # carrying capacity (per species per patch)
 
 # Initial population matrix, 50 individuals of each species
 composition <- array(NA, dim = c(n_patches, n_species, n_gen*20),
@@ -52,18 +36,22 @@ composition[, , 1] <- init_pop
 
 
 # Trait scenario with one trait contributing to all processes
-trait_scenar <- data.frame(trait = "trait1", growth_weight = 1, compet_weight = 1, hierarchy_weight = 1)
-trait_scenar
+trait_scenar <- data.frame(trait            = "trait1",
+                           growth_weight    = 1,
+                           compet_weight    = 1,
+                           hierarchy_weight = 1)
 
 # One trait, all four scenarios with X replicates and random trait var.
 # Trait value (uncorrelated traits)
-uncor_traits <- generate_cor_traits(n_patches, n_species, n_traits - 1, cor_coef = 0)
+uncor_traits <- generate_cor_traits(n_patches, n_species, n_traits - 1,
+                                    cor_coef = 0)
 uncor_traits <- uncor_traits[, 1, drop = FALSE]
 trait_comb <- seq(1:100)
 
-# Generate truly random trait distributions
+# Generate truly random trait distributions (trait 1 varies)
 for (i in trait_comb[-1]) {
-    uncor_traits2 <- generate_cor_traits_rand(n_patches, n_species, n_traits - 1, cor_coef = 0)
+    uncor_traits2 <- generate_cor_traits_rand(n_patches, n_species,
+                                              n_traits - 1, cor_coef = 0)
     uncor_traits2 <- uncor_traits2[, 1, drop = FALSE]
     uncor_traits <- cbind(uncor_traits, uncor_traits2)
 }
@@ -79,7 +67,8 @@ comb <- data.frame(expand.grid(list_k, list_A, list_H, trait_comb))
 colnames(comb) <- c("k", "A", "H", "trait_comb")
 comb <- distinct(comb) # remove duplicates
 
-# Outputs
+
+# Computation & Outputs --------------------------------------------------------
 eq <- c()
 mis_i <- list()
 tra_env <- list()
@@ -147,7 +136,8 @@ for (i in 1:nrow(comb)) {
     tra_env[[i]] <- tra_env_j
 
     ## Species mismatches
-    all_growth <- r_env(simul_i, sp1 = n_species, n_patches = n_patches, time=50)
+    all_growth <- r_env_CT(simul_i, sp1 = n_species, n_patches = n_patches,
+                           time = 50)
 
     ##species level mismatches
     matches <- matrix(NA, ncol=17, nrow=n_species)
@@ -172,7 +162,11 @@ for (i in 1:nrow(comb)) {
         }
     }
 
-    colnames(matches) <- c("Species", "TrueRPatch", "TrueR", "ObsRPatch", "ObsR", "TrueAbPatch", "TrueAb", "ObsAbPatch", "ObsAb", "finalabundPatch", "finalabund", "avgGRPatch", "avgGR", "maxGRPatch", "maxGR", "intGRPatch", "intGR")
+    colnames(matches) <- c("Species", "TrueRPatch", "TrueR", "ObsRPatch",
+                           "ObsR", "TrueAbPatch", "TrueAb", "ObsAbPatch",
+                           "ObsAb", "finalabundPatch", "finalabund",
+                           "avgGRPatch", "avgGR", "maxGRPatch", "maxGR",
+                           "intGRPatch", "intGR")
 
     matches <- cbind(matches, comb[rep(i, nrow(matches)), ], traits)
 
@@ -185,31 +179,36 @@ for (i in 1:nrow(comb)) {
 #tra_env100 <- tra_env
 #mis_i100 <- mis_i
 
+
+# Mismatches by Species --------------------------------------------------------
+
 allmis <- bind_rows(mis_i100)
 
-#Calculate all the various mismatches. Also super messy.
+# Calculate all the various mismatches. Also super messy.
 
-#Final abundance is true env only, vs obs abundance (MisAbP)
-allmis$MisAbP <- 100*(allmis$finalabund - allmis$ObsAb)/n_patches #prop change in obs ab from TRUE
+# Final abundance is true env only, vs obs abundance (MisAbP)
+# prop change in obs ab from TRUE
+allmis$MisAbP <- 100*(allmis$finalabund - allmis$ObsAb)/n_patches
 #by patch match
 allmis$MisAbPatchP <- 100*(allmis$finalabundPatch - allmis$ObsAbPatch)/n_patches
 
 #Obs inst GR as measure
-allmis$MisinstRP <- 100*(allmis$intGR - allmis$ObsR)/n_patches #prop change in obs instR patch
-#patch match
+# prop change in obs instR patch
+allmis$MisinstRP <- 100*(allmis$intGR - allmis$ObsR)/n_patches
+# patch match
 allmis$MisinstRPatchP <- 100*(allmis$intGRPatch - allmis$ObsRPatch)/n_patches
 
-#Avg GR as measure
+# Avg GR as measure
 allmis$MisavgGRP <- 100*(allmis$avgGR - allmis$ObsR)/n_patches #prop change in obs instR
 allmis$MisavgGRPatchP <- 100*(allmis$avgGRPatch - allmis$ObsRPatch)/n_patches
 
-#Max GT as a measure
+# Max GT as a measure
 allmis$MismaxGRP <- 100*(allmis$maxGR - allmis$ObsR)/n_patches
 allmis$MismaxGRPatchP <- 100*(allmis$maxGRPatch - allmis$ObsRPatch)/n_patches
 
 allmis$comb <- paste(allmis$k, allmis$A, allmis$H, sep="_")
 
-#ignore warnings
+ #ignore warnings
 allmisA <- aggregate(allmis, by=list(allmis$Species, allmis$comb), "mean", na.rm=TRUE)
 allmisA$comb <- allmisA$Group.2
 
@@ -221,9 +220,12 @@ Hcomp <- allmisA[which(allmisA$comb %in% c("2_0_0.001")), ]
 allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001")), ]
 
 
+# Plots of Mismatches by Species -----------------------------------------------
 ##mismatch plots, by species
 par(mfrow=c(1,2))
-plot(nocomp$Species~ nocomp$MisAbPatchP, cex=0.3, xlim=c(-25,25), xlab="Mismatch from true topt (% of gradient)", ylab="Species", main="+Limiting similarity", col="grey", type="l")
+plot(nocomp$Species~ nocomp$MisAbPatchP, cex=0.3, xlim=c(-25,25),
+     xlab="Mismatch from true topt (% of gradient)", ylab="Species",
+     main="+Limiting similarity", col="grey", type="l")
 abline(h=c(1:50), col="grey", lwd=0.2)
 points(Acomp$Group.1~Acomp$MisAbPatchP, cex=0.75, col="red")
 points((Acomp$Group.1) ~ (Acomp$MisinstRPatchP), cex=0.75, pch=16, col="orange")
@@ -268,41 +270,48 @@ arrows(x0= Hcomp$MisAbPatchP, x1=Hcomp$MisavgGRPatchP, y0=seq(1:50), y1=seq(1:50
 #arrows(x0= allcomp$MisPatchAbP, x1=allcomp$MisavgGRPatchP, y0=seq(1:50), y1=seq(1:50),code=0)
 
 
+# Correlation of Mismatches ----------------------------------------------------
 ###tables of correlations
 #allcomp
-cor(allcomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP", "MisavgGRPatchP")], method="spearman")
+cor(allcomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP",
+               "MisavgGRPatchP")],
+    method="spearman")
 
-MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
-MisPatchAb     1.0000000     0.4164496     0.6729627     0.8061727
-MisPatchinstR  0.4164496     1.0000000     0.3293066     0.5395412
-MismaxGRPatch  0.6729627     0.3293066     1.0000000     0.8102633
-MisavgGRPatch  0.8061727     0.5395412     0.8102633     1.0000000
+# MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
+# MisPatchAb     1.0000000     0.4164496     0.6729627     0.8061727
+# MisPatchinstR  0.4164496     1.0000000     0.3293066     0.5395412
+# MismaxGRPatch  0.6729627     0.3293066     1.0000000     0.8102633
+# MisavgGRPatch  0.8061727     0.5395412     0.8102633     1.0000000
 
 #H comp
-cor(Hcomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP", "MisavgGRPatchP")], method="spearman")
-MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
-MisPatchAb     1.0000000    0.40114217    0.10229505    0.49460843
-MisPatchinstR  0.4011422    1.00000000    0.04985318    0.82697422
-MismaxGRPatch  0.1022950    0.04985318    1.00000000   -0.09408434
-MisavgGRPatch  0.4946084    0.82697422   -0.09408434    1.00000000
+cor(Hcomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP",
+             "MisavgGRPatchP")],
+    method="spearman")
+# MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
+# MisPatchAb     1.0000000    0.40114217    0.10229505    0.49460843
+# MisPatchinstR  0.4011422    1.00000000    0.04985318    0.82697422
+# MismaxGRPatch  0.1022950    0.04985318    1.00000000   -0.09408434
+# MisavgGRPatch  0.4946084    0.82697422   -0.09408434    1.00000000
 
-cor(Acomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP", "MisavgGRPatchP")], method="spearman")
-MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
-MisPatchAb     1.0000000     0.7729351     0.6976272     0.9281220
-MisPatchinstR  0.7729351     1.0000000     0.4811728     0.7313187
-MismaxGRPatch  0.6976272     0.4811728     1.0000000     0.7848516
-MisavgGRPatch  0.9281220     0.7313187     0.7848516     1.0000000
+cor(Acomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP",
+             "MisavgGRPatchP")], method="spearman")
+# MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
+# MisPatchAb     1.0000000     0.7729351     0.6976272     0.9281220
+# MisPatchinstR  0.7729351     1.0000000     0.4811728     0.7313187
+# MismaxGRPatch  0.6976272     0.4811728     1.0000000     0.7848516
+# MisavgGRPatch  0.9281220     0.7313187     0.7848516     1.0000000
 
 #no comp
-cor(nocomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP", "MisavgGRPatchP")], method="spearman")
-MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
-MisPatchAb             1            NA            NA            NA
-MisPatchinstR         NA             1            NA            NA
-MismaxGRPatch         NA            NA             1            NA
-MisavgGRPatch         NA            NA            NA             1
+cor(nocomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP",
+              "MisavgGRPatchP")], method="spearman")
+# MisPatchAb MisPatchinstR MismaxGRPatch MisavgGRPatch
+# MisPatchAb             1            NA            NA            NA
+# MisPatchinstR         NA             1            NA            NA
+# MismaxGRPatch         NA            NA             1            NA
+# MisavgGRPatch         NA            NA            NA             1
 
 
-######################by patches
+# Mismatches by patch ----------------------------------------------------------
 cwmdat <- bind_rows(tra_env100)
 cwmdat$comb <- paste(cwmdat$k, cwmdat$A, cwmdat$H, sep="_")
 unique(cwmdat$comb)
@@ -351,6 +360,4 @@ points(I((w_max_gw-site2)/25)~site2, data= HcomponlyCWMA, xlim=c(0,25), type="b"
 points(I((w_avg_gw-site2)/25)~site2, data= HcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="purple", pch=4)
 
 ##These need to have error bars added!
-
-
 save.image(file="/Users/tuckerca/Dropbox/Documents/Caroline/fdcoexist/2020/Data/100rep_50sp_1trait_scenarios.RData")
