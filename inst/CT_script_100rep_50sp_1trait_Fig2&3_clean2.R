@@ -139,24 +139,31 @@ for (i in 1:nrow(comb)) {
     all_growth <- r_env_CT(simul_i, sp1 = n_species, n_patches = n_patches,
                            time = 50)
 
-    ##species level mismatches
+    ## species level mismatches
     matches <- matrix(NA, ncol=17, nrow=n_species)
     for (z in 1:n_species){
-        allout <- extract_mismatchesCT(x=all_growth, z=z)
 
-        sub <- na.omit(gw[which(gw$sp == paste("species",z, sep="")), ])
+        # Extract max performance and environmental of max performance for each
+        # species
+        allout <- extract_mismatchesCT(x = all_growth, z = z)
+
+        sub <- na.omit(gw[which(gw$sp == paste("species", z, sep="")), ])
         if(nrow(sub)>0){
-            finalabund <- sub[which.max(sub$final_abundance), "patch"]
-            avg_growth_rate <- sub[which.max(sub$avg_growth_rate), "patch"]
-            max_growth_rate <- sub[which.max(sub$max_growth_rate), "patch"]
-            int_growth_rate <- sub[which.max(sub$int_growth_rate), "patch"]
-            finalabund1 <- max(sub $final_abundance, na.rm=TRUE)
-            avg_growth_rate1 <- max(sub$avg_growth_rate, na.rm=TRUE)
-            max_growth_rate1 <- max(sub$max_growth_rate, na.rm=TRUE)
-            int_growth_rate1 <- max(sub$int_growth_rate, na.rm=TRUE)
+            patch_finalabund <- sub[which.max(sub$final_abundance), "patch"]
+            patch_avg_growth_rate <- sub[which.max(sub$avg_growth_rate), "patch"]
+            patch_max_growth_rate <- sub[which.max(sub$max_growth_rate), "patch"]
+            patch_int_growth_rate <- sub[which.max(sub$int_growth_rate), "patch"]
+            finalabund <- max(sub$final_abundance, na.rm=TRUE)
+            avg_growth_rate <- max(sub$avg_growth_rate, na.rm=TRUE)
+            max_growth_rate <- max(sub$max_growth_rate, na.rm=TRUE)
+            int_growth_rate <- max(sub$int_growth_rate, na.rm=TRUE)
 
-            matches[z,] <- c(z, allout, finalabund, finalabund1, avg_growth_rate, avg_growth_rate1, max_growth_rate, max_growth_rate1, int_growth_rate, int_growth_rate1)
-        }else{
+            matches[z,] <- c(z, allout,
+                             patch_finalabund,      finalabund,
+                             patch_avg_growth_rate, avg_growth_rate,
+                             patch_max_growth_rate, max_growth_rate,
+                             patch_int_growth_rate, int_growth_rate)
+        } else {
 
             matches[z,] <- c(z, allout, NA, NA, NA, NA, NA, NA, NA, NA)
         }
@@ -186,13 +193,14 @@ allmis <- bind_rows(mis_i)
 
 # Calculate all the various mismatches. Also super messy.
 
-# Final abundance is true env only, vs obs abundance (MisAbP)
+# Final abundance is real abundance vs abundance considering environmental
+# filtering only (MisAbP)
 # prop change in obs ab from TRUE
 allmis$MisAbP <- 100*(allmis$finalabund - allmis$ObsAb)/n_patches
 #by patch match
 allmis$MisAbPatchP <- 100*(allmis$finalabundPatch - allmis$ObsAbPatch)/n_patches
 
-#Obs inst GR as measure
+# Obs inst GR as measure
 # prop change in obs instR patch
 allmis$MisinstRP <- 100*(allmis$intGR - allmis$ObsR)/n_patches
 # patch match
