@@ -182,7 +182,7 @@ for (i in 1:nrow(comb)) {
 
 # Mismatches by Species --------------------------------------------------------
 
-allmis <- bind_rows(mis_i100)
+allmis <- bind_rows(mis_i)
 
 # Calculate all the various mismatches. Also super messy.
 
