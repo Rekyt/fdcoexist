@@ -253,6 +253,18 @@ points(y=c(44), x=10,  pch=4, col="purple")
 text(y=c(44), x=20, cex=0.75,"Avg growth rate")
 #
 
+# Try reproducing plot using ggplot2
+
+Acomp %>%
+    select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
+           MisavgGRPatchP) %>%
+    tidyr::gather("mismatch_name", "mismatch_value",
+                  MisAbPatchP:MisavgGRPatchP) %>%
+    ggplot(aes(mismatch_value, Species, color = mismatch_name,
+               shape = mismatch_name)) +
+    geom_point() +
+    theme_bw()
+
 #H competition
 plot(nocomp$Species~ nocomp$MisAbPatchP, cex=0.3, xlim=c(-25,25), xlab="Mismatch from true topt (% of gradient)", ylab="Species", main="+Hierarchical competition", type="l", col="grey")
 #points(I(nocomp$Species) ~ (nocomp$MisPatchinstRP), cex=0.3, col="grey")
