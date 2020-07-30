@@ -246,14 +246,14 @@ all_minmax_mismatch = allmisA %>%
     select(Species, min_mismatch, max_mismatch, comb)
 
 plot_species_mismatch = allmisA %>%
-    filter(comb != "2_0_0") %>%
+    filter(comb != "2_0.001_0.001") %>%
     select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
            MisavgGRPatchP, comb) %>%
     tidyr::gather("mismatch_name", "mismatch_value",
                   MisAbPatchP:MisavgGRPatchP) %>%
     inner_join(all_minmax_mismatch, by = c("Species", "comb")) %>%
-    mutate(comb = factor(comb, levels = c("2_0.001_0", "2_0_0.001",
-                                          "2_0.001_0.001"))) %>%
+    mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
+                                          "2_0_0.001"))) %>%
     ggplot(aes(mismatch_value, Species, color = mismatch_name,
                shape = mismatch_name)) +
     geom_segment(aes(x = min_mismatch, xend = max_mismatch,
@@ -265,7 +265,7 @@ plot_species_mismatch = allmisA %>%
                labeller = labeller(
                    comb = c("2_0.001_0" = "+Limiting Similarity",
                             "2_0_0.001" = "+Hierarchical Competition",
-                            "2_0.001_0.001" = "+Limiting Similarity\n+Hierarchical Competition"))) +
+                            "2_0_0" = "Environmental filtering\nonly"))) +
     scale_x_continuous(labels = scales::label_percent()) +
     scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
     scale_color_discrete(labels = c(
@@ -348,14 +348,14 @@ site_avg_perf = cwmdat %>%
 
 plot_site_mismatch = site_avg_perf %>%
     # Remove limiting similarity only scenarios
-    filter(comb != "2_0_0") %>%
+    filter(comb != "2_0.001_0.001") %>%
     ungroup() %>%
     # Tidy data to get properly ordered for ggplot2
     tidyr::gather("perf_name", "perf_value",
                   cwm:int_growth_rate) %>%
     # Reorder factor levels
-    mutate(comb = factor(comb, levels = c("2_0.001_0", "2_0_0.001",
-                                          "2_0.001_0.001")),
+    mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
+                                          "2_0_0.001")),
            perf_name = factor(
                perf_name,
                levels = c("cwm", "avg_growth_rate", "int_growth_rate",
@@ -370,7 +370,7 @@ plot_site_mismatch = site_avg_perf %>%
                labeller = labeller(
                    comb = c("2_0.001_0" = "+Limiting Similarity",
                             "2_0_0.001" = "+Hierarchical Competition",
-                            "2_0.001_0.001" = "+Limiting Similarity\n+Hierarchical Competition"))) +
+                            "2_0_0" = "Environmental filtering\nonly"))) +
     scale_x_continuous(breaks = c(1, (1:5)*5)) +
     scale_y_continuous(labels = scales::label_percent()) +
     scale_color_discrete(labels = c(
