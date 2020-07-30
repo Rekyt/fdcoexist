@@ -19,7 +19,7 @@ devtools::load_all()  # Load all functions from package in local repo
 set.seed(1)      # set random seed
 n_patches <- 25  # number of patches
 n_species <- 50  # number of species
-n_gen <- 50      # number of time steps
+n_gen <- 100      # number of time steps
 n_traits <- 2    # number of traits
 init_pop <- 50   # number of individuals at t=0 for each species
 d <- 0.05        # dispersal parameter
@@ -27,10 +27,10 @@ width <- 5       # standard deviation of the Gaussian environmental filtering
 K <- 100         # carrying capacity (per species per patch)
 
 # Initial population matrix, 50 individuals of each species
-composition <- array(NA, dim = c(n_patches, n_species, n_gen*20),
+composition <- array(NA, dim = c(n_patches, n_species, n_gen),
                      dimnames = list(paste0("patches", seq(n_patches)),
                                      paste0("species", seq(n_species)),
-                                     paste0("time", seq(n_gen*20))))
+                                     paste0("time", seq(n_gen))))
 
 composition[, , 1] <- init_pop
 
@@ -73,29 +73,27 @@ comb <- distinct(comb) # remove duplicates
 
 
 # Computation & Outputs --------------------------------------------------------
-eq <- c()          # list of
-mis_i <- list()    # list of data.frame with species performance & patch of best
-                   # performance
-tra_env <- list()  # Contain CWM by environment
+simul <- vector("list", nrow(comb))    # list of simulations
+mis_i <- vector("list", nrow(comb))    # list of data.frame with species
+                                       # performance & patch of best performance
+tra_env <- vector("list", nrow(comb))  # Contain CWM by environment
 
-# total generation
-j = 2*n_gen
-
-for (i in 1:nrow(comb)) {
+for (i in seq(nrow(comb))) {
 
     # Extract simulation trait data.frame
     traits <- data.frame(trait1 = uncor_traits[,comb[i, "trait_comb"]])
     simul_i <- multigen(
         traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
-        time = 2*n_gen, species = n_species, patches = 25,
+        time = n_gen, species = n_species, patches = 25,
         composition = composition,
         A = comb[i, "A"], B = 1e-7, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100)
 
+    simul[[i]] <- simul_i
 
     ## Data frame of site vs. abundance at last time step
-    tra_env_j <- reshape2::melt(simul_i$compo[, , j])
+    tra_env_j <- reshape2::melt(simul_i$compo[, , n_gen])
     colnames(tra_env_j) <- c("site", "sp", "ab")
 
     ## Species trait data.frame
@@ -106,7 +104,7 @@ for (i in 1:nrow(comb)) {
     ## Compute CWM
     tra_env_j <- tra_env_j %>%
         group_by(site) %>%
-        mutate(time = j,
+        mutate(time = n_gen,
                k = comb[i,"k"], A = comb[i, "A"], H = comb[i, "H"],
                A_H = comb[i, "trait_comb"],
                cwm = weighted.mean(tra, w = ab, na.rm=TRUE)) %>%
@@ -115,7 +113,7 @@ for (i in 1:nrow(comb)) {
 
     ## Compute growth rates
     max_time <- n_gen
-    gw <- extract_growth_rates(simul = simul_i, chosen_time = j)
+    gw <- extract_growth_rates(simul = simul_i, chosen_time = n_gen)
 
     # Merge growth rates with the CWM data frame
     tra_env_j <- left_join(tra_env_j, gw,
@@ -147,7 +145,7 @@ for (i in 1:nrow(comb)) {
     # filtering and hierarchical competition, real abundance, and abundance
     # based on environmental filtering only
     all_growth <- r_env_CT(simul_i, sp1 = n_species, n_patches = n_patches,
-                           time = 50)
+                           time = n_gen)
 
     ## Compute Species-level mismatches
     matches <- matrix(NA, ncol = 17, nrow = n_species)
