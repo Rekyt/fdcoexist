@@ -90,7 +90,7 @@ for (i in seq(nrow(comb))) {
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100)
 
-    simul[[i]] <- simul_i
+    #simul[[i]] <- simul_i
 
     ## Data frame of site vs. abundance at last time step
     tra_env_j <- reshape2::melt(simul_i$compo[, , n_gen])
@@ -104,41 +104,37 @@ for (i in seq(nrow(comb))) {
     ## Compute CWM
     tra_env_j <- tra_env_j %>%
         group_by(site) %>%
+        summarise(cwm = weighted.mean(tra, w = ab, na.rm = TRUE),
+                  .groups = "keep") %>%
         mutate(time = n_gen,
                k = comb[i,"k"], A = comb[i, "A"], H = comb[i, "H"],
-               A_H = comb[i, "trait_comb"],
-               cwm = weighted.mean(tra, w = ab, na.rm=TRUE)) %>%
-        as.data.frame() %>%
-        mutate(env = as.integer(gsub("patches", "", x = site)))
+               trait_comb = comb[i, "trait_comb"],
+               param_comb = i,
+               env = as.integer(gsub("patches", "", x = site))) %>%
+        as.data.frame()
 
     ## Compute growth rates
     max_time <- n_gen
     gw <- extract_growth_rates(simul = simul_i, chosen_time = n_gen)
 
-    # Merge growth rates with the CWM data frame
-    tra_env_j <- left_join(tra_env_j, gw,
-                           by = c("env" = "patch", "sp" = "species"))
-
-    # Add trait weighted by the different growth rates per site
-    # (scaling before)
-    tra_env_j <- tra_env_j %>%
-        group_by(site) %>% # filter(site == "patches15") %>%
-        mutate(avg_growth_rate = scales::rescale(avg_growth_rate,
-                                                 c(0, 1)),
-               max_growth_rate = scales::rescale(max_growth_rate,
-                                                 c(0, 1)),
-               int_growth_rate = scales::rescale(int_growth_rate,
-                                                 c(0, 1))) %>%
-        mutate(w_avg_gw = wtd_mean(tra, w = avg_growth_rate, na.rm = TRUE),
-               w_max_gw = wtd_mean(tra, w = max_growth_rate, na.rm = TRUE),
-               w_int_gw = wtd_mean(tra, w = int_growth_rate, na.rm = TRUE)) %>%
-        distinct(site, .keep_all = TRUE) %>%
-        select(-sp, -final_abundance, -avg_growth_rate,
-               -max_growth_rate, -int_growth_rate) %>%
+    # Compute weighted growth rates
+    gwm <- gw %>%
+        inner_join(sp_tra, by = c(species = "sp")) %>%
+        select(-final_abundance) %>%
+        relocate(patch, species, tra) %>%
+        group_by(patch) %>%
+        # Scale growth rates relatively in each site
+        mutate(across(avg_growth_rate:int_growth_rate,
+                  ~scales::rescale(.x, c(0, 1)))) %>%
+        # Weight trait values per site by growth rates
+        summarise(across(avg_growth_rate:int_growth_rate,
+                     ~wtd_mean(tra, w = .x, na.rm = TRUE)),
+                  .groups = "keep") %>%
         as.data.frame()
 
     ## Bind patch level results
-    tra_env[[i]] <- tra_env_j
+    tra_env[[i]] <- tra_env_j %>%
+        inner_join(gwm, by = c(env = "patch"))
 
     ## Compute Species Performance and Patch of Best performance for all species
     # return information with growth from env. filtering only, growth from env.
@@ -297,31 +293,6 @@ plot_species_mismatch = allmisA %>%
 
 plot_species_mismatch
 
-#H competition
-plot(nocomp$Species~ nocomp$MisAbPatchP, cex=0.3, xlim=c(-25,25), xlab="Mismatch from true topt (% of gradient)", ylab="Species", main="+Hierarchical competition", type="l", col="grey")
-#points(I(nocomp$Species) ~ (nocomp$MisPatchinstRP), cex=0.3, col="grey")
-#abline(v=c(0), col="grey", lwd=1)
-abline(h=c(1:50), col="grey", lwd=0.2)
-points(Hcomp$Group.1~Hcomp$MisAbPatchP, cex=0.75, col="red")
-points((Hcomp$Group.1) ~ (Hcomp$MisinstRPatchP), cex=0.75, pch=16, col="orange")
-arrows(x0= Hcomp$MisAbPatchP, x1=Hcomp$MisinstRPatchP, y0=seq(1:50), y1=seq(1:50),code=0)
-points((Hcomp$Species) ~ (Hcomp$MismaxGRPatchP), cex=0.75, pch=09, col="blue")
-points((Hcomp$Species) ~ (Hcomp$MisavgGRPatchP), cex=0.75, pch=4, col="purple")
-arrows(x0= Hcomp$MismaxGRPatchP, x1=Hcomp$MisavgGRPatchP, y0=seq(1:50), y1=seq(1:50),code=0)
-arrows(x0= Hcomp$MisAbPatchP, x1=Hcomp$MisavgGRPatchP, y0=seq(1:50), y1=seq(1:50),code=0)
-
-#all comp
-#plot(nocomp$Species~ nocomp$MisPatchAbP, cex=0.3, xlim=c(-25,25), xlab="Mismatch from true topt (% of gradient)", ylab="Species", main="All processes", col="grey", type="l")
-#abline(h=c(1:50), col="grey", lwd=0.2)
-#points(allcomp$Group.1~allcomp$MisPatchAbP, cex=0.75, col="red")
-#points((allcomp$Group.1) ~ (allcomp$MisPatchinstRP), cex=0.75, pch=16, col="orange")
-#arrows(x0= allcomp$MisPatchAbP, x1=allcomp$MisPatchinstRP, y0=seq(1:50), y1=seq(1:50),code=0)
-#points((allcomp$Species) ~ (allcomp$MismaxGRPatchP), cex=0.75, pch=09, col="blue")
-#points((allcomp$Species) ~ (allcomp$MisavgGRPatchP), cex=0.75, pch=4, col="purple")
-#arrows(x0= allcomp$MismaxGRPatchP, x1=allcomp$MisavgGRPatchP, y0=seq(1:50), y1=seq(1:50),code=0)
-#arrows(x0= allcomp$MisPatchAbP, x1=allcomp$MisavgGRPatchP, y0=seq(1:50), y1=seq(1:50),code=0)
-
-
 # Correlation of Mismatches ----------------------------------------------------
 ###tables of correlations
 #allcomp
@@ -363,53 +334,70 @@ cor(nocomp[,c("MisAbPatchP", "MisinstRPatchP", "MismaxGRPatchP",
 # MisavgGRPatch         NA            NA            NA             1
 
 
-# Mismatches by patch ----------------------------------------------------------
-cwmdat <- bind_rows(tra_env100)
-cwmdat$comb <- paste(cwmdat$k, cwmdat$A, cwmdat$H, sep="_")
-unique(cwmdat$comb)
-cwmdat$site2 <- as.numeric(gsub("[[:alpha:]]","", cwmdat$site))
-#ignore all warning
-##CMW by scenarios
-nocompCWM <- subset(cwmdat, cwmdat$A==0 & cwmdat$H==0)
-nocompCWM <- na.omit(nocompCWM)
-nocompCWMA <- aggregate(nocompCWM, by=list(nocompCWM$site), mean, na.rm=TRUE)
-nocompCWMV <- aggregate(nocompCWM[,9:15], by=list(nocompCWM$site), sd, na.rm=TRUE)
-#
-AcomponlyCWM <- subset(cwmdat, cwmdat$A>0 & cwmdat$H==0)
-AcomponlyCWM <- na.omit(AcomponlyCWM)
-AcomponlyCWMA <- aggregate(AcomponlyCWM, by=list(AcomponlyCWM$site), mean, na.rm=TRUE)
-AcomponlyCWMV <- aggregate(AcomponlyCWM[,9:15], by=list(AcomponlyCWM$site), sd, na.rm=TRUE)
-#
-HcomponlyCWM <- subset(cwmdat, cwmdat$H>0 & cwmdat$A==0)
-HcomponlyCWM <- na.omit(HcomponlyCWM)
-HcomponlyCWMA <- aggregate(HcomponlyCWM, by=list(HcomponlyCWM$site), mean, na.rm=TRUE)
-HcomponlyCWMV <- aggregate(HcomponlyCWM[,9:15], by=list(HcomponlyCWM$site), sd, na.rm=TRUE)
+# Mismatches by patch (CWM/GWM) ------------------------------------------------
 
-#
-allcomponlyCWM <- subset(cwmdat, cwmdat$H>0 & cwmdat$A==0)
-allcomponlyCWM <- na.omit(allcomponlyCWM)
-allcomponlyCWMA <- aggregate(allcomponlyCWM, by=list(allcomponlyCWM$site), mean, na.rm=TRUE)
-allcomponlyCWMV <- aggregate(allcomponlyCWM[,9:15], by=list(allcomponlyCWM$site), sd, na.rm=TRUE)
+cwmdat <- bind_rows(tra_env)
+cwmdat$comb <- paste(cwmdat$k, cwmdat$A, cwmdat$H, sep = "_")
+cwmdat$patch <- as.numeric(gsub("[[:alpha:]]","", cwmdat$site))
 
-#Plot
-par(mfrow=c(1,3), mar=c(4, 4, 2, 2))
-plot(I((cwm-site2)/25)~site2, data= nocompCWMA, xlim=c(0,25),ylim=c(-0.15, 0.15), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="red")
-abline(h=0, col="grey80")
-points(I((w_int_gw-site2)/25)~site2, data= nocompCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="orange", pch=16)
-points(I((w_max_gw-site2)/25)~site2, data= nocompCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="blue", pch=9)
-points(I((w_avg_gw-site2)/25)~site2, data= nocompCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="purple", pch=4)
-#
-plot(I((cwm-site2)/25)~site2, data= AcomponlyCWMA, xlim=c(0,25),ylim=c(-0.15, 0.15), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="+ Limiting similarity", col="red")
-abline(h=0, col="grey80")
-points(I((w_int_gw-site2)/25)~site2, data= AcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="orange", pch=16)
-points(I((w_max_gw-site2)/25)~site2, data= AcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="blue", pch=9)
-points(I((w_avg_gw-site2)/25)~site2, data= AcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="purple", pch=4)
-#
-plot(I((cwm-site2)/25)~site2, data= HcomponlyCWMA, xlim=c(0,25),ylim=c(-0.15, 0.15), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="+ Hierarchical competition", col="red")
-abline(h=0, col="grey80")
-points(I((w_int_gw-site2)/25)~site2, data= HcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="orange", pch=16)
-points(I((w_max_gw-site2)/25)~site2, data= HcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="blue", pch=9)
-points(I((w_avg_gw-site2)/25)~site2, data= HcomponlyCWMA, xlim=c(0,25), type="b", ylab="Obs CWM - expected (%)", xlab="Patch", main="No competition (Env filtering only)", col="purple", pch=4)
+site_avg_perf = cwmdat %>%
+    select(comb, site, env, cwm, avg_growth_rate, max_growth_rate, int_growth_rate) %>%
+    # Average CWM/GWM across all trait replicates
+    group_by(comb, site, env) %>%
+    summarise(across(cwm:int_growth_rate, mean))
+
+plot_site_mismatch = site_avg_perf %>%
+    # Remove limiting similarity only scenarios
+    filter(comb != "2_0_0") %>%
+    ungroup() %>%
+    # Tidy data to get properly ordered for ggplot2
+    tidyr::gather("perf_name", "perf_value",
+                  cwm:int_growth_rate) %>%
+    # Reorder factor levels
+    mutate(comb = factor(comb, levels = c("2_0.001_0", "2_0_0.001",
+                                          "2_0.001_0.001")),
+           perf_name = factor(
+               perf_name,
+               levels = c("cwm", "avg_growth_rate", "int_growth_rate",
+                          "max_growth_rate"))
+    ) %>%
+    ggplot(aes(env, (perf_value - env)/25, color = perf_name,
+               shape = perf_name)) +
+    geom_hline(yintercept = 0, linetype = 1, size = 1/2, color = "black") +
+    geom_line() +
+    geom_point(size = 1.5) +
+    facet_wrap(vars(comb), ncol = 3,
+               labeller = labeller(
+                   comb = c("2_0.001_0" = "+Limiting Similarity",
+                            "2_0_0.001" = "+Hierarchical Competition",
+                            "2_0.001_0.001" = "+Limiting Similarity\n+Hierarchical Competition"))) +
+    scale_x_continuous(breaks = c(1, (1:5)*5)) +
+    scale_y_continuous(labels = scales::label_percent()) +
+    scale_color_discrete(labels = c(
+        cwm = "Abundance",
+        avg_growth_rate = "Average Growth Rate",
+        int_growth_rate = "Intrinsic Growth Rate",
+        max_growth_rate = "Maximum Growth Rate"
+    )) +
+    scale_shape_discrete(labels = c(
+        cwm = "Abundance",
+        avg_growth_rate = "Average Growth Rate",
+        int_growth_rate = "Intrinsic Growth Rate",
+        max_growth_rate = "Maximum Growth Rate"
+    )) +
+    labs(x = "Site",
+         y = "Relative Site-level Mismatch (% of gradient)",
+         shape = "Performance Measure",
+         color = "Performance Measure") +
+    theme_bw(12) +
+    theme(aspect.ratio = 1,
+          panel.grid.major.y = element_line(size = 1.3),
+          panel.spacing.x = unit(4, "mm"),
+          strip.background = element_blank(),
+          panel.border = element_blank(),
+          legend.position = "top")
+
+plot_site_mismatch
 
 ##These need to have error bars added!
 save.image(file="/Users/tuckerca/Dropbox/Documents/Caroline/fdcoexist/2020/Data/100rep_50sp_1trait_scenarios.RData")

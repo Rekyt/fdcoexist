@@ -47,7 +47,7 @@ equilibrium <- function(simul, n_gen, patch){
 }
 
 ###
-# Generate random traits but how different is it from our method?
+# Generate random traits
 # Compared to generate_cor_traits() introduce a little of variability in first
 # trait as instead of being directly determined by the species number it adds
 # little white noise to it and scale it to a minimum of 0 if negative and
@@ -57,8 +57,14 @@ generate_cor_traits_rand <- function (number_patches, number_species,
                                       min_value = 1)
  {
      x1 = seq(min_value, number_patches, length.out = number_species)
+     # Add small random noise
      x1 = x1 + rnorm(length(x1), mean = 0, sd = 1)
-     x1 = sort(ifelse(x1 < 0, 0, x1))
+
+     # If negative trait value replace negative trait values with random number
+     # between 0 and first non-negative number
+     x1 = sort(x1)
+     first_non_neg = x1[which(x1 > 0)[1]]
+     x1 = sort(ifelse(x1 < 0, runif(1, 0, first_non_neg), x1))
      x1 = ifelse(x1 < number_patches, x1, number_patches)
      cov_mat = matrix(c(1, cor_coef, 0, sqrt(1 - cor_coef^2)), nrow = 2)
      n_other <- number_other
