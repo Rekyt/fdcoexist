@@ -88,7 +88,8 @@ for (i in seq(nrow(comb))) {
         composition = composition,
         A = comb[i, "A"], B = 1e-7, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
-        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100)
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        hierar_exponent = 0.5)
 
     #simul[[i]] <- simul_i
 
@@ -280,7 +281,7 @@ plot_species_mismatch = allmisA %>%
         MisinstRPatchP = "Intrinsic Growth Rate",
         MismaxGRPatchP = "Maximum Growth Rate"
     )) +
-    labs(x = "Relative Mismatch from true optimal patch (% of gradient)",
+    labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
          shape = "Performance Measure",
          color = "Performance Measure") +
     theme_bw(12) +
