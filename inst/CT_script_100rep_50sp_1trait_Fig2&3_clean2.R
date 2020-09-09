@@ -65,10 +65,11 @@ for (i in trait_comb[-1]) {
 list_k <- c(2)
 list_A <- c(0, 1e-3)
 list_H <- c(0, 1e-3)
+list_hierar_expo <- c(0.25, 0.5, 1, 2, 4)
 
 # data.frame with all combinations of parameter values
-comb <- data.frame(expand.grid(list_k, list_A, list_H, trait_comb))
-colnames(comb) <- c("k", "A", "H", "trait_comb")
+comb <- data.frame(expand.grid(list_k, list_A, list_H, trait_comb, list_hierar_expo))
+colnames(comb) <- c("k", "A", "H", "trait_comb", "hierar_exp")
 comb <- distinct(comb) # remove duplicates
 
 
@@ -89,9 +90,9 @@ for (i in seq(nrow(comb))) {
         A = comb[i, "A"], B = 1e-7, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-        hierar_exponent = 0.5)
+        hierar_exponent = comb[i, "hierar_exp"])
 
-    #simul[[i]] <- simul_i
+    simul[[i]] <- simul_i
 
     ## Data frame of site vs. abundance at last time step
     tra_env_j <- reshape2::melt(simul_i$compo[, , n_gen])
@@ -110,7 +111,7 @@ for (i in seq(nrow(comb))) {
         mutate(time = n_gen,
                k = comb[i,"k"], A = comb[i, "A"], H = comb[i, "H"],
                trait_comb = comb[i, "trait_comb"],
-               param_comb = i,
+               param_comb = i, hierar_exp = comb[i, "hierar_exp"],
                env = as.integer(gsub("patches", "", x = site))) %>%
         as.data.frame()
 
@@ -193,7 +194,7 @@ for (i in seq(nrow(comb))) {
 allmis <- bind_rows(mis_i)
 
 
-allmis = allmis %>%
+allmis <- allmis %>%
     mutate(
         ## Real final abudance vs. abundance with only environmental filtering
         MisAbP = finalabund - ObsAb,
@@ -215,7 +216,7 @@ allmis = allmis %>%
         # Same but with patch of best growth
         MismaxGRPatchP = maxGRPatch - ObsRPatch,
         ## Concatenate parameter values
-        comb = paste(k, A, H, sep = "_")
+        comb = paste(k, A, H, hierar_exp, sep = "_")
     ) %>%
     # Make all mismatches relative to gradient length
     mutate_at(vars(starts_with("Mis")), ~./n_patches)
@@ -224,6 +225,10 @@ allmis = allmis %>%
 allmisA <- aggregate(allmis, by = list(allmis$Species, allmis$comb), "mean",
                      na.rm = TRUE)
 allmisA$comb <- allmisA$Group.2
+# Convert back comb column in parameter combinations without hierarchical exp.
+allmisA <- allmisA %>%
+    extract(comb, c("comb", "hierar_exp"), c("(.*)_(.+)$")) %>%
+    mutate(hierar_exp = as.numeric(hierar_exp))
 
 unique(allmisA$comb)
 # subset into distinct scenarios
@@ -237,22 +242,22 @@ allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001")), ]
 ##mismatch plots, by species
 # Try reproducing plot using ggplot2
 all_minmax_mismatch = allmisA %>%
-    select(Species, comb, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
-           MisavgGRPatchP) %>%
+    select(Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
+           MismaxGRPatchP, MisavgGRPatchP) %>%
     rowwise() %>%
     mutate(min_mismatch = min(MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
                               MisavgGRPatchP),
            max_mismatch = max(MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
                               MisavgGRPatchP)) %>%
-    select(Species, min_mismatch, max_mismatch, comb)
+    select(Species, min_mismatch, max_mismatch, comb, hierar_exp)
 
 plot_species_mismatch = allmisA %>%
-    filter(comb != "2_0.001_0.001") %>%
+    filter(comb != "2_0.001_0.001", hierar_exp == 2) %>%
     select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
-           MisavgGRPatchP, comb) %>%
+           MisavgGRPatchP, comb, hierar_exp) %>%
     tidyr::gather("mismatch_name", "mismatch_value",
                   MisAbPatchP:MisavgGRPatchP) %>%
-    inner_join(all_minmax_mismatch, by = c("Species", "comb")) %>%
+    inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
     mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
                                           "2_0_0.001"))) %>%
     ggplot(aes(mismatch_value, Species, color = mismatch_name,
@@ -293,6 +298,58 @@ plot_species_mismatch = allmisA %>%
           legend.position = "top")
 
 plot_species_mismatch
+label_hierar_exp = function(string) {
+
+    lapply(unlist(string), function(x) {
+        paste0("hierarchical~distance^{", x, "}")
+    })
+}
+
+# Plot comparison species mismatches with multiple hierarchical exponent
+plot_hierar_exp_species_mismatch = allmisA %>%
+    filter(comb == "2_0_0.001") %>%
+    select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
+           MisavgGRPatchP, comb, hierar_exp) %>%
+    tidyr::gather("mismatch_name", "mismatch_value",
+                  MisAbPatchP:MisavgGRPatchP) %>%
+    inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
+    mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
+                                          "2_0_0.001"))) %>%
+    ggplot(aes(mismatch_value, Species, color = mismatch_name,
+               shape = mismatch_name)) +
+    geom_segment(aes(x = min_mismatch, xend = max_mismatch,
+                     yend = Species),
+                 color = "grey", size = 2/3) +
+    geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
+    geom_point(size = 1.5) +
+    facet_wrap(vars(hierar_exp), ncol = 3,
+               labeller = as_labeller(label_hierar_exp, default = label_parsed)) +
+    scale_x_continuous(labels = scales::label_percent()) +
+    scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
+    scale_color_discrete(labels = c(
+        MisAbPatchP = "Abundance",
+        MisavgGRPatchP = "Average Growth Rate",
+        MisinstRPatchP = "Intrinsic Growth Rate",
+        MismaxGRPatchP = "Maximum Growth Rate"
+    )) +
+    scale_shape_discrete(labels = c(
+        MisAbPatchP = "Abundance",
+        MisavgGRPatchP = "Average Growth Rate",
+        MisinstRPatchP = "Intrinsic Growth Rate",
+        MismaxGRPatchP = "Maximum Growth Rate"
+    )) +
+    labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
+         shape = "Performance Measure",
+         color = "Performance Measure") +
+    theme_bw(12) +
+    theme(aspect.ratio = 1,
+          panel.grid.major.x = element_line(size = 1.3),
+          panel.spacing.x = unit(4, "mm"),
+          strip.background = element_blank(),
+          panel.border = element_blank(),
+          legend.position = "top")
+
+plot_hierar_exp_species_mismatch
 
 # Correlation of Mismatches ----------------------------------------------------
 ###tables of correlations
