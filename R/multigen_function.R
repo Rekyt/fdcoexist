@@ -261,6 +261,7 @@ scale_distance = function(dist_matrix) {
 #' @param trait_values a trait matrix
 #' @param trait_weights a scenario data.frame
 #' @param H the hierarchical competition scalar
+#' @param exponent  exponent to use for hierarchical compet. distances
 #' @inheritParams compute_compet_distance
 #'
 #' @export
