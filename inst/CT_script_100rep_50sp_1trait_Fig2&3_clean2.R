@@ -1,5 +1,5 @@
-# FDcoexist June 4 2029
-# C Tucker
+# FDcoexist June 4 2020
+# Authors: C. Tucker & M. Grenié
 # Generate species level responses to site conditions. Only moderate value of A,
 # H or both used.
 # replicates of each required - currently ~100
@@ -16,15 +16,15 @@ devtools::load_all()  # Load all functions from package in local repo
 
 
 # Initial Parameters -----------------------------------------------------------
-set.seed(1)      # set random seed
-n_patches <- 25  # number of patches
-n_species <- 50  # number of species
-n_gen <- 100      # number of time steps
-n_traits <- 2    # number of traits
-init_pop <- 50   # number of individuals at t=0 for each species
-d <- 0.05        # dispersal parameter
-width <- 5       # standard deviation of the Gaussian environmental filtering
-K <- 100         # carrying capacity (per species per patch)
+set.seed(20201008) # set random seed
+n_patches <- 25    # number of patches
+n_species <- 50    # number of species
+n_gen <- 100       # number of time steps
+n_traits <- 2      # number of traits
+init_pop <- 50     # number of individuals at t=0 for each species
+d <- 0.05          # dispersal parameter
+width <- 5         # standard deviation of the Gaussian environmental filtering
+K <- 100           # carrying capacity (per species per patch)
 
 # Initial population matrix, 50 individuals of each species
 composition <- array(NA, dim = c(n_patches, n_species, n_gen),
@@ -41,8 +41,7 @@ trait_scenar <- data.frame(trait            = "trait1",
                            compet_weight    = 1,
                            hierarchy_weight = 1)
 
-# One trait, all four scenarios with X replicates and random trait var.
-# Trait value (uncorrelated traits)
+# Get random trait values per species within [0,25] range
 uncor_traits <- generate_cor_traits(n_patches, n_species, n_traits - 1,
                                     cor_coef = 0)
 uncor_traits <- uncor_traits[, 1, drop = FALSE]
@@ -60,7 +59,6 @@ for (i in trait_comb[-1]) {
     uncor_traits <- cbind(uncor_traits, uncor_traits2)
 }
 
-# One trait contributing to all the processes
 # Parameter values - reduced for speed
 list_k <- c(2)
 list_A <- c(0, 1e-3)
@@ -68,8 +66,11 @@ list_H <- c(0, 1e-3)
 list_hierar_expo <- c(0.25, 0.5, 1, 2, 4)
 
 # data.frame with all combinations of parameter values
-comb <- data.frame(expand.grid(list_k, list_A, list_H, trait_comb, list_hierar_expo))
+comb <- data.frame(
+  expand.grid(list_k, list_A, list_H, trait_comb, list_hierar_expo))
+
 colnames(comb) <- c("k", "A", "H", "trait_comb", "hierar_exp")
+
 comb <- distinct(comb) # remove duplicates
 
 
@@ -187,7 +188,7 @@ for (i in seq(nrow(comb))) {
     cat(100*i/nrow(comb), "\t")
 }
 
-# Mismatches by Species --------------------------------------------------------
+# Compute Mismatches for each Species ------------------------------------------
 
 # Calculate all relative species-level mismatches
 # (either by performance or by patch)
@@ -238,9 +239,7 @@ Hcomp <- allmisA[which(allmisA$comb %in% c("2_0_0.001")), ]
 allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001")), ]
 
 
-# Plots of Mismatches by Species -----------------------------------------------
-##mismatch plots, by species
-# Try reproducing plot using ggplot2
+# Plot Figure 2: species mismatches in function of competition type ------------
 all_minmax_mismatch = allmisA %>%
     select(Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
            MismaxGRPatchP, MisavgGRPatchP) %>%
@@ -305,7 +304,11 @@ label_hierar_exp = function(string) {
     })
 }
 
-# Plot comparison species mismatches with multiple hierarchical exponent
+# Plot Figure 3: Deviation along the environment -------------------------------
+
+# Plot Figure 4: CWM & CWV in function of trait contribution to growth ---------
+
+# Supplementary Figure 1: effect of hierarchical exponent ----------------------
 plot_hierar_exp_species_mismatch = allmisA %>%
     filter(comb == "2_0_0.001") %>%
     select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
@@ -350,6 +353,10 @@ plot_hierar_exp_species_mismatch = allmisA %>%
           legend.position = "top")
 
 plot_hierar_exp_species_mismatch
+
+
+# Supplementary Figure 2: Parameter space --------------------------------------
+
 
 # Correlation of Mismatches ----------------------------------------------------
 ###tables of correlations
@@ -459,3 +466,65 @@ plot_site_mismatch
 
 ##These need to have error bars added!
 save.image(file="/Users/tuckerca/Dropbox/Documents/Caroline/fdcoexist/2020/Data/100rep_50sp_1trait_scenarios.RData")
+
+
+# Compute distinctiveness ------------------------------------------------------
+
+all_di = uncor_traits %>%
+    apply(2, function(x) {
+      traits = x
+
+      sc_traits = (traits - min(traits))/(max(traits) - min(traits))
+
+      names(sc_traits) = 1:50
+
+      trait_dist = dist(sc_traits)
+
+      funrar::distinctiveness_global(trait_dist, "reg_di")
+    }) %>%
+    purrr::set_names(nm = seq(ncol(uncor_traits))) %>%
+  bind_rows(.id = "trait_comb")
+
+
+mis_di = bind_rows(mis_i_pred) %>%
+    filter(hierar_exp == 2.00) %>%  # Filter original hierarchical exponent value
+    inner_join(all_di %>%
+                   mutate(trait_comb = as.integer(trait_comb),
+                          Species = as.integer(species)), by = c("trait_comb", "Species")) %>%
+    group_by(finalabundPatch) %>%
+    summarise(k = mean(k, A = mean(A), H = mean(H)))
+
+patch_di = simul_i$compo[,,"time100"] %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("patch") %>%
+  tidyr::gather("species", "abund", species1:species50) %>%
+  inner_join(all_di %>%
+               filter(trait_comb == 1) %>%
+               mutate(species = paste0("species", species)),
+             by = "species") %>%
+  filter(abund > 0) %>%
+  group_by(patch) %>%
+  summarise(avg_di = mean(reg_di),
+            cwm_di = weighted.mean(reg_di, abund))
+
+avg_di_df = purrr::map2(simul, tra_env, function(x, y) {
+
+  x$compo[,,"time100"] %>%
+    as.data.frame() %>%
+    tibble::rownames_to_column("patch") %>%
+    tidyr::gather("species", "abund", species1:species50)  %>%
+    inner_join(all_di %>%
+                 filter(trait_comb == unique(y$trait_comb)) %>%
+                 mutate(species = paste0("species", species)),
+               by = "species") %>%
+    filter(abund > 0) %>%
+    group_by(patch) %>%
+    summarise(avg_di = mean(reg_di),
+              cwm_di = weighted.mean(reg_di, abund),
+              .groups = "drop") %>%
+    mutate(k = unique(y$k),
+           A = unique(y$A),
+           H = unique(y$H))
+}) %>%
+  bind_rows()
+
