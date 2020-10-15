@@ -449,11 +449,91 @@ plot_cwm_cwv_growth
 
 # Supp. Fig. 1: Parameter space ------------------------------------------------
 
+# Generate parameter space
 param_space = expand.grid(
-  k = c(1.8, 2, 2.2),
-  A = c(0, 1e-7, 1e-5, 1e-3, 1e-1),
-  H = c(0, 1e-7, 1e-5, 1e-3, 1e-1)
+  k          = c(2),
+  A          = c(0, 1e-7, 1e-5, 1e-3, 1e-1),
+  H          = c(0, 1e-7, 1e-5, 1e-3, 1e-1),
+  trait_comb = trait_comb[1:30]
 )
+
+param_space_simuls <- vector("list", nrow(var_growth_comb))
+
+# Simulations of varying trait growth contribution
+for (i in seq_len(nrow(param_space))) {
+
+  # Get trait dataset
+  traits <- data.frame(trait1 = uncor_traits[,param_space[i, "trait_comb"]])
+
+  # Actual Simulation
+  param_space_simul <- multigen(
+    traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
+    time = n_gen, species = n_species, patches = 25,
+    composition = composition,
+    B = 1e-7, d = d,
+    A = param_space[i, "A"],
+    k = param_space[i, "k"],
+    H = param_space[i, "H"],
+    width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+    hierar_exponent = 2)
+
+  param_space_simuls[[i]] <- param_space_simul
+}
+
+param_space_abund <- purrr::map2_dfr(
+  param_space_simuls, seq_len(nrow(param_space)), function(x, y) {
+    # Extract final abundances
+    abund_df <- x$compo[,,100] %>%
+      as.data.frame() %>%
+      tibble::rownames_to_column("patch") %>%
+      tidyr::gather("species", "abundance", -patch) %>%
+      mutate(k = param_space[y, "k"],
+             A = param_space[y, "A"],
+             H = param_space[y, "H"],
+             trait_comb = param_space[y, "trait_comb"])
+
+  })
+
+param_space_avg = param_space_abund %>%
+  group_by(k, A, H, trait_comb, patch) %>%
+  summarise(n_sp = sum(abundance > 0),
+            avg_ab = mean(abundance))
+
+plot_param_space_rich = param_space_avg %>%
+  ungroup() %>%
+  mutate(A_chr = format(A, scientific = FALSE),
+         H_chr = format(H, scientific = FALSE)) %>%
+  ggplot(aes(A_chr, H_chr, z = n_sp)) +
+  stat_summary_2d() +
+  scale_fill_viridis_c(name = "Species\nRichness") +
+  scale_x_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+  scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+  labs(x = "Limiting similarity intensity",
+       y = "Hierarchical competition intensity") +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        panel.background = element_blank(),
+        legend.position = "top")
+
+plot_param_space_abund = param_space_avg %>%
+  ungroup() %>%
+  mutate(A_chr = format(A, scientific = FALSE),
+         H_chr = format(H, scientific = FALSE)) %>%
+  ggplot(aes(A_chr, H_chr, z = avg_ab)) +
+  stat_summary_2d() +
+  scale_fill_viridis_c(name = "Average\nAbundance") +
+  scale_x_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+  scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+  labs(x = "Limiting similarity intensity",
+       y = "Hierarchical competition intensity") +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        panel.background = element_blank(),
+        legend.position = "top")
+
+plot_param_space = cowplot::plot_grid(plot_param_space_rich,
+                                      plot_param_space_abund, labels = "AUTO")
+
 
 
 # Supp. Fig. 2: effect of hierarchical exponent --------------------------------
