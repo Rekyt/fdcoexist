@@ -3,7 +3,6 @@
 # Generate species level responses to site conditions. Only moderate value of A,
 # H or both used.
 # replicates of each required - currently ~100
-# For plots 2 & 3 (update with st err)
 
 # Load Packages ----------------------------------------------------------------
 library(dplyr)
@@ -23,7 +22,7 @@ label_hierar_exp = function(string) {
 }
 
 # Initial Parameters -----------------------------------------------------------
-set.seed(20201008) # set random seed
+set.seed(20201008) # To be fixed to replicate our results
 n_patches <- 25    # number of patches
 n_species <- 50    # number of species
 n_gen <- 100       # number of time steps
@@ -201,7 +200,6 @@ for (i in seq(nrow(comb))) {
 # (either by performance or by patch)
 allmis <- bind_rows(mis_i)
 
-
 allmis <- allmis %>%
     mutate(
         ## Real final abudance vs. abundance with only environmental filtering
@@ -247,6 +245,7 @@ allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001")), ]
 
 
 # Fig. 2: species mismatches in function of competition type -------------------
+
 all_minmax_mismatch = allmisA %>%
     select(Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
            MismaxGRPatchP, MisavgGRPatchP) %>%
@@ -305,6 +304,7 @@ plot_species_mismatch = allmisA %>%
 
 plot_species_mismatch
 
+saveRDS(plot_species_mismatch, "inst/figures/paper_figure2.Rds")
 
 # Fig. 3: Deviation along the environment --------------------------------------
 
@@ -353,6 +353,8 @@ plot_deviation_env = all_trait_env %>%
         legend.position = "top")
 
 plot_deviation_env
+
+saveRDS(plot_deviation_env, "inst/figures/paper_figure3.Rds")
 
 # Fig. 4: CWM & CWV in function of trait contribution to growth ----------------
 
@@ -447,6 +449,8 @@ plot_cwm_cwv_growth = var_growth_cwm %>%
 
 plot_cwm_cwv_growth
 
+saveRDS(plot_cwm_cwv_growth, "inst/figures/paper_figure4.Rds")
+
 # Supp. Fig. 1: Parameter space ------------------------------------------------
 
 # Generate parameter space
@@ -535,6 +539,8 @@ plot_param_space = cowplot::plot_grid(plot_param_space_rich,
                                       plot_param_space_abund, labels = "AUTO")
 
 
+saveRDS(plot_param_space, "inst/figures/paper_supp_fig1_param_space.Rds")
+
 
 # Supp. Fig. 2: effect of hierarchical exponent --------------------------------
 plot_hierar_exp_species_mismatch = allmisA %>%
@@ -582,6 +588,10 @@ plot_hierar_exp_species_mismatch = allmisA %>%
           legend.position = "top")
 
 plot_hierar_exp_species_mismatch
+
+
+saveRDS(plot_hierar_exp_species_mismatch,
+        "inst/figures/paper_supp_fig2_hierar_exponent.Rds")
 
 
 # Supp. Fig. 3: contribution to competition effect on CWM and CWV --------------
@@ -708,3 +718,6 @@ plot_cwm_cwv_comp_contrib = cowplot::plot_grid(
   plot_cwm_cwv_hier,
   labels = "AUTO",
   ncol = 1, nrow = 2)
+
+saveRDS(plot_cwm_cwv_comp_contrib,
+        "inst/figures/paper_supp_fig3_comp_contrib.Rds")
