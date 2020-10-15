@@ -292,9 +292,9 @@ plot_species_mismatch = allmisA %>%
         MismaxGRPatchP = "Maximum Growth Rate"
     )) +
     labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
-         shape = "Performance Measure",
-         color = "Performance Measure") +
-    theme_bw(12) +
+         shape = "Performance\nMeasure",
+         color = "Performance\nMeasure") +
+    theme_bw(10) +
     theme(aspect.ratio = 1,
           panel.grid.major.x = element_line(size = 1.3),
           panel.spacing.x = unit(4, "mm"),
@@ -305,6 +305,10 @@ plot_species_mismatch = allmisA %>%
 plot_species_mismatch
 
 saveRDS(plot_species_mismatch, "inst/figures/paper_figure2.Rds")
+
+ggsave2("inst/figures/paper_figure2.pdf", plot_species_mismatch,
+        width = 16.6, height = 8.5,
+        units = "cm", dpi = 300)
 
 # Fig. 3: Deviation along the environment --------------------------------------
 
@@ -329,21 +333,21 @@ plot_deviation_env = all_trait_env %>%
   stat_summary(fun = "mean", geom = "point", size = 1) +
   scale_color_discrete(labels = c(
     cwm = "CWM",
-    avg_growth_rate = "Avg. Growth Rate Weighted-Mean",
-    int_growth_rate = "Intrinsic Growth Rate Weighted-Mean",
-    max_growth_rate = "Maximum Growth Rate Weighted-Mean"
+    avg_growth_rate = "Avg. Growth Rate\nWeighted-Mean",
+    int_growth_rate = "Intrinsic Growth Rate\nWeighted-Mean",
+    max_growth_rate = "Maximum Growth Rate\nWeighted-Mean"
   )) +
   scale_shape_discrete(labels = c(
     cwm = "CWM",
-    avg_growth_rate = "Avg. Growth Rate Weighted-Mean",
-    int_growth_rate = "Intrinsic Growth Rate Weighted-Mean",
-    max_growth_rate = "Maximum Growth Rate Weighted-Mean"
+    avg_growth_rate = "Avg. Growth Rate\nWeighted-Mean",
+    int_growth_rate = "Intrinsic Growth Rate\nWeighted-Mean",
+    max_growth_rate = "Maximum Growth Rate\nWeighted-Mean"
   )) +
   labs(x = "Environment",
-       y = "Deviation between Observed CWM vs. expected CWM",
-       color = "CWM Type",
-       shape = "CWM Type") +
-  theme_bw(12) +
+       y = "Deviation (Observed CWM vs. Expected CWM)",
+       color = "CWM\nType",
+       shape = "CWM\nType") +
+  theme_bw(10) +
   theme(aspect.ratio = 1,
         panel.grid.major.x = element_line(size = 1.3),
         panel.spacing.x = unit(4, "mm"),
@@ -355,6 +359,10 @@ plot_deviation_env = all_trait_env %>%
 plot_deviation_env
 
 saveRDS(plot_deviation_env, "inst/figures/paper_figure3.Rds")
+
+ggsave2("inst/figures/paper_figure3.pdf", plot_deviation_env,
+        width = 16.6, height = 8.8,
+        units = "cm", dpi = 300)
 
 # Fig. 4: CWM & CWV in function of trait contribution to growth ----------------
 
@@ -434,14 +442,14 @@ plot_cwm_cwv_growth = var_growth_cwm %>%
   ggplot(aes(env, cwm_value, color = as.factor(growth_weight))) +
   stat_summary(geom = "smooth") +
   facet_wrap(vars(cwm_name), scales = "free_y",
-             labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
+             labeller = labeller(cwm_name = c(cwm = "CW Mean", cwv = "CW Variance"))) +
   labs(x = "Environment",
-       y = "CWM or CWV value") +
+       y = "Community-Weighted Value") +
   scale_colour_manual(name = "Trait Contribution\nto growth",
                       values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
                       labels = function(x) scales::percent(as.numeric(x))) +
   guides(color = guide_legend(nrow = 1)) +
-  theme_bw() +
+  theme_bw(10) +
   theme(aspect.ratio = 1,
         legend.position = "top",
         strip.background = element_blank(),
@@ -450,6 +458,10 @@ plot_cwm_cwv_growth = var_growth_cwm %>%
 plot_cwm_cwv_growth
 
 saveRDS(plot_cwm_cwv_growth, "inst/figures/paper_figure4.Rds")
+
+ggsave2("inst/figures/paper_figure4.pdf", plot_cwm_cwv_growth,
+        width = 12.7, height = 8.8,
+        units = "cm", dpi = 300)
 
 # Supp. Fig. 1: Parameter space ------------------------------------------------
 
@@ -514,7 +526,7 @@ plot_param_space_rich = param_space_avg %>%
   scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
   labs(x = "Limiting similarity intensity",
        y = "Hierarchical competition intensity") +
-  theme_bw() +
+  theme_bw(10) +
   theme(aspect.ratio = 1,
         panel.background = element_blank(),
         legend.position = "top")
@@ -530,7 +542,7 @@ plot_param_space_abund = param_space_avg %>%
   scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
   labs(x = "Limiting similarity intensity",
        y = "Hierarchical competition intensity") +
-  theme_bw() +
+  theme_bw(10) +
   theme(aspect.ratio = 1,
         panel.background = element_blank(),
         legend.position = "top")
@@ -540,6 +552,11 @@ plot_param_space = cowplot::plot_grid(plot_param_space_rich,
 
 
 saveRDS(plot_param_space, "inst/figures/paper_supp_fig1_param_space.Rds")
+
+ggsave2("inst/figures/paper_supp_fig1_param_space.pdf", plot_param_space,
+        width = 16.6, height = 8,
+        units = "cm", dpi = 300)
+
 
 
 # Supp. Fig. 2: effect of hierarchical exponent --------------------------------
@@ -576,9 +593,9 @@ plot_hierar_exp_species_mismatch = allmisA %>%
         MismaxGRPatchP = "Maximum Growth Rate"
     )) +
     labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
-         shape = "Performance Measure",
-         color = "Performance Measure") +
-    theme_bw(12) +
+         shape = "Performance\nMeasure",
+         color = "Performance\nMeasure") +
+    theme_bw(10) +
     theme(aspect.ratio = 1,
           panel.grid.major.x = element_line(size = 1.3),
           panel.spacing.x = unit(4, "mm"),
@@ -589,10 +606,13 @@ plot_hierar_exp_species_mismatch = allmisA %>%
 
 plot_hierar_exp_species_mismatch
 
-
 saveRDS(plot_hierar_exp_species_mismatch,
         "inst/figures/paper_supp_fig2_hierar_exponent.Rds")
 
+ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.pdf",
+        plot_hierar_exp_species_mismatch,
+        width = 16.6, height = 12,
+        units = "cm", dpi = 300)
 
 # Supp. Fig. 3: contribution to competition effect on CWM and CWV --------------
 
@@ -688,7 +708,7 @@ plot_cwm_cwv_comp = var_comp_cwm %>%
                       values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
                       labels = function(x) scales::percent(as.numeric(x))) +
   guides(color = guide_legend(nrow = 1)) +
-  theme_bw() +
+  theme_bw(10) +
   theme(aspect.ratio = 1,
         legend.position = "top",
         strip.background = element_blank(),
@@ -707,7 +727,7 @@ plot_cwm_cwv_hier = var_comp_cwm %>%
                       values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
                       labels = function(x) scales::percent(as.numeric(x))) +
   guides(color = guide_legend(nrow = 1)) +
-  theme_bw() +
+  theme_bw(10) +
   theme(aspect.ratio = 1,
         legend.position = "top",
         strip.background = element_blank(),
@@ -721,3 +741,8 @@ plot_cwm_cwv_comp_contrib = cowplot::plot_grid(
 
 saveRDS(plot_cwm_cwv_comp_contrib,
         "inst/figures/paper_supp_fig3_comp_contrib.Rds")
+
+ggsave2("inst/figures/paper_supp_fig3_comp_contrib.pdf",
+        plot_cwm_cwv_comp_contrib,
+        width = 16.6, height = 16.6,
+        units = "cm", dpi = 300)
