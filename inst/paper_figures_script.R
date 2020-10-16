@@ -244,6 +244,8 @@ Hcomp <- allmisA[which(allmisA$comb %in% c("2_0_0.001")), ]
 allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001")), ]
 
 
+saveRDS(allmisA, "inst/all_mismatches.Rds")
+
 # Fig. 2: species mismatches in function of competition type -------------------
 
 all_minmax_mismatch = allmisA %>%
@@ -256,57 +258,57 @@ all_minmax_mismatch = allmisA %>%
                               MisavgGRPatchP)) %>%
     select(Species, min_mismatch, max_mismatch, comb, hierar_exp)
 
-plot_species_mismatch = allmisA %>%
-    filter(comb != "2_0.001_0.001", hierar_exp == 2) %>%
-    select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
-           MisavgGRPatchP, comb, hierar_exp) %>%
-    tidyr::gather("mismatch_name", "mismatch_value",
-                  MisAbPatchP:MisavgGRPatchP) %>%
-    inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
-    mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
-                                          "2_0_0.001"))) %>%
-    ggplot(aes(mismatch_value, Species, color = mismatch_name,
-               shape = mismatch_name)) +
-    geom_segment(aes(x = min_mismatch, xend = max_mismatch,
-                     yend = Species),
-                 color = "grey", size = 2/3) +
-    geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
-    geom_point(size = 1.5) +
-    facet_wrap(vars(comb), ncol = 3,
-               labeller = labeller(
-                   comb = c("2_0.001_0" = "+Limiting Similarity",
-                            "2_0_0.001" = "+Hierarchical Competition",
-                            "2_0_0" = "Environmental filtering\nonly"))) +
-    scale_x_continuous(labels = scales::label_percent()) +
-    scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
-    scale_color_discrete(labels = c(
-        MisAbPatchP = "Abundance",
-        MisavgGRPatchP = "Average Growth Rate",
-        MisinstRPatchP = "Intrinsic Growth Rate",
-        MismaxGRPatchP = "Maximum Growth Rate"
-    )) +
-    scale_shape_discrete(labels = c(
-        MisAbPatchP = "Abundance",
-        MisavgGRPatchP = "Average Growth Rate",
-        MisinstRPatchP = "Intrinsic Growth Rate",
-        MismaxGRPatchP = "Maximum Growth Rate"
-    )) +
-    labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
-         shape = "Performance\nMeasure",
-         color = "Performance\nMeasure") +
-    theme_bw(10) +
-    theme(aspect.ratio = 1,
-          panel.grid.major.x = element_line(size = 1.3),
-          panel.spacing.x = unit(4, "mm"),
-          strip.background = element_blank(),
-          panel.border = element_blank(),
-          legend.position = "top")
+plot_species_mismatch = paper_figure_2$data %>%
+  filter(comb != "2_0_0") %>%
+  ggplot(aes(mismatch_value, Species, color = mismatch_name,
+             shape = mismatch_name)) +
+  geom_segment(aes(x = min_mismatch, xend = max_mismatch,
+                   yend = Species),
+               color = "grey", size = 2/3) +
+  geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
+  geom_point(size = 1.5) +
+  facet_wrap(vars(comb), ncol = 2,
+             labeller = labeller(
+               comb = c("2_0.001_0" = "+Limiting Similarity",
+                        "2_0_0.001" = "+Hierarchical Competition"))) +
+  scale_x_continuous(labels = scales::label_percent()) +
+  scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
+  scale_color_discrete(labels = c(
+    MisAbPatchP = "Abundance",
+    MisavgGRPatchP = "Average Growth Rate",
+    MisinstRPatchP = "Intrinsic Growth Rate",
+    MismaxGRPatchP = "Maximum Growth Rate"
+  ), guide = guide_legend(nrow = 2)) +
+  scale_shape_discrete(labels = c(
+    MisAbPatchP = "Abundance",
+    MisavgGRPatchP = "Average Growth Rate",
+    MisinstRPatchP = "Intrinsic Growth Rate",
+    MismaxGRPatchP = "Maximum Growth Rate"
+  ), guide = guide_legend(nrow = 2)) +
+  labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
+       shape = "Performance\nMeasure",
+       color = "Performance\nMeasure") +
+  theme_bw(10) +
+  theme(aspect.ratio = 1,
+        panel.grid.major.x = element_line(size = 1.3),
+        panel.spacing.x = unit(4, "mm"),
+        strip.background = element_blank(),
+        panel.border = element_blank(),
+        legend.position = "top")
 
 plot_species_mismatch
 
 saveRDS(plot_species_mismatch, "inst/figures/paper_figure2.Rds")
 
 ggsave2("inst/figures/paper_figure2.pdf", plot_species_mismatch,
+        width = 16.6, height = 8.5,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_figure2.svg", plot_species_mismatch,
+        width = 16.6, height = 8.5,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_figure2.png", plot_species_mismatch,
         width = 16.6, height = 8.5,
         units = "cm", dpi = 300)
 
@@ -317,6 +319,8 @@ all_trait_env = bind_rows(tra_env) %>%
                 avg_growth_rate:int_growth_rate) %>%
   mutate(mismatch_value = cwm_value - env,
          comb = paste(k, A, H, sep = "_"))
+
+saveRDS(all_trait_env, "inst/all_trait_env.Rds")
 
 plot_deviation_env = all_trait_env %>%
   filter(comb != "2_0.001_0.001", hierar_exp == 2) %>%
@@ -361,6 +365,14 @@ plot_deviation_env
 saveRDS(plot_deviation_env, "inst/figures/paper_figure3.Rds")
 
 ggsave2("inst/figures/paper_figure3.pdf", plot_deviation_env,
+        width = 16.6, height = 8.8,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_figure3.png", plot_deviation_env,
+        width = 16.6, height = 8.8,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_figure3.svg", plot_deviation_env,
         width = 16.6, height = 8.8,
         units = "cm", dpi = 300)
 
@@ -437,9 +449,15 @@ var_growth_cwm <- purrr::map2_dfr(
              param_comb = y)
 })
 
+saveRDS(var_growth_cwm, "inst/var_growth_cwm.Rds")
+
 plot_cwm_cwv_growth = var_growth_cwm %>%
   tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
   ggplot(aes(env, cwm_value, color = as.factor(growth_weight))) +
+  # 1:1 line only on CWM facet
+  geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+              aes(slope = slope, intercept = 0), linetype = 2) +
+  # Rest of the geoms
   stat_summary(geom = "smooth") +
   facet_wrap(vars(cwm_name), scales = "free_y",
              labeller = labeller(cwm_name = c(cwm = "CW Mean", cwv = "CW Variance"))) +
@@ -460,6 +478,14 @@ plot_cwm_cwv_growth
 saveRDS(plot_cwm_cwv_growth, "inst/figures/paper_figure4.Rds")
 
 ggsave2("inst/figures/paper_figure4.pdf", plot_cwm_cwv_growth,
+        width = 12.7, height = 8.8,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_figure4.png", plot_cwm_cwv_growth,
+        width = 12.7, height = 8.8,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_figure4.svg", plot_cwm_cwv_growth,
         width = 12.7, height = 8.8,
         units = "cm", dpi = 300)
 
@@ -510,6 +536,8 @@ param_space_abund <- purrr::map2_dfr(
 
   })
 
+saveRDS(param_space_abund, "inst/param_space_abund.Rds")
+
 param_space_avg = param_space_abund %>%
   group_by(k, A, H, trait_comb, patch) %>%
   summarise(n_sp = sum(abundance > 0),
@@ -557,7 +585,13 @@ ggsave2("inst/figures/paper_supp_fig1_param_space.pdf", plot_param_space,
         width = 16.6, height = 8,
         units = "cm", dpi = 300)
 
+ggsave2("inst/figures/paper_supp_fig1_param_space.png", plot_param_space,
+        width = 16.6, height = 8,
+        units = "cm", dpi = 300)
 
+ggsave2("inst/figures/paper_supp_fig1_param_space.svg", plot_param_space,
+        width = 16.6, height = 8,
+        units = "cm", dpi = 300)
 
 # Supp. Fig. 2: effect of hierarchical exponent --------------------------------
 plot_hierar_exp_species_mismatch = allmisA %>%
@@ -614,6 +648,16 @@ ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.pdf",
         width = 16.6, height = 12,
         units = "cm", dpi = 300)
 
+ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.png",
+        plot_hierar_exp_species_mismatch,
+        width = 16.6, height = 12,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.svg",
+        plot_hierar_exp_species_mismatch,
+        width = 16.6, height = 12,
+        units = "cm", dpi = 300)
+
 # Supp. Fig. 3: contribution to competition effect on CWM and CWV --------------
 
 var_comp_scenars = lapply(seq(0, 1, length.out = 6), function(x) {
@@ -639,7 +683,7 @@ var_comp_comb = expand.grid(trait_comb    = trait_comb,
 # Initialize list of simulations
 comp_simuls <- vector("list", nrow(var_comp_comb))
 
-# Simulations of varying trait growth contribution
+# Simulations of varying trait contribution to competition
 for (i in seq_len(nrow(var_comp_comb))) {
 
   # Get trait dataset
@@ -695,10 +739,15 @@ var_comp_cwm <- purrr::map2_dfr(
              param_comb = y)
   })
 
+saveRDS(var_comp_cwm, "inst/var_comp_cwm.Rds")
+
 plot_cwm_cwv_comp = var_comp_cwm %>%
   filter(hier_weight == 0) %>%
   tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
   ggplot(aes(env, cwm_value, color = as.factor(comp_weight))) +
+  # 1:1 line only on CWM facet
+  geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+              aes(slope = slope, intercept = 0), linetype = 2) +
   stat_summary(geom = "smooth") +
   facet_wrap(vars(cwm_name), scales = "free_y",
              labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
@@ -718,6 +767,9 @@ plot_cwm_cwv_hier = var_comp_cwm %>%
   filter(comp_weight == 0) %>%
   tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
   ggplot(aes(env, cwm_value, color = as.factor(hier_weight))) +
+  # 1:1 line only on CWM facet
+  geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+              aes(slope = slope, intercept = 0), linetype = 2) +
   stat_summary(geom = "smooth") +
   facet_wrap(vars(cwm_name), scales = "free_y",
              labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
@@ -743,6 +795,16 @@ saveRDS(plot_cwm_cwv_comp_contrib,
         "inst/figures/paper_supp_fig3_comp_contrib.Rds")
 
 ggsave2("inst/figures/paper_supp_fig3_comp_contrib.pdf",
+        plot_cwm_cwv_comp_contrib,
+        width = 16.6, height = 16.6,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_supp_fig3_comp_contrib.png",
+        plot_cwm_cwv_comp_contrib,
+        width = 16.6, height = 16.6,
+        units = "cm", dpi = 300)
+
+ggsave2("inst/figures/paper_supp_fig3_comp_contrib.svg",
         plot_cwm_cwv_comp_contrib,
         width = 16.6, height = 16.6,
         units = "cm", dpi = 300)
