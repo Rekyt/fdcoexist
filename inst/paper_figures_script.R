@@ -9,7 +9,6 @@ library(dplyr)
 library(cowplot)
 library(tidyr)
 library(RColorBrewer)
-library(sads)
 devtools::load_all()  # Load all functions from package in local repo
 
 
@@ -202,7 +201,7 @@ allmis <- bind_rows(mis_i)
 
 allmis <- allmis %>%
     mutate(
-        ## Real final abudance vs. abundance with only environmental filtering
+        ## Real final abundance vs. abundance with only environmental filtering
         MisAbP = finalabund - ObsAb,
         # Same but using patch of greatest abundance
         MisAbPatchP = finalabundPatch - ObsAbPatch,
@@ -225,12 +224,15 @@ allmis <- allmis %>%
         comb = paste(k, A, H, hierar_exp, sep = "_")
     ) %>%
     # Make all mismatches relative to gradient length
-    mutate_at(vars(starts_with("Mis")), ~./n_patches)
+    mutate_at(vars(starts_with("Mis")), list(relative = ~./n_patches))
 
 # Get average of mismatches per species
 allmisA <- aggregate(allmis, by = list(allmis$Species, allmis$comb), "mean",
-                     na.rm = TRUE)
-allmisA$comb <- allmisA$Group.2
+                     na.rm = TRUE) %>%
+  select(-Species, -trait_comb, -comb) %>%
+  rename(Species = Group.1,
+         comb = Group.2) %>%
+  select(k, A, H, hierar_exp, comb, Species, everything())
 # Convert back comb column in parameter combinations without hierarchical exp.
 allmisA <- allmisA %>%
     extract(comb, c("comb", "hierar_exp"), c("(.*)_(.+)$")) %>%
@@ -238,16 +240,18 @@ allmisA <- allmisA %>%
 
 unique(allmisA$comb)
 # subset into distinct scenarios
-nocomp <- allmisA[which(allmisA$comb %in% c("2_0_0")), ]
-Acomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0")), ]
-Hcomp <- allmisA[which(allmisA$comb %in% c("2_0_0.001")), ]
-allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001")), ]
+nocomp <- allmisA[which(allmisA$comb %in% c("2_0_0_0.5")), ]
+Acomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0_0.5")), ]
+Hcomp <- allmisA[which(allmisA$comb %in% c("2_0_0.001_0.5")), ]
+allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001_0.5")), ]
 
 
 saveRDS(allmisA, "inst/all_mismatches.Rds")
 
 # Fig. 2: species mismatches in function of competition type -------------------
 
+# Get for each species in each parameter combination the minimum and maximum
+# mistmatch values observed across all Patch mismatches
 all_minmax_mismatch = allmisA %>%
     select(Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
            MismaxGRPatchP, MisavgGRPatchP) %>%
@@ -258,20 +262,106 @@ all_minmax_mismatch = allmisA %>%
                               MisavgGRPatchP)) %>%
     select(Species, min_mismatch, max_mismatch, comb, hierar_exp)
 
-plot_species_mismatch = paper_figure_2$data %>%
-  filter(comb != "2_0_0") %>%
+# Combine and keep only relevant information for figure 2
+mismatch_extract = allmisA %>%
+  select(k, A, H, Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
+         MismaxGRPatchP, MisavgGRPatchP) %>%
+  tidyr::pivot_longer(
+    c(MisAbPatchP, MisinstRPatchP, MismaxGRPatchP, MisavgGRPatchP),
+    names_to = "mismatch_name", values_to = "mismatch_value") %>%
+  inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
+  filter(comb != "2_0_0", comb != "2_0.001_0.001", hierar_exp == 0.5)
+
+# Get the correlation between mismatches
+mismatch_cor = mismatch_extract %>%
+  select(comb, Species, mismatch_name, mismatch_value) %>%
+  tidyr::pivot_wider(names_from = mismatch_name,
+                     values_from = mismatch_value) %>%
+  tidyr::nest(mismatches = c(Species, MisAbPatchP, MisinstRPatchP,
+                             MisavgGRPatchP, MismaxGRPatchP)) %>%
+  mutate(cor_mat = purrr::map(mismatches,
+                              ~cor(.x[, -1], method = "spearman") %>%
+                                round(2)))
+
+## Convert correlation table to image
+# Limiting similarity scenario
+limsim_table = mismatch_cor$cor_mat[[1]][, 1:3]
+limsim_table[upper.tri(limsim_table)] = ""
+limsim_table = as.data.frame(limsim_table) %>%
+  tibble::rownames_to_column("mismatch_name") %>%
+  mutate(mismatch_name = case_when(
+    mismatch_name == "MisinstRPatchP" ~ "&#9632;",
+    mismatch_name == "MisavgGRPatchP" ~ "&#9650;",
+    mismatch_name == "MismaxGRPatchP" ~ "+",
+    TRUE ~ "",
+  )) %>%
+  mutate(
+    mismatch_name = kableExtra::cell_spec(
+      mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"), bold = TRUE,
+      escape = FALSE, align = "c")
+  )
+limsim_table[1, 2:4] = c(
+  '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
+  '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
+  '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
+limsim_table[2, 3] = ""
+limsim_table[3, 4] = ""
+
+limsim_table %>%
+  kableExtra::kable(escape = FALSE, col.names = NULL) %>%
+  kableExtra::kable_minimal(full_width = FALSE, font_size = 14) %>%
+  kableExtra::as_image(file = "inst/figures/paper_figure2_limsimtable.png")
+limsim_png = png::readPNG("inst/figures/paper_figure2_limsimtable.png",
+                          native = TRUE)
+
+# Hierarchical Competition Scenario
+hiercomp_table = mismatch_cor$cor_mat[[2]][, 1:3]
+hiercomp_table[upper.tri(hiercomp_table)] = ""
+hiercomp_table = as.data.frame(hiercomp_table) %>%
+  tibble::rownames_to_column("mismatch_name") %>%
+  mutate(mismatch_name = case_when(
+    mismatch_name == "MisinstRPatchP" ~ "&#9632;",
+    mismatch_name == "MisavgGRPatchP" ~ "&#9650;",
+    mismatch_name == "MismaxGRPatchP" ~ "+",
+    TRUE ~ "",
+  )) %>%
+  mutate(
+    mismatch_name = kableExtra::cell_spec(
+      mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"),
+      bold = TRUE,
+      escape = FALSE)
+  )
+hiercomp_table[1, 2:4] = c(
+  '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
+  '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
+  '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
+hiercomp_table[2, 3] = ""
+hiercomp_table[3, 4] = ""
+
+hiercomp_table %>%
+  kableExtra::kable(escape = FALSE, col.names = NULL) %>%
+  kableExtra::row_spec(1, background = "white") %>%
+  kableExtra::row_spec(2, background = "white") %>%
+  kableExtra::row_spec(3, background = "white") %>%
+  kableExtra::row_spec(4, background = "white") %>%
+  kableExtra::kable_minimal(full_width = FALSE, font_size = 14) %>%
+  kableExtra::as_image(file = "inst/figures/paper_figure2_hiercomptable.png")
+hiercomp_png = png::readPNG("inst/figures/paper_figure2_hiercomptable.png",
+                            native = TRUE)
+
+# Actual Main plot
+plot_species_mismatch = mismatch_extract %>%
   ggplot(aes(mismatch_value, Species, color = mismatch_name,
              shape = mismatch_name)) +
   geom_segment(aes(x = min_mismatch, xend = max_mismatch,
                    yend = Species),
-               color = "grey", size = 2/3) +
+               color = "grey", size = 1/3) +
   geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
   geom_point(size = 1.5) +
   facet_wrap(vars(comb), ncol = 2,
              labeller = labeller(
                comb = c("2_0.001_0" = "+Limiting Similarity",
                         "2_0_0.001" = "+Hierarchical Competition"))) +
-  scale_x_continuous(labels = scales::label_percent()) +
   scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
   scale_color_discrete(labels = c(
     MisAbPatchP = "Abundance",
@@ -285,7 +375,7 @@ plot_species_mismatch = paper_figure_2$data %>%
     MisinstRPatchP = "Intrinsic Growth Rate",
     MismaxGRPatchP = "Maximum Growth Rate"
   ), guide = guide_legend(nrow = 2)) +
-  labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
+  labs(x     = "Patch Mismatch",
        shape = "Performance\nMeasure",
        color = "Performance\nMeasure") +
   theme_bw(10) +
@@ -296,21 +386,26 @@ plot_species_mismatch = paper_figure_2$data %>%
         panel.border = element_blank(),
         legend.position = "top")
 
-plot_species_mismatch
+paper_figure2 = plot_species_mismatch +
+  inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7, align_to = "panel") +
+  inset_element(hiercomp_png, 0.75, 0.5, 0.85, 0.7, align_to = "panel") +
+  theme_void()
 
-saveRDS(plot_species_mismatch, "inst/figures/paper_figure2.Rds")
+paper_figure2
 
-ggsave2("inst/figures/paper_figure2.pdf", plot_species_mismatch,
+saveRDS(paper_figure2, "inst/figures/paper_figure2.Rds")
+
+ggsave2("inst/figures/paper_figure2.pdf", paper_figure2,
         width = 16.6, height = 8.5,
-        units = "cm", dpi = 300)
+        units = "cm", dpi = 300, scale = 1.5)
 
-ggsave2("inst/figures/paper_figure2.svg", plot_species_mismatch,
+ggsave2("inst/figures/paper_figure2.svg", paper_figure2,
         width = 16.6, height = 8.5,
-        units = "cm", dpi = 300)
+        units = "cm", dpi = 300, scale = 1.5)
 
-ggsave2("inst/figures/paper_figure2.png", plot_species_mismatch,
+ggsave2("inst/figures/paper_figure2.png", paper_figure2,
         width = 16.6, height = 8.5,
-        units = "cm", dpi = 300)
+        units = "cm", dpi = 300, scale = 1.5)
 
 # Fig. 3: Deviation along the environment --------------------------------------
 
