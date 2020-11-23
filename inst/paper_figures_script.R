@@ -707,7 +707,6 @@ plot_hierar_exp_species_mismatch = allmisA %>%
     geom_point(size = 1.5) +
     facet_wrap(vars(hierar_exp), ncol = 3,
                labeller = as_labeller(label_hierar_exp, default = label_parsed)) +
-    scale_x_continuous(labels = scales::label_percent()) +
     scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
     scale_color_discrete(labels = c(
         MisAbPatchP = "Abundance",
@@ -721,7 +720,7 @@ plot_hierar_exp_species_mismatch = allmisA %>%
         MisinstRPatchP = "Intrinsic Growth Rate",
         MismaxGRPatchP = "Maximum Growth Rate"
     )) +
-    labs(x = "Relative Mismatch from True Optimal Patch (% of gradient)",
+    labs(x = "Patch Mismatch",
          shape = "Performance\nMeasure",
          color = "Performance\nMeasure") +
     theme_bw(10) +
@@ -740,16 +739,16 @@ saveRDS(plot_hierar_exp_species_mismatch,
 
 ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.pdf",
         plot_hierar_exp_species_mismatch,
-        width = 16.6, height = 12,
+        width = 16.6, height = 12, scale = 1.5,
         units = "cm", dpi = 300)
 
 ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.png",
         plot_hierar_exp_species_mismatch,
-        width = 16.6, height = 12,
+        width = 16.6, height = 12, scale = 1.5,
         units = "cm", dpi = 300)
 
 ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.svg",
-        plot_hierar_exp_species_mismatch,
+        plot_hierar_exp_species_mismatch, scale = 1.5,
         width = 16.6, height = 12,
         units = "cm", dpi = 300)
 
