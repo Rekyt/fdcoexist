@@ -42,7 +42,7 @@ alphaterm <- function(distance, Nts, A, B, di_thresh) {
     # Similarity is for Inter-specific competition only
     diag(similarity) = 0
 
-    A * (Nts %*% similarity) + B * (Nts)# + (K/(K - Nts))
+    A * (Nts %*% similarity) + B * (Nts)
 }
 
 #' Beverton-Holt function
