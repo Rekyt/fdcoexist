@@ -3,6 +3,8 @@
 library("dplyr")
 library("ggplot2")
 
+pkgload::load_all()
+
 # Exponent of hierarchical compoent --------------------------------------------
 hierar_df = data.frame(
     diff_trait = seq(-2, 2, length.out = 5000)
@@ -60,7 +62,6 @@ cowplot::plot_grid(plot_hierar_effect, plot_limsim_effect, ncol = 1,
 # 3 species with 1 trait contributing to both k and A
 # species 1 and 2 very close, 1 and 3 functionally distant
 # H = 0, low and strong A
-#
 
 set.seed(1) # set random seed
 n_patches <- 25 # number of patches
@@ -80,12 +81,12 @@ composition[, , 1] <- init_pop
 # trait value and contribution
 trait_scenar <- data.frame(trait = "trait1", growth_weight = 1,
                            compet_weight = 1, hierarchy_weight = 0)
-uncor_traits <- data.frame(trait1 = c(4, 5, 20))
+uncor_traits <- data.frame(trait1 = c(4, 4.1, 7))
 rownames(uncor_traits) <- paste0("species", seq(1:3))
 
 # parameter values
 list_k <- 2
-list_A <- c(list_k/2000, list_k/2e6)
+list_A <- c(1e-2, 1e-4, 1e-6, 0)
 list_H <- 0
 
 # multigen
@@ -101,8 +102,10 @@ for(i in 1:length(list_A)){
     simul_list[[i]] <- simul
 }
 
-library(tidyr)
 env_resp <- r_env(simul, n_patches = 25, sp = 3, plot = TRUE)
 env_resp[[2]]
 
+env_resp1 <- r_env(simul_list[[1]], n_patches = 25, sp = 3, plot = TRUE)
 
+cowplot::plot_grid(env_resp1[[2]],
+                   env_resp[[2]])
