@@ -86,7 +86,7 @@ rownames(uncor_traits) <- paste0("species", seq(1:3))
 
 # parameter values
 list_k <- 2
-list_A <- c(1e-2, 1e-4, 1e-6, 0)
+list_A <- c(5, 2, 1, 0.5, 1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 0)
 list_H <- 0
 
 # multigen
@@ -97,15 +97,8 @@ for(i in 1:length(list_A)){
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
         A = list_A[i], B = 1e-7, d = d, k = list_k, H = list_H,
-        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100)
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        lim_sim_exponent = 1)
 
     simul_list[[i]] <- simul
 }
-
-env_resp <- r_env(simul, n_patches = 25, sp = 3, plot = TRUE)
-env_resp[[2]]
-
-env_resp1 <- r_env(simul_list[[1]], n_patches = 25, sp = 3, plot = TRUE)
-
-cowplot::plot_grid(env_resp1[[2]],
-                   env_resp[[2]])
