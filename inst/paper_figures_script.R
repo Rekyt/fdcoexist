@@ -96,7 +96,7 @@ for (i in seq(nrow(comb))) {
         A = comb[i, "A"], B = 1e-7, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-        hierar_exponent = comb[i, "hierar_exp"])
+        hierar_exponent = comb[i, "hierar_exp"], lim_sim_exponent = 1)
 
     simul[[i]] <- simul_i
 
@@ -387,8 +387,10 @@ plot_species_mismatch = mismatch_extract %>%
         legend.position = "top")
 
 paper_figure2 = plot_species_mismatch +
-  inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7, align_to = "panel") +
-  inset_element(hiercomp_png, 0.75, 0.5, 0.85, 0.7, align_to = "panel") +
+  patchwork::inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7,
+                           align_to = "panel") +
+  patchwork::inset_element(hiercomp_png, 0.75, 0.5, 0.85, 0.7,
+                           align_to = "panel") +
   theme_void()
 
 paper_figure2
@@ -589,18 +591,18 @@ ggsave2("inst/figures/paper_figure4.svg", plot_cwm_cwv_growth,
 # Generate parameter space
 param_space = expand.grid(
   k          = c(2),
-  A          = c(0, 1e-7, 1e-5, 1e-3, 1e-1),
+  A          = c(0, 1e-7, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1),
   H          = c(0, 1e-7, 1e-5, 1e-3, 1e-1),
   trait_comb = trait_comb[1:30]
 )
 
-param_space_simuls <- vector("list", nrow(var_growth_comb))
+param_space_simuls <- vector("list", nrow(param_space))
 
 # Simulations of varying trait growth contribution
 for (i in seq_len(nrow(param_space))) {
 
   # Get trait dataset
-  traits <- data.frame(trait1 = uncor_traits[,param_space[i, "trait_comb"]])
+  traits <- data.frame(trait1 = uncor_traits[, param_space[i, "trait_comb"]])
 
   # Actual Simulation
   param_space_simul <- multigen(
@@ -612,7 +614,7 @@ for (i in seq_len(nrow(param_space))) {
     k = param_space[i, "k"],
     H = param_space[i, "H"],
     width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-    hierar_exponent = 2)
+    lim_sim_exponent = 1, hierar_exponent = 2)
 
   param_space_simuls[[i]] <- param_space_simul
 }
@@ -620,7 +622,7 @@ for (i in seq_len(nrow(param_space))) {
 param_space_abund <- purrr::map2_dfr(
   param_space_simuls, seq_len(nrow(param_space)), function(x, y) {
     # Extract final abundances
-    abund_df <- x$compo[,,100] %>%
+    x$compo[,,100] %>%
       as.data.frame() %>%
       tibble::rownames_to_column("patch") %>%
       tidyr::gather("species", "abundance", -patch) %>%
