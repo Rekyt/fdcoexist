@@ -18,7 +18,7 @@ r_env <- function(simul, n_patches, sp, plot = TRUE){
 
     env_growth <- data.frame(simul[["rmatrix"]][, sp])
     env_growth$env <- 1:n_patches
-    env_growth <- gather(env_growth, "sp", "r_env", contains("species"))
+    env_growth <- tidyr::gather(env_growth, "sp", "r_env", contains("species"))
     env_growth$sp <- gsub("species", "sp", env_growth$sp)
 
     # Patch where each species has its maximal growth rate
@@ -43,7 +43,7 @@ r_env <- function(simul, n_patches, sp, plot = TRUE){
             theme(panel.border = element_rect(fill = NA))
 
         return(list(env_growth, env_plot))
-    }else {
+    } else {
         return(env_growth)
     }
 }
