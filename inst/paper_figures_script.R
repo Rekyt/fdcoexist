@@ -591,8 +591,8 @@ ggsave2("inst/figures/paper_figure4.svg", plot_cwm_cwv_growth,
 # Generate parameter space
 param_space = expand.grid(
   k          = c(2),
-  A          = c(0, 1e-7, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1),
-  H          = c(0, 1e-7, 1e-5, 1e-3, 1e-1),
+  A          = c(0, 1e-7, 1e-5, 1e-4, 7e-3, 5e-3, 2e-3, 1e-3),
+  H          = c(0, 1e-5, 1e-4, 1e-3, 1e-2, 5e-1, 1e-1),
   trait_comb = trait_comb[1:30]
 )
 
