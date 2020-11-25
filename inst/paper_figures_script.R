@@ -68,7 +68,7 @@ for (i in trait_comb[-1]) {
 list_k <- c(2)
 list_A <- c(0, 1e-3)
 list_H <- c(0, 1e-3)
-list_hierar_expo <- c(0.25, 0.5, 1, 2, 4)
+list_hierar_expo <- c(0.5, 1, 2)
 
 # data.frame with all combinations of parameter values
 comb <- data.frame(
