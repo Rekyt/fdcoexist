@@ -39,6 +39,11 @@ alphaterm <- function(distance, Nts, A, B, di_thresh) {
     # We compute similarity matrix: when species are not distant they
     # are maximally similar (similarity = max(distance))
     similarity = max(distance) - distance
+
+    # other potential transformations
+    # similarity = 1/(1 + distance)
+    # similarity = exp(-(distance^2)/2)
+
     # Similarity is for Inter-specific competition only
     diag(similarity) = 0
 
@@ -231,7 +236,8 @@ compute_compet_distance = function(trait_weights, traits, exponent = 1) {
         # Compute distance matrix
         disttraits <- as.matrix(dist(scaled_compet_traits))^exponent
 
-        disttraits <- disttraits/max(disttraits)
+        # Potential scaling of the distances (relatively to the max distance)
+        # disttraits <- disttraits/max(disttraits)
     }
 
     return(disttraits)
