@@ -598,6 +598,28 @@ ggsave2("inst/figures/paper_figure4.svg", plot_cwm_cwv_growth,
         width = 12.7, height = 8.8,
         units = "cm", dpi = 300)
 
+# Table 2: model the influence of each parameter -------------------------------
+
+cwm_env_model = all_trait_env %>%
+  filter(hierar_exp == 0.5) %>%
+  select(-site, -time, -trait_comb, -param_comb, -hierar_exp, -comb) %>%
+  mutate(A = factor(A),
+         H = factor(H)) %>%
+  tidyr::nest(cwm_env = c(k, A, H, cwm_value, mismatch_value, env)) %>%
+  mutate(
+    cwm_mod = purrr::map(
+      cwm_env, function(x) lm(cwm_value ~ env + A*H, data = x)),
+    mis_mod = purrr::map(
+      cwm_env, function(x) lm(mismatch_value ~ env + A*H, data = x)),
+    cwm_coef = purrr::map(cwm_mod, broom::tidy),
+    mis_coef = purrr::map(cwm_mod, broom::tidy))
+
+table2_figure = sjPlot::plot_models(cwm_env_model$cwm_mod,
+                                    m.labels = cwm_env_model$cwm_type) +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "top")
+
 # Supp. Fig. 1: Parameter space ------------------------------------------------
 
 # Generate parameter space
