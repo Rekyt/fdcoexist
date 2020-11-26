@@ -70,6 +70,11 @@ list_A <- c(0, 1e-4)
 list_H <- c(0, 1e-2)
 list_hierar_expo <- c(0.5, 1, 2)
 
+scenarios = c(none   = "2_0_0",
+              hier   = "2_0_0.01",
+              limsim = "2_1e-04_0",
+              both   = "2_1e-04_0.01")
+
 # data.frame with all combinations of parameter values
 comb <- data.frame(
   expand.grid(list_k, list_A, list_H, trait_comb, list_hierar_expo))
@@ -240,10 +245,10 @@ allmisA <- allmisA %>%
 
 unique(allmisA$comb)
 # subset into distinct scenarios
-nocomp <- allmisA[which(allmisA$comb %in% c("2_0_0_0.5")), ]
-Acomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0_0.5")), ]
-Hcomp <- allmisA[which(allmisA$comb %in% c("2_0_0.001_0.5")), ]
-allcomp <- allmisA[which(allmisA$comb %in% c("2_0.001_0.001_0.5")), ]
+nocomp <- allmisA[which(allmisA$comb %in% scenarios[["none"]]), ]
+Acomp <- allmisA[which(allmisA$comb %in% scenarios[["limsim"]]), ]
+Hcomp <- allmisA[which(allmisA$comb %in% scenarios[["hier"]]), ]
+allcomp <- allmisA[which(allmisA$comb %in% scenarios[["both"]]), ]
 
 
 saveRDS(allmisA, "inst/all_mismatches.Rds")
@@ -270,7 +275,8 @@ mismatch_extract = allmisA %>%
     c(MisAbPatchP, MisinstRPatchP, MismaxGRPatchP, MisavgGRPatchP),
     names_to = "mismatch_name", values_to = "mismatch_value") %>%
   inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
-  filter(comb != "2_0_0", comb != "2_0.001_0.001", hierar_exp == 0.5)
+  filter(comb != scenarios[["none"]], comb != scenarios[["both"]],
+         hierar_exp == 0.5)
 
 # Get the correlation between mismatches
 mismatch_cor = mismatch_extract %>%
@@ -279,15 +285,15 @@ mismatch_cor = mismatch_extract %>%
                      values_from = mismatch_value) %>%
   tidyr::nest(mismatches = c(Species, MisAbPatchP, MisinstRPatchP,
                              MisavgGRPatchP, MismaxGRPatchP)) %>%
-  mutate(cor_mat = purrr::map(mismatches,
-                              ~cor(.x[, -1], method = "spearman") %>%
+  mutate(cor_mat = purrr::map(
+    mismatches, ~cor(.x[, -1], method = "spearman", use = "complete.obs") %>%
                                 round(2)))
 
 ## Convert correlation table to image
 # Limiting similarity scenario
 limsim_table = mismatch_cor$cor_mat[[1]][, 1:3]
 limsim_table[upper.tri(limsim_table)] = ""
-limsim_table = as.data.frame(limsim_table) %>%
+limsim_table = as.data.frame(limsim_table, stringsAsFactors = FALSE) %>%
   tibble::rownames_to_column("mismatch_name") %>%
   mutate(mismatch_name = case_when(
     mismatch_name == "MisinstRPatchP" ~ "&#9632;",
@@ -297,8 +303,8 @@ limsim_table = as.data.frame(limsim_table) %>%
   )) %>%
   mutate(
     mismatch_name = kableExtra::cell_spec(
-      mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"), bold = TRUE,
-      escape = FALSE, align = "c")
+      mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"),
+      bold = TRUE, escape = FALSE, align = "c")
   )
 limsim_table[1, 2:4] = c(
   '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
@@ -317,7 +323,7 @@ limsim_png = png::readPNG("inst/figures/paper_figure2_limsimtable.png",
 # Hierarchical Competition Scenario
 hiercomp_table = mismatch_cor$cor_mat[[2]][, 1:3]
 hiercomp_table[upper.tri(hiercomp_table)] = ""
-hiercomp_table = as.data.frame(hiercomp_table) %>%
+hiercomp_table = as.data.frame(hiercomp_table, stringsAsFactors = FALSE) %>%
   tibble::rownames_to_column("mismatch_name") %>%
   mutate(mismatch_name = case_when(
     mismatch_name == "MisinstRPatchP" ~ "&#9632;",
@@ -349,8 +355,14 @@ hiercomp_table %>%
 hiercomp_png = png::readPNG("inst/figures/paper_figure2_hiercomptable.png",
                             native = TRUE)
 
+legend_comb =  c("+Limiting Similarity", "+Hierarchical Competition")
+names(legend_comb) = c(scenarios[["limsim"]],
+                       scenarios[["hier"]])
+
 # Actual Main plot
 plot_species_mismatch = mismatch_extract %>%
+  mutate(comb = factor(comb, levels = c(scenarios[["limsim"]],
+                                        scenarios[["hier"]]))) %>%
   ggplot(aes(mismatch_value, Species, color = mismatch_name,
              shape = mismatch_name)) +
   geom_segment(aes(x = min_mismatch, xend = max_mismatch,
@@ -358,10 +370,7 @@ plot_species_mismatch = mismatch_extract %>%
                color = "grey", size = 1/3) +
   geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
   geom_point(size = 1.5) +
-  facet_wrap(vars(comb), ncol = 2,
-             labeller = labeller(
-               comb = c("2_0.001_0" = "+Limiting Similarity",
-                        "2_0_0.001" = "+Hierarchical Competition"))) +
+  facet_wrap(vars(comb), ncol = 2, labeller = labeller(comb = legend_comb)) +
   scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
   scale_color_discrete(labels = c(
     MisAbPatchP = "Abundance",
@@ -419,17 +428,17 @@ all_trait_env = bind_rows(tra_env) %>%
 
 saveRDS(all_trait_env, "inst/all_trait_env.Rds")
 
+legend_comb[3] = "Environmental filtering\nonly"
+names(legend_comb)[3] = scenarios[["none"]]
+
 plot_deviation_env = all_trait_env %>%
-  filter(comb != "2_0.001_0.001", hierar_exp == 2) %>%
-  mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
-                                        "2_0_0.001"))) %>%
+  filter(comb != scenarios[["both"]], hierar_exp == 2) %>%
+  mutate(comb = factor(comb,
+                       levels = c(scenarios[["none"]], scenarios[["limsim"]],
+                                  scenarios[["hier"]]))) %>%
   ggplot(aes(env, mismatch_value, color = cwm_type, shape = cwm_type)) +
   geom_hline(yintercept = 0, linetype = 2, color = "black") +
-  facet_wrap(vars(comb), ncol = 3,
-             labeller = labeller(
-               comb = c("2_0.001_0" = "+Limiting Similarity",
-                        "2_0_0.001" = "+Hierarchical Competition",
-                        "2_0_0" = "Environmental filtering\nonly"))) +
+  facet_wrap(vars(comb), ncol = 3, labeller = labeller(comb = legend_comb)) +
   stat_summary(fun = "mean", geom = "line") +
   stat_summary(fun = "mean", geom = "point", size = 1) +
   scale_color_discrete(labels = c(
@@ -694,14 +703,15 @@ ggsave2("inst/figures/paper_supp_fig1_param_space.svg", plot_param_space,
 
 # Supp. Fig. 2: effect of hierarchical exponent --------------------------------
 plot_hierar_exp_species_mismatch = allmisA %>%
-    filter(comb == "2_0_0.001") %>%
+    filter(comb == scenarios[["hier"]]) %>%
     select(Species, MisAbPatchP, MisinstRPatchP, MismaxGRPatchP,
            MisavgGRPatchP, comb, hierar_exp) %>%
     tidyr::gather("mismatch_name", "mismatch_value",
                   MisAbPatchP:MisavgGRPatchP) %>%
     inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
-    mutate(comb = factor(comb, levels = c("2_0_0", "2_0.001_0",
-                                          "2_0_0.001"))) %>%
+    mutate(comb = factor(comb,
+                         levels = c(scenarios[["none"]], scenarios[["limsim"]],
+                                    scenarios[["hier"]]))) %>%
     ggplot(aes(mismatch_value, Species, color = mismatch_name,
                shape = mismatch_name)) +
     geom_segment(aes(x = min_mismatch, xend = max_mismatch,
@@ -791,8 +801,8 @@ for (i in seq_len(nrow(var_comp_comb))) {
   # Get trait contribution scenario
   comp_scenar <- var_comp_scenars[[var_comp_comb[i, "comp_scenar"]]]
 
-  A = ifelse(comp_scenar$compet_weight[[1]] == 0, 0, 1e-3)
-  H = ifelse(comp_scenar$hierarchy_weight[[1]] == 0, 0, 1e-3)
+  A = ifelse(comp_scenar$compet_weight[[1]] == 0, 0, list_A[[2]])
+  H = ifelse(comp_scenar$hierarchy_weight[[1]] == 0, 0, list_H[[2]])
 
   # Actual Simulation
   comp_simul <- multigen(
