@@ -67,22 +67,25 @@ for (i in trait_comb[-1]) {
 # Parameter values - reduced for speed
 list_k <- c(2)
 list_A <- c(0, 1e-4)
-list_H <- c(0, 1e-2)
+list_H <- c(0, 1e-3)
 list_hierar_expo <- c(0.5, 1, 2)
 
-scenarios = c(none   = "2_0_0",
-              hier   = "2_0_0.01",
-              limsim = "2_1e-04_0",
-              both   = "2_1e-04_0.01")
+
 
 # data.frame with all combinations of parameter values
-comb <- data.frame(
-  expand.grid(list_k, list_A, list_H, trait_comb, list_hierar_expo))
-
-colnames(comb) <- c("k", "A", "H", "trait_comb", "hierar_exp")
+comb <- expand.grid(k = list_k, A = list_A, H = list_H, trait_comb = trait_comb,
+                    hierar_exp = list_hierar_expo) %>%
+  data.frame()
 
 comb <- distinct(comb) # remove duplicates
 
+# Short handles for different scenarios
+scenarios = comb %>%
+  mutate(comb = paste(k, A, H, sep = "_")) %>%
+  distinct(comb) %>%
+  pull()
+
+names(scenarios) = c("none", "limsim", "hier", "both")
 
 # Main Simulations -------------------------------------------------------------
 simul <- vector("list", nrow(comb))    # list of simulations
