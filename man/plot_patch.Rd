@@ -4,7 +4,7 @@
 \alias{plot_patch}
 \title{Plot patch dynamics}
 \usage{
-plot_patch(results, patch, time)
+plot_patch(results, patch, time, equilibrium = FALSE)
 }
 \arguments{
 \item{results}{results array of a given simulation (a \code{\link[=multigen]{multigen()}} output)}
@@ -12,6 +12,9 @@ plot_patch(results, patch, time)
 \item{patch}{an integer indicating the patch number}
 
 \item{time}{an integer indicating the maximum timestep to look at}
+
+\item{equilibrium}{a boolean, if TRUE, displays a vertical line when
+equilibrium is reached}
 }
 \description{
 Plot the dynamics of species in a single patch over time. Automatically

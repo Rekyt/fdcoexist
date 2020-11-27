@@ -4,8 +4,13 @@
 \alias{compute_hierarchical_compet}
 \title{Compute Hierarchical Competition coefficient at each time step}
 \usage{
-compute_hierarchical_compet(composition_given_time_step, trait_values,
-  trait_weights, H, exponent = 1)
+compute_hierarchical_compet(
+  composition_given_time_step,
+  trait_values,
+  trait_weights,
+  H,
+  exponent = 1
+)
 }
 \arguments{
 \item{composition_given_time_step}{composition matrix at a given time step
@@ -17,8 +22,7 @@ compute_hierarchical_compet(composition_given_time_step, trait_values,
 
 \item{H}{the hierarchical competition scalar}
 
-\item{exponent}{[\code{numeric(1)}] (default: 1)\cr{}
-The exponent used before standardizing the distance}
+\item{exponent}{exponent to use for hierarchical compet. distances}
 }
 \description{
 Outputs a matrix of additional growth per patch per species given by
