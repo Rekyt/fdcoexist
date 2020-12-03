@@ -52,7 +52,7 @@ uncor_traits <- generate_cor_traits(n_patches, n_species, n_traits - 1,
 uncor_traits <- uncor_traits[, 1, drop = FALSE]
 
 # Number of combination of traits
-trait_comb <- seq(100)
+trait_comb <- seq(30)
 
 
 # Generate truly random trait distributions (trait 1 varies, instead of being
@@ -67,7 +67,7 @@ for (i in trait_comb[-1]) {
 # Parameter values - reduced for speed
 list_k <- c(2)
 list_A <- c(0, 1e-4)
-list_H <- c(0, 1e-3)
+list_H <- c(0, 5e-3)
 list_hierar_expo <- c(0.5, 1, 2)
 
 
@@ -86,6 +86,10 @@ scenarios = comb %>%
   pull()
 
 names(scenarios) = c("none", "limsim", "hier", "both")
+
+legend_comb =  c("+Limiting Similarity", "+Hierarchical Competition")
+names(legend_comb) = c(scenarios[["limsim"]],
+                       scenarios[["hier"]])
 
 # Main Simulations -------------------------------------------------------------
 simul <- vector("list", nrow(comb))    # list of simulations
@@ -357,10 +361,6 @@ hiercomp_table %>%
   kableExtra::as_image(file = "inst/figures/paper_figure2_hiercomptable.png")
 hiercomp_png = png::readPNG("inst/figures/paper_figure2_hiercomptable.png",
                             native = TRUE)
-
-legend_comb =  c("+Limiting Similarity", "+Hierarchical Competition")
-names(legend_comb) = c(scenarios[["limsim"]],
-                       scenarios[["hier"]])
 
 # Actual Main plot
 plot_species_mismatch = mismatch_extract %>%
