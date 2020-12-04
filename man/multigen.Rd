@@ -4,9 +4,26 @@
 \alias{multigen}
 \title{Function to run the simulation}
 \usage{
-multigen(traits, trait_weights, env, time, species, patches, composition,
-  A = A, B = B, d, k, width, H, h_fun = "+", di_thresh = 24,
-  lim_sim_exponent = 2, hierar_exponent = 0.5)
+multigen(
+  traits,
+  trait_weights,
+  env,
+  time,
+  species,
+  patches,
+  composition,
+  A = A,
+  B = B,
+  d,
+  k,
+  width,
+  H,
+  h_fun = "+",
+  di_thresh = 24,
+  lim_sim_exponent = 2,
+  hierar_exponent = 0.5,
+  K
+)
 }
 \arguments{
 \item{traits}{a species-traits data.frame with species as rownames and

@@ -4,7 +4,7 @@
 \alias{bevHoltFct}
 \title{Beverton-Holt function}
 \usage{
-bevHoltFct(R, N, alpha)
+bevHoltFct(R, N, alpha, K)
 }
 \arguments{
 \item{R}{a numeric vector of species growth rates}

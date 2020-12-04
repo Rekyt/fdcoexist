@@ -4,8 +4,13 @@
 \alias{generate_cor_traits}
 \title{Generate correlated traits}
 \usage{
-generate_cor_traits(number_patches, number_species, number_other = 9,
-  cor_coef = 0.7, min_value = 1)
+generate_cor_traits(
+  number_patches,
+  number_species,
+  number_other = 9,
+  cor_coef = 0.7,
+  min_value = 1
+)
 }
 \arguments{
 \item{number_patches}{a numeric value giving the total number of patches}

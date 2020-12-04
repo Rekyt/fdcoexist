@@ -4,12 +4,14 @@
 \alias{mismatch}
 \title{Plot mismatch per species between environmental optimum and max. abundance}
 \usage{
-mismatch(simul, n_patches = 25, time = 50, plot = TRUE)
+mismatch(simul, n_patches = 25, sp, time = 50, plot = TRUE)
 }
 \arguments{
 \item{simul}{results array of a given simulation (a \code{\link[=multigen]{multigen()}} output)}
 
 \item{n_patches}{an integer indicating the patch number}
+
+\item{sp}{integer for the number of species to consider}
 
 \item{time}{an integer indicating the number of time steps}
 
