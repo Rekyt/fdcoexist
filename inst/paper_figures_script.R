@@ -52,7 +52,7 @@ uncor_traits <- generate_cor_traits(n_patches, n_species, n_traits - 1,
 uncor_traits <- uncor_traits[, 1, drop = FALSE]
 
 # Number of combination of traits
-trait_comb <- seq(30)
+trait_comb <- seq(100)
 
 
 # Generate truly random trait distributions (trait 1 varies, instead of being
