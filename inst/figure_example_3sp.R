@@ -3,6 +3,7 @@ library("dplyr")
 library("ggplot2")
 library("cowplot")
 library("ggrepel")
+library("RColorBrewer")
 library("tidyr")
 library("gridExtra")
 
@@ -93,17 +94,18 @@ env_resp_plot <- ggplot(env_resp[[1]], aes(env, r_env)) +
     theme(panel.border = element_rect(fill = NA)) +
     geom_segment(x = 5, xend = 5, y = 0, yend = 2, linetype = "dashed")
 
-# Trait table
+# Species-trait table
 table_tra_theme <- ttheme_minimal(
     core = list(fg_params = list(cex = 1),
                 bg_params = list(fill = c("grey90", "grey89", "grey70"),
                                  col = NA)), # blues9[1:3]
     colhead = list(fg_params = list(cex = 2)),
-    rowhead = list(fg_params = list(cex = 2)))
+    rowhead = list(fg_params = list(cex = 2,
+                                    col = brewer.pal(n = 3, name = "Dark2"))))
 
 sp_tra <- uncor_traits
 colnames(sp_tra) <- "Trait"
-rownames(sp_tra) <- paste("Sp.", seq(1:3))
+rownames(sp_tra) <- paste0("sp", seq(1:3))
 
 tra_tbl <- tableGrob(sp_tra, theme = table_tra_theme)
 
