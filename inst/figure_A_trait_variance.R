@@ -116,8 +116,8 @@ for(i in 1:length(simul_list)){
     # Weighted variance by site
     tmp <- tmp %>%
         group_by(site) %>%
-        mutate(var_w = Weighted.Desc.Stat::w.var(trait1, mu = ab),
-               var_w2 = Weighted.Desc.Stat::w.var(trait2, mu = ab)) %>%
+        mutate(var_w = wtd_var(trait1, mu = ab),
+               var_w2 = wtd_var(trait2, mu = ab)) %>%
         ungroup() %>%
         as.data.frame()
 
@@ -126,16 +126,22 @@ for(i in 1:length(simul_list)){
 }
 
 # Plot
-ggplot(res, aes(as.factor(A), trait2)) +
-    geom_violin() +
-    # geom_boxplot() +
-    # geom_point() +
+res$site_plot <- as.integer(gsub("patches", "", res$site))
+
+cwv_A <-
+    ggplot(res[!duplicated(res[, c("A", "site")]), ],
+           aes(site_plot, var_w)) +
+    geom_point(aes(fill = as.factor(A)), shape = 21, size = 2) +
+    geom_line(aes(color = as.factor(A))) +
+    scale_color_viridis_d("Limiting similarity (A)") +
+    scale_fill_viridis_d("Limiting similarity (A)") +
+    labs(x = "Site", y = "Weighted trait variance") +
     theme_classic() +
     theme(panel.border = element_rect(fill = NA))
 
-ggplot(res[!duplicated(res[, c("A", "site")]), ],
-       aes(site, var_w2)) +
-    geom_point(aes(color = as.factor(A))) +
-    theme_classic() +
-    theme(panel.border = element_rect(fill = NA))
+# Saving figure
+ggsave2("inst/figures/paper_supp_fig4_A_cwv.png",
+        cwv_A,
+        width = 16.6, height = 16.6,
+        units = "cm", dpi = 300)
 
