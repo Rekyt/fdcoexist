@@ -1,5 +1,5 @@
 Package: fdcoexist
-Title: Multi-species Trait-based Coexistence Model in discrete time
+Title: Multi-Species Trait-Based Coexistence Model in Discrete time
 Version: 0.0.1
 Authors@R: c(
   person("Matthias", "Grenié", email = "matthias.grenie@gmail.com",
