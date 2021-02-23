@@ -1,6 +1,6 @@
 Package: fdcoexist
-Title: Coexistence Model of Species
-Version: 0.0.0.9000
+Title: Multi-species Trait-based Coexistence Model in discrete time
+Version: 0.0.1
 Authors@R: c(
   person("Matthias", "Grenié", email = "matthias.grenie@gmail.com",
          role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4659-7522")),
@@ -9,13 +9,15 @@ Authors@R: c(
   person("Caroline", "Tucker", email = "carolinemtucker@gmail.com",
          role = "aut", comment = c(ORCID = "0000-0002-4871-2010")),
   person("François", "Munoz", email = "fmunoz@univ-grenoble-alpes.fr",
-         role = "ths", comment = c(ORCID = "0000-0001-8776-4705")),
+         role = "aut", comment = c(ORCID = "0000-0001-8776-4705")),
   person("Cyrille", "Violle", email = "cyrille.violle@cefe.cnrs.fr",
-         role = "ths", comment = c(ORCID = "0000-0002-2471-9226"))
+         role = "aut", comment = c(ORCID = "0000-0002-2471-9226"))
   )
-Description: A modified Beverton-Holt model used in the Denelle et al. (in prep)
-  article. It provides all the code necessary to rerun the analyses that are
-  available in the vignettes.
+Description: A modified Beverton-Holt model used in the Denelle, Grenié et al.
+  manuscript that expresses environmental filtering, limiting similarity and
+  hierarchical competition explicitely in function of species traits.
+  This package provides all the code necessary to rerun the analyses
+  of the manuscript.
 Depends: R (>= 3.3.0),
     ggplot2
 LazyData: true
