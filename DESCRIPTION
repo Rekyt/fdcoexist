@@ -18,7 +18,7 @@ Description: A modified Beverton-Holt model used in the Denelle, Grenié et al.
   hierarchical competition explicitely in function of species traits.
   This package provides all the code necessary to rerun the analyses
   of the manuscript.
-Depends: R (>= 3.3.0),
+Depends: R (>= 3.5.0),
     ggplot2
 LazyData: true
 License: GPL (>= 2)
