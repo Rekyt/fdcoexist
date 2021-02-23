@@ -1,0 +1,10 @@
+pandoc: 2.7.3
+pkgdown: 1.6.1
+pkgdown_sha: ~
+articles:
+  equation_only: equation_only.html
+last_built: 2021-02-23T14:36Z
+urls:
+  reference: https://rekyt.github.io/fdcoexist/reference
+  article: https://rekyt.github.io/fdcoexist/articles
+
