@@ -5,3 +5,5 @@
 ^README\.md$
 ^\.circleci$
 ^\.github$
+^inst/figures/*.Rds$
+^inst/*.Rds$
