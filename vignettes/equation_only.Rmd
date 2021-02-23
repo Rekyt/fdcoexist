@@ -1,0 +1,230 @@
+---
+title: "fdcoexist equation only"
+author:
+    - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: pdf_document
+vignette: >
+  %\VignetteIndexEntry{Full equation of the model}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+  %\usepackage[utf8]{inputenc}
+---
+
+## Basic Equation
+
+This document resumes the equation used in our model and details the different processes.
+Our coexistence model is developed following this equation (Beverton-Holt equation):
+
+$$
+N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha_i}
+$$
+
+with $N_{t+1, i, x}$ the abundance of species $i$ in patch $x$ at time $t + 1$, $R_{i, x}$ the growth of species $i$ in patch $x$, $A$ the constant for inter-specific competition and $\alpha_i$ the competition coefficient for species $i$. We can detail both $R_{i, x}$ and $\alpha_i$:
+
+$$
+\begin{aligned}
+\alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}\\
+R_{i, x} = k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times {l_x}^2}\right)
+\end{aligned}
+$$
+
+with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $e_x$ the environmental value of patch $x$ and ${l_x}^2$ the width of the environmental filter in patch $x$.
+
+
+If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
+
+$$
+N_{t+1, i, x} = \frac{
+k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right] \times N_{t, i, x}}{
+1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}
+}
+$$
+
+## Detailing the computation of $\delta_{ij}$ & $\sigma_{ij}$
+
+$\delta_{ij}$ is the functional dissimilarity coefficient between species $i$ and species $j$. It reflects the fact that the more two species are dissimilar the less competition they experience from each other.
+
+First we can compute $\delta_{ij}$ as the euclidean distance between species using multiple traits:
+
+$$
+\delta_{ij} = \sqrt{\sum_{c = 1}^{T} (t_{i, c} - t_{j, c})^2}, 
+$$
+
+with $T$ the number of traits, $t_{i, c}$ trait $c$ of species $i$ and $t_{j, c}$ trait $c$ of species $j$. If want to take the contribution of traits to competition we have to modify the trait values as follow:
+
+$$
+\begin{aligned}
+\delta_{ij} = \sqrt{\sum_{c = 1}^{T} \left[ \sqrt{w_c} (t_{i, c} - t_{j, c})\right]^2}\\
+\delta_{ij} = \sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2},
+\end{aligned}
+$$
+
+with $w_c$ the contribution of trait $c$ in limiting similarity and we have $\sum_{c = 1}^{T_c} w_c = 1$.
+
+In order to consider that the effect of limiting similarity is non-linear we use an exponent on distances:
+$$
+\begin{aligned}
+{\delta_{ij}}' &= {\delta_{ij}}^2\\
+               &= \left(\sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}\right)^2 \\
+               &= \sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2
+\end{aligned}
+$$
+
+We use $\max({\delta_{ij}}') - {\delta_{ij}}'$ in above-mentioned equations to consider limiting similarity (closer species experience higher inter-specific competition) thus we can use a similarity term:
+
+$$
+\begin{aligned}
+\sigma_{ij} = \max({\delta_{ij}}') - {\delta_{ij}}',\quad \sigma_{ii} = 0 ~\forall~i \in [1, S] \\
+\end{aligned}
+$$
+
+## Adding intra-specific competition
+
+The equation above only considers inter-specific competition when $j \neq i$ in the sum. We can however add intra-specific competition when $j = i$. Each site has a species-specific carrying capacity $K$ as the number of individuals approaches this carrying capacity the intra-specific competition increases:
+
+$$
+\alpha_{ii} = B \times N_{t,i,x}
+$$
+
+Thus the equation becomes:
+
+$$
+N_{t+1, i, x} = \frac{
+k \times \exp\left(- \displaystyle\frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) \times N_{t, i, x}}{
+1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} \times \sigma_{ij} +
+B \times N_{t,i,x}
+}
+$$
+
+with $B$ the coefficient scaling intra-specific competition. 
+
+## Multi-trait growth term
+
+Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
+
+$$
+R_{i, x} = \sum_{g = 1}^{T} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right)
+$$
+
+with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T} w_g = 1$), $t_{i, g}$ the trait number $g$ of species $i$.
+
+If want to account for multiple traits contributing to growth the easiest way is to consider composite traits such as:
+
+$$
+t_i = \sum_{g = 1}^T w_g t_g
+$$
+with $w_g$ the contribution of trait to growth such that $\sum w_g = 1$, $t_g$ the $g$th trait, and $T$ the total number of traits.
+
+And thus $R_{i, x}$ becomes:
+
+$$
+R_{i, x} = k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
+$$
+
+
+## Adding Hierarchical competition
+
+We want hierarchical competition to depends on the species present in the community and the distance of species such that smallest species get their growth reduced by tallest species in proportion of their distances and abundances. So the competition term of a species $i$ in patch $x$ at time $t$ can be:
+$$
+H_{tix} = H \sum_{
+                \substack{j = 1\\
+                          t_j \ge t_i}}^S
+           (t_j - t_i) N_{tjx}
+$$
+with $H$ the scale for hierarchical competition $t_j$ the trait of species $j$, $t_i$ the trait of species $i$ and $N_{tjx}$ the abundance of species $j$ at time $t$ in patch $x$. To account for the fact that hierarchical competition has a negative influence on growth we add a minus sign in front of the equation which becomes:
+$$
+H_{tix} = - H \sum_{
+                \substack{j = 1\\
+                          t_j \ge t_i}}^S
+           (t_j - t_i) N_{tjx}
+$$
+If we wabt to consider multiple traits with different contributions we can generalize the equation using the same principle as for limiting similarity:
+$$
+H_{tix} = - H \sum_{h = 1}^T w_h \sum_{
+                \substack{j = 1\\
+                          t_{j, h} \ge t_{i, h}}}^S
+           (t_{j, h} - t_{i, h}) N_{tjx}
+$$
+with $w_h$ the hierarchical weight of trait $h$ among the $T$ traits, with $\sum w_h = 1$.
+
+Finally we can consider that hierarchical competition is not linear with the trait difference but instead that taller species have a saturating influence on smaller species (a tree of 10m or 50m will have almost similar influence for light interception for grasses 0.5m high). To account for that we can scale the distances using a square root:
+
+$$
+H_{tix} = - H \sum_{h = 1}^T w_h \sum_{
+                \substack{j = 1\\
+                          t_{j, h} \ge t_{i, h}}}^S
+            N_{tjx} \sqrt{t_{j, h} - t_{i, h}}
+$$
+
+
+## Adding dispersal
+
+In our model we consider dispersal between patches as if all patches were in a meta-community. At each time step a proportion $d$ of inviduals for each species move across patches. $d$ percent of individuals leave each patch and move evenly across patches.
+
+The dispersion is thus
+$$
+\begin{aligned}
+    N_{t, i, x, \text{leaving}} &= d \times N_{t, i, x} \\
+    N_{t, i, x, \text{sedentaries}} &= N_{t, i, x} - N_{t, i, x, \text{leaving}} = N_{t, i, x} - d \times N_{t, i, x} \\
+    N_{t, i, x, \text{sedentaries}} &= (1 - d) N_{t, i, x}\\
+\end{aligned}
+$$
+
+For then for each species all immigrants are split evenly across patches:
+
+$$
+    N_{t, i, \text{migrants}} = \sum_{k = 1}^{k = 25} d \times N_{t, i, k}
+$$
+
+Finally the number of inviduals in the patch after dispersal becomes:
+
+$$
+\begin{aligned}
+N_{t, i, x} = N_{t, i, x, \text{sedentaries}} + \frac{N_{t, i, \text{migrants}}}{25} \\
+N_{t, i, x} = (1 - d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}\\
+N_{t, i, x} = (1 - \frac{24}{25}d) N_{t, i, x} + d \frac{\displaystyle\sum_{k = 1, k \neq x}^{k = 25} N_{t, i, k}}{25} \\
+N_{t, i, x} = N_{t, i, x} \underbrace{- d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}}_{D_{t,i,x}} \\
+D_{t, i, x} = - d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i, k}}{25}
+\end{aligned}
+$$
+
+## Final equation
+
+### Single trait contributing to everything
+
+If a single trait contributes to everything than the equation simplifies as there is no need to to account for the difference in contribution to the different processes the final equation is thus:
+
+$$
+\begin{aligned}
+N_{t+1, i, x} &= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N_{t, i, x} + D_{t, i, x}\\
+              &= \frac{
+               \displaystyle k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) - H \sum_{\substack{j = 1\\ t_j > t_i}}^S N_{t, j, x} \sqrt{t_j - t_i}
+               }{
+               \displaystyle 1 +
+               A \left( \sum_{j = 1, j \neq i}^{S} N_{t, j, x} (t_i - t_j)^2\right) +
+               B \times N_{t,i,x}
+               } N_{t, i, x} + D_{t, i, x}
+\end{aligned}
+$$
+
+
+### Multiple traits co-contributing to some processes
+
+To account for the various contributions of multiple processes to the different processes the final equation is:
+
+$$
+\begin{aligned}
+N_{t+1, i, x} &= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N_{t, i, x} + D_{t, i, x}\\
+              &= \frac{
+               \displaystyle k \times \exp\left[- \frac{\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
+               - H \sum_{h = 1}^T \sum_{\substack{j = 1\\ t_{j, h} \ge t_{i, h}}}^S w_h \, N_{tjx} \,\sqrt{t_{j, h} - t_{i, h}}
+               }{
+               \displaystyle 1 +
+               A \left( \sum_{j = 1, j \neq i}^{S} \sum_{c = 1}^{T} w_c \, N_{t, j, x} \, (t_{i, c} - t_{j, c})^2\right) +
+               B \times N_{t,i,x}
+               } N_{t, i, x} + D_{t, i, x}
+\end{aligned}
+$$
+
+with $w_g$, $w_h$ and $w_c$, the contribution respectively of trait to growth, hierarchical competition and limiting similarity with $T$ the number of traits.
