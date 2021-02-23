@@ -169,7 +169,7 @@ for (i in seq(nrow(comb))) {
 
         # Extract max performance and environmental of max performance for each
         # species
-        allout <- extract_mismatchesCT(x = all_growth, z = z)
+        allout <- extract_mismatches(x = all_growth, z = z)
 
         sub <- na.omit(gw[which(gw$sp == paste("species", z, sep="")), ])
         if (nrow(sub) > 0) {

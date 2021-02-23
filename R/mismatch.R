@@ -14,13 +14,13 @@
 #'
 mismatch <- function(simul, n_patches = 25, sp, time = 50, plot = TRUE){
     # data.frame with environmental growth per species
-    env_growth <- fdcoexist::r_env(simul, sp = sp, n_patches = n_patches,
-                                   plot = FALSE)
+    env_growth <- r_env(simul, sp = sp, n_patches = n_patches, plot = FALSE)
 
     # Extract environment where species has its maximal R
     max_r <- env_growth %>%
-        distinct(sp, .keep_all = TRUE) %>%
-        select(sp, max_r_env)
+        dplyr::distinct(sp, .keep_all = TRUE) %>%
+        dplyr::select(dplyr::starts_with("sp"),
+                      dplyr::starts_with("max_r_env"))
 
     # Vector of species
     sp <- 1:sp
@@ -36,9 +36,9 @@ mismatch <- function(simul, n_patches = 25, sp, time = 50, plot = TRUE){
         max_env = as.integer(max_ab))
 
     # Merge environmental growth with maximal abundances
-    mismatch <- left_join(max_r, max_ab, by = "sp") %>%
-        mutate(mismatch = max_r_env - max_env) %>%
-        mutate(sp_lab = as.integer(gsub("sp", "", sp)))
+    mismatch <- dplyr::left_join(max_r, max_ab, by = "sp") %>%
+        dplyr::mutate(mismatch = max_r_env - max_env) %>%
+        dplyr::mutate(sp_lab = as.integer(gsub("sp", "", sp)))
 
     if(plot == TRUE){
         return(list(

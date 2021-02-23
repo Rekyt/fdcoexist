@@ -33,15 +33,18 @@ plot_rh <- function(simul, n_patches, time){
     time_end <- time
     rh_data$sp_label <- gsub("species", "sp", rh_data$sp)
 
-    ggplot(rh_data, aes_string("time", "rh")) +
+    rh_data %>%
+        dplyr::mutate(
+            label = ifelse(time == time_end, as.character(sp_label), NA)
+        ) %>%
+        ggplot(rh_data, aes_string("time", "rh")) +
         geom_line(aes_string(color = "as.factor(sp_label)"), size = 1) +
         scale_color_discrete(name = "Species") +
         ylab("Hierarchical coefficient") +
         xlab("Time") +
         ggtitle(paste0("Patch ", n_patches)) +
         theme_classic() +
-        geom_label(aes(label = ifelse(time == time_end, as.character(sp_label),
-                                      NA))) +
+        geom_label(aes_string(label = "label")) +
         theme_classic() +
         guides(color = FALSE)
 }

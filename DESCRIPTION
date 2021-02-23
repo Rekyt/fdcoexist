@@ -30,7 +30,8 @@ Imports:
     scales,
     tibble,
     tidyr,
-    Weighted.Desc.Stat
+    Weighted.Desc.Stat,
+    magrittr
 Suggests: 
     testthat,
     knitr,

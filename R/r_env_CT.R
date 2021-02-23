@@ -25,18 +25,20 @@ r_env_CT <- function(simul, n_patches, sp1, time) {
     sp <- 1:sp1
     env_growth <- data.frame(simul[["rmatrix"]][, sp])
     env_growth$env <- 1:n_patches
-    env_growth <- gather(env_growth, "sp", "r_env", contains("species"))
+    env_growth <- tidyr::gather(env_growth, "sp", "r_env",
+                                tidyr::contains("species"))
     env_growth$sp <- gsub("species", "sp", env_growth$sp)
 
     # Patch where each species has its maximal growth rate based on environment
     # only
     max_r_env <- env_growth %>%
-        group_by(sp) %>%
-        top_n(1, r_env) %>%
-        rename(max_r_env = env) %>%
+        dplyr::group_by(sp) %>%
+        dplyr::top_n(1, r_env) %>%
+        dplyr::rename(max_r_env = env) %>%
         as.data.frame()
 
-    renv <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
+    renv <- dplyr::left_join(env_growth, max_r_env[, c("sp", "max_r_env")],
+                             by = "sp")
 
     # Growth of species based on total growth termsÒ
     # (environment + hierarchical competition)
@@ -44,35 +46,39 @@ r_env_CT <- function(simul, n_patches, sp1, time) {
     env_growth <- data.frame(simul[["r_tot"]][, sp, (time-1)])
     rownames(env_growth) <- rownames(data.frame(simul[["rmatrix"]][, sp]))
     env_growth$env <- 1:n_patches
-    env_growth <- gather(env_growth, "sp", "r_env", contains("species"))
+    env_growth <- tidyr::gather(env_growth, "sp", "r_env",
+                                tidyr::contains("species"))
     env_growth$sp <- gsub("species", "sp", env_growth$sp)
 
     # Patch where each species has its maximal total
     # (env + hierarch. competition) growth rate
     max_r_env <- env_growth %>%
-        group_by(sp) %>%
-        top_n(1, r_env) %>%
-        rename(max_r_env = env) %>%
+        dplyr::group_by(sp) %>%
+        dplyr::top_n(1, r_env) %>%
+        dplyr::rename(max_r_env = env) %>%
         as.data.frame()
 
-    rtot <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
+    rtot <- dplyr::left_join(env_growth, max_r_env[, c("sp", "max_r_env")],
+                             by = "sp")
 
     #r_comp
     sp <- 1:sp1
     env_growth <- data.frame(simul[["compo"]][, sp, (time-1)])
     rownames(env_growth) <- rownames(data.frame(simul[["rmatrix"]][, sp]))
     env_growth$env <- 1:n_patches
-    env_growth <- gather(env_growth, "sp", "r_env", contains("species"))
+    env_growth <- tidyr::gather(env_growth, "sp", "r_env",
+                                tidyr::contains("species"))
     env_growth$sp <- gsub("species", "sp", env_growth$sp)
 
     # Patch where each species has its maximal growth rate
     max_r_env <- env_growth %>%
-        group_by(sp) %>%
-        top_n(1, r_env) %>%
-        rename(max_r_env = env) %>%
+        dplyr::group_by(sp) %>%
+        dplyr::top_n(1, r_env) %>%
+        dplyr::rename(max_r_env = env) %>%
         as.data.frame()
 
-    rcomp <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
+    rcomp <- dplyr::left_join(env_growth, max_r_env[, c("sp", "max_r_env")],
+                              by = "sp")
 
 
     #r_envab
@@ -80,18 +86,19 @@ r_env_CT <- function(simul, n_patches, sp1, time) {
     env_growth <- data.frame(simul[["env_ab"]][, sp, (time-1)])
     rownames(env_growth) <- rownames(data.frame(simul[["rmatrix"]][, sp]))
     env_growth$env <- 1:n_patches
-    env_growth <- gather(env_growth, "sp", "r_env", contains("species"))
+    env_growth <- tidyr::gather(env_growth, "sp", "r_env",
+                                tidyr::contains("species"))
     env_growth$sp <- gsub("species", "sp", env_growth$sp)
 
     # Patch where each species has its maximal growth rate
     max_r_env <- env_growth %>%
-        group_by(sp) %>%
-        top_n(1, r_env) %>%
-        rename(max_r_env = env) %>%
+        dplyr::group_by(sp) %>%
+        dplyr::top_n(1, r_env) %>%
+        dplyr::rename(max_r_env = env) %>%
         as.data.frame()
 
     envab <- left_join(env_growth, max_r_env[, c("sp", "max_r_env")], by = "sp")
 
-    return(list(env_all= renv, r_all= rtot, r_comp= rcomp, r_envab= envab))
+    return(list(env_all = renv, r_all = rtot, r_comp = rcomp, r_envab = envab))
 
 }

@@ -1,3 +1,7 @@
+#' Extract different growth rates from fdcoexist simulation
+#'
+#' @importFrom stats coef lm rnorm runif
+#' @export
 extract_growth_rates = function(simul, chosen_time = NULL){
 
     if(!is.null(chosen_time)){
@@ -67,13 +71,13 @@ extract_growth_rates = function(simul, chosen_time = NULL){
                 int_growth_rate = na_if_null_or_inf(int_growth_rate)
             )
         })  %>%
-            bind_rows(.id = "species")
+            dplyr::bind_rows(.id = "species")
 
         # Abundance at final time step
         sp_abund = site_abund[, chosen_time] %>%
             tibble::enframe("species", "final_abundance") %>%
             dplyr::mutate(patch = site_index) %>%
-            dplyr::select(patch, dplyr::everything())
+            dplyr::select(dplyr::starts_with("patch"), dplyr::everything())
 
 
         # Combine all data
@@ -82,7 +86,7 @@ extract_growth_rates = function(simul, chosen_time = NULL){
     })
 
     # Bind list into one data frame
-    gw <- as.data.frame(bind_rows(gw))
+    gw <- as.data.frame(dplyr::bind_rows(gw))
 
     return(gw)
 }

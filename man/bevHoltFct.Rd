@@ -13,6 +13,9 @@ bevHoltFct(R, N, alpha, K)
 
 \item{alpha}{the competition coefficient see \code{\link[=alphaterm]{alphaterm()}} for its
 computation}
+
+\item{K}{a numeric vector of species carrying capacity.
+NB: This is a fixed property for all species and not of the site}
 }
 \description{
 To simulate growth easily, use the Beverton-Holt equation. Which is:

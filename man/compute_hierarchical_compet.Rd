@@ -18,7 +18,11 @@ compute_hierarchical_compet(
 
 \item{trait_values}{a trait matrix}
 
-\item{trait_weights}{a scenario data.frame}
+\item{trait_weights}{data.frame with at least three columns equal to \code{trait}
+(giving the name of the concerned traits in \code{traits}
+df), \code{growth_weight} the relative weight of the trait in
+growth and \code{compet_weight} the relative weight of the
+trait in competition.}
 
 \item{H}{the hierarchical competition scalar}
 

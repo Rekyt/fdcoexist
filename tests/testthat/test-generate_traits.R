@@ -2,9 +2,9 @@ context("test functions in generate_traits.R")
 
 test_that("Trait generation works", {
 
-    n_sp = sample(25, size = 1)
+    n_sp = sample(2:25, size = 1)
     n_patch = sample(2:25, size = 1)
-    n_traits = sample(25, size = 1)
+    n_traits = sample(2:25, size = 1)
 
     expect_silent(generate_cor_traits(n_patch, n_sp, n_traits))
 

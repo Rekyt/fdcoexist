@@ -63,6 +63,8 @@ alphaterm <- function(distance, Nts, A, B, di_thresh) {
 #'
 #' @param R     a numeric vector of species growth rates
 #' @param N     a numeric vector of species population sizes
+#' @param K     a numeric vector of species carrying capacity.
+#'              NB: This is a fixed property for all species and not of the site
 #' @param alpha the competition coefficient see [alphaterm()] for its
 #'              computation
 #'
@@ -265,10 +267,9 @@ scale_distance = function(dist_matrix) {
 #' @param composition_given_time_step composition matrix at a given time step
 #'                                    (a site-species matrix with sites in rows)
 #' @param trait_values a trait matrix
-#' @param trait_weights a scenario data.frame
 #' @param H the hierarchical competition scalar
 #' @param exponent  exponent to use for hierarchical compet. distances
-#' @inheritParams compute_compet_distance
+#' @inheritParams check_trait_weights
 #'
 #' @export
 compute_hierarchical_compet = function(composition_given_time_step,
