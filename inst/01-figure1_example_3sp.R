@@ -66,7 +66,7 @@ for(i in 1:length(three_scenarios)){
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
         A = three_scenarios[[i]]$list_A, H = three_scenarios[[i]]$list_H,
-        B = 1e-7, d = d, k = list_k,
+        B = 1e-2, d = d, k = list_k,
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
         lim_sim_exponent = 1)
 

@@ -88,6 +88,7 @@ scenarios = comb %>%
 
 names(scenarios) = c("none", "limsim", "hier", "both")
 
+# Nice legends for plots
 legend_comb =  c("+Limiting Similarity", "+Hierarchical Competition")
 names(legend_comb) = c(scenarios[["limsim"]],
                        scenarios[["hier"]])
@@ -106,7 +107,7 @@ for (i in seq(nrow(comb))) {
         traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
-        A = comb[i, "A"], B = 1e-7, d = d, k = comb[i, "k"],
+        A = comb[i, "A"], B = 1e-2, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
         hierar_exponent = comb[i, "hierar_exp"], lim_sim_exponent = 1)
