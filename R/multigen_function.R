@@ -63,14 +63,12 @@ alphaterm <- function(distance, Nts, A, B, di_thresh) {
 #'
 #' @param R     a numeric vector of species growth rates
 #' @param N     a numeric vector of species population sizes
-#' @param K     a numeric vector of species carrying capacity.
-#'              NB: This is a fixed property for all species and not of the site
 #' @param alpha the competition coefficient see [alphaterm()] for its
 #'              computation
 #'
 #' @export
-bevHoltFct <- function(R, N, alpha, K){
-    ((R * N)/(1 + alpha))/(K/(K - N))
+bevHoltFct <- function(R, N, alpha){
+    (R * N)/(1 + alpha)
 }
 
 #' Species growth rate for a given trait and environment

@@ -20,7 +20,7 @@ n_traits <- 2 # number of traits
 init_pop <- 50 # number of individuals at t=0 for each species
 d <- 0.05 # dispersal parameter
 width <- 5 # standard deviation of the Gaussian environmental filtering
-K <- 100 # carrying capacity (per species per patch)
+
 # Initial population matrix, 50 individuals of each species
 composition <- array(NA, dim = c(n_patches, n_species, n_gen),
                      dimnames = list(paste0("patches", seq(n_patches)),
@@ -86,7 +86,7 @@ for(i in 1:length(scenarios)){
         composition = composition,
         A = scenarios[[i]]$list_A, H = scenarios[[i]]$list_H,
         B = 1e-7, d = d, k = list_k,
-        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
         lim_sim_exponent = 1)
 
     simul_list[[i]] <- simul
