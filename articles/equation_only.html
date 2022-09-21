@@ -19,6 +19,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -31,23 +33,17 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fdcoexist</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.1</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
 <li>
-  <a href="../index.html">
-    <span class="fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
-<li>
   <a href="../reference/index.html">Reference</a>
 </li>
 <li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
      
     <span class="caret"></span>
@@ -73,9 +69,9 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>fdcoexist equation only</h1>
-                        <h4 class="author">Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker</h4>
+                        <h4 data-toc-skip class="author">Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker</h4>
             
-            <h4 class="date">02 October 2021</h4>
+            <h4 data-toc-skip class="date">21 September 2022</h4>
       
       
       <div class="hidden name"><code>equation_only.Rmd</code></div>
@@ -84,9 +80,9 @@
 
     
     
-<div id="basic-equation" class="section level2">
-<h2 class="hasAnchor">
-<a href="#basic-equation" class="anchor"></a>Basic Equation</h2>
+<div class="section level2">
+<h2 id="basic-equation">Basic Equation<a class="anchor" aria-label="anchor" href="#basic-equation"></a>
+</h2>
 <p>This document resumes the equation used in our model and details the different processes. Our coexistence model is developed following this equation (Beverton-Holt equation):</p>
 <p><span class="math display">\[
 N_{t+1, i, x} = \frac{R_{i, x} \times N_{t, i, x}}{1 + A \times \alpha_i}
@@ -107,9 +103,8 @@ k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right
 }
 \]</span></p>
 </div>
-<div id="detailing-the-computation-of-delta_ij-sigma_ij" class="section level2">
-<h2 class="hasAnchor">
-<a href="#detailing-the-computation-of-delta_ij-sigma_ij" class="anchor"></a>Detailing the computation of <span class="math inline">\(\delta_{ij}\)</span> &amp; <span class="math inline">\(\sigma_{ij}\)</span>
+<div class="section level2">
+<h2 id="detailing-the-computation-of-delta_ij-sigma_ij">Detailing the computation of <span class="math inline">\(\delta_{ij}\)</span> &amp; <span class="math inline">\(\sigma_{ij}\)</span><a class="anchor" aria-label="anchor" href="#detailing-the-computation-of-delta_ij-sigma_ij"></a>
 </h2>
 <p><span class="math inline">\(\delta_{ij}\)</span> is the functional dissimilarity coefficient between species <span class="math inline">\(i\)</span> and species <span class="math inline">\(j\)</span>. It reflects the fact that the more two species are dissimilar the less competition they experience from each other.</p>
 <p>First we can compute <span class="math inline">\(\delta_{ij}\)</span> as the euclidean distance between species using multiple traits:</p>
@@ -138,9 +133,9 @@ k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right
 \end{aligned}
 \]</span></p>
 </div>
-<div id="adding-intra-specific-competition" class="section level2">
-<h2 class="hasAnchor">
-<a href="#adding-intra-specific-competition" class="anchor"></a>Adding intra-specific competition</h2>
+<div class="section level2">
+<h2 id="adding-intra-specific-competition">Adding intra-specific competition<a class="anchor" aria-label="anchor" href="#adding-intra-specific-competition"></a>
+</h2>
 <p>The equation above only considers inter-specific competition when <span class="math inline">\(j \neq i\)</span> in the sum. We can however add intra-specific competition when <span class="math inline">\(j = i\)</span>. Each site has a species-specific carrying capacity <span class="math inline">\(K\)</span> as the number of individuals approaches this carrying capacity the intra-specific competition increases:</p>
 <p><span class="math display">\[
 \alpha_{ii} = B \times N_{t,i,x}
@@ -155,9 +150,9 @@ B \times N_{t,i,x}
 \]</span></p>
 <p>with <span class="math inline">\(B\)</span> the coefficient scaling intra-specific competition.</p>
 </div>
-<div id="multi-trait-growth-term" class="section level2">
-<h2 class="hasAnchor">
-<a href="#multi-trait-growth-term" class="anchor"></a>Multi-trait growth term</h2>
+<div class="section level2">
+<h2 id="multi-trait-growth-term">Multi-trait growth term<a class="anchor" aria-label="anchor" href="#multi-trait-growth-term"></a>
+</h2>
 <p>Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:</p>
 <p><span class="math display">\[
 R_{i, x} = \sum_{g = 1}^{T} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right)
@@ -172,9 +167,9 @@ t_i = \sum_{g = 1}^T w_g t_g
 R_{i, x} = k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
 \]</span></p>
 </div>
-<div id="adding-hierarchical-competition" class="section level2">
-<h2 class="hasAnchor">
-<a href="#adding-hierarchical-competition" class="anchor"></a>Adding Hierarchical competition</h2>
+<div class="section level2">
+<h2 id="adding-hierarchical-competition">Adding Hierarchical competition<a class="anchor" aria-label="anchor" href="#adding-hierarchical-competition"></a>
+</h2>
 <p>We want hierarchical competition to depends on the species present in the community and the distance of species such that smallest species get their growth reduced by tallest species in proportion of their distances and abundances. So the competition term of a species <span class="math inline">\(i\)</span> in patch <span class="math inline">\(x\)</span> at time <span class="math inline">\(t\)</span> can be: <span class="math display">\[
 H_{tix} = H \sum_{
                 \substack{j = 1\\
@@ -199,9 +194,9 @@ H_{tix} = - H \sum_{h = 1}^T w_h \sum_{
             N_{tjx} \sqrt{t_{j, h} - t_{i, h}}
 \]</span></p>
 </div>
-<div id="adding-dispersal" class="section level2">
-<h2 class="hasAnchor">
-<a href="#adding-dispersal" class="anchor"></a>Adding dispersal</h2>
+<div class="section level2">
+<h2 id="adding-dispersal">Adding dispersal<a class="anchor" aria-label="anchor" href="#adding-dispersal"></a>
+</h2>
 <p>In our model we consider dispersal between patches as if all patches were in a meta-community. At each time step a proportion <span class="math inline">\(d\)</span> of inviduals for each species move across patches. <span class="math inline">\(d\)</span> percent of individuals leave each patch and move evenly across patches.</p>
 <p>The dispersion is thus <span class="math display">\[
 \begin{aligned}
@@ -225,12 +220,12 @@ D_{t, i, x} = - d N_{t,i,x} + d \frac{\displaystyle\sum_{k = 1}^{k = 25} N_{t, i
 \end{aligned}
 \]</span></p>
 </div>
-<div id="final-equation" class="section level2">
-<h2 class="hasAnchor">
-<a href="#final-equation" class="anchor"></a>Final equation</h2>
-<div id="single-trait-contributing-to-everything" class="section level3">
-<h3 class="hasAnchor">
-<a href="#single-trait-contributing-to-everything" class="anchor"></a>Single trait contributing to everything</h3>
+<div class="section level2">
+<h2 id="final-equation">Final equation<a class="anchor" aria-label="anchor" href="#final-equation"></a>
+</h2>
+<div class="section level3">
+<h3 id="single-trait-contributing-to-everything">Single trait contributing to everything<a class="anchor" aria-label="anchor" href="#single-trait-contributing-to-everything"></a>
+</h3>
 <p>If a single trait contributes to everything than the equation simplifies as there is no need to to account for the difference in contribution to the different processes the final equation is thus:</p>
 <p><span class="math display">\[
 \begin{aligned}
@@ -245,9 +240,9 @@ N_{t+1, i, x} &amp;= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N
 \end{aligned}
 \]</span></p>
 </div>
-<div id="multiple-traits-co-contributing-to-some-processes" class="section level3">
-<h3 class="hasAnchor">
-<a href="#multiple-traits-co-contributing-to-some-processes" class="anchor"></a>Multiple traits co-contributing to some processes</h3>
+<div class="section level3">
+<h3 id="multiple-traits-co-contributing-to-some-processes">Multiple traits co-contributing to some processes<a class="anchor" aria-label="anchor" href="#multiple-traits-co-contributing-to-some-processes"></a>
+</h3>
 <p>To account for the various contributions of multiple processes to the different processes the final equation is:</p>
 <p><span class="math display">\[
 \begin{aligned}
@@ -278,11 +273,13 @@ N_{t+1, i, x} &amp;= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N
 
 
       <footer><div class="copyright">
-  <p>Developed by Matthias Grenié, Pierre Denelle, Caroline Tucker, François Munoz, Cyrille Violle.</p>
+  <p></p>
+<p>Developed by Matthias Grenié, Pierre Denelle, Caroline Tucker, François Munoz, Cyrille Violle.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer>
@@ -290,6 +287,8 @@ N_{t+1, i, x} &amp;= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N
 
   
 
+
+  
 
   </body>
 </html>

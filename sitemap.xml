@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://rekyt.github.io/fdcoexist/404.html</loc>
+  </url>
+  <url>
+    <loc>https://rekyt.github.io/fdcoexist/articles/equation_only.html</loc>
+  </url>
+  <url>
+    <loc>https://rekyt.github.io/fdcoexist/articles/index.html</loc>
+  </url>
+  <url>
+    <loc>https://rekyt.github.io/fdcoexist/authors.html</loc>
+  </url>
+  <url>
     <loc>https://rekyt.github.io/fdcoexist/index.html</loc>
   </url>
   <url>
@@ -35,6 +47,9 @@
   </url>
   <url>
     <loc>https://rekyt.github.io/fdcoexist/reference/generate_cor_traits_rand.html</loc>
+  </url>
+  <url>
+    <loc>https://rekyt.github.io/fdcoexist/reference/index.html</loc>
   </url>
   <url>
     <loc>https://rekyt.github.io/fdcoexist/reference/mismatch.html</loc>
@@ -74,8 +89,5 @@
   </url>
   <url>
     <loc>https://rekyt.github.io/fdcoexist/reference/wtd_var.html</loc>
-  </url>
-  <url>
-    <loc>https://rekyt.github.io/fdcoexist/articles/equation_only.html</loc>
   </url>
 </urlset>
