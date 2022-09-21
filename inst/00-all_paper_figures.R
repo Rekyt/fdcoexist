@@ -66,7 +66,7 @@ for (i in trait_comb[-1]) {
 
 # Parameter values - reduced for speed
 list_k <- c(2)
-list_A <- c(0, 1e-4)
+list_A <- c(0, 1e-2)
 list_H <- c(0, 5e-3)
 list_hierar_expo <- c(0.5, 1, 2)
 
