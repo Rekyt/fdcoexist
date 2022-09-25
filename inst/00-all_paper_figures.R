@@ -29,6 +29,7 @@ n_traits <- 2      # number of traits
 init_pop <- 50     # number of individuals at t=0 for each species
 d <- 0.05          # dispersal parameter
 width <- 5         # standard deviation of the Gaussian environmental filtering
+B <- 1e-2          # Strengh of intra-specific competition
 
 # Initial population matrix, 50 individuals of each species
 composition <- array(NA, dim = c(n_patches, n_species, n_gen),
@@ -107,7 +108,7 @@ for (i in seq(nrow(comb))) {
         traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
-        A = comb[i, "A"], B = 1e-2, d = d, k = comb[i, "k"],
+        A = comb[i, "A"], B = B, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
         hierar_exponent = comb[i, "hierar_exp"], lim_sim_exponent = 1
@@ -299,7 +300,7 @@ mismatch_cor = mismatch_extract %>%
     tidyr::nest(mismatches = c(Species, MisAbPatchP, MisinstRPatchP,
                                MisavgGRPatchP, MismaxGRPatchP)) %>%
     mutate(cor_mat = purrr::map(
-        mismatches, ~cor(.x[, -1], method = "spearman", use = "complete.obs") %>%
+        mismatches, ~cor(.x[, -1], method = "spearman", use = "na.or.complete") %>%
             round(2)))
 
 ## Convert correlation table to image
@@ -528,10 +529,10 @@ for (i in seq_len(nrow(var_growth_comb))) {
         traits = traits, trait_weights = growth_scenar, env = 1:n_patches,
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
-        A = 0, B = 1e-7, d = d, k = 2,
-        H = 0 ,
-        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-        hierar_exponent = 2)
+        A = 0, B = B, d = d, k = 2, H = 0 ,
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
+        hierar_exponent = 2
+    )
 
     growth_simuls[[i]] <- growth_simul
 }
@@ -649,12 +650,13 @@ for (i in seq_len(nrow(param_space))) {
         traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
-        B = 1e-7, d = d,
+        B = B, d = d,
         A = param_space[i, "A"],
         k = param_space[i, "k"],
         H = param_space[i, "H"],
-        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-        lim_sim_exponent = 1, hierar_exponent = 2)
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
+        lim_sim_exponent = 1, hierar_exponent = 2
+    )
 
     param_space_simuls[[i]] <- param_space_simul
 }
@@ -840,9 +842,8 @@ for (i in seq_len(nrow(var_comp_comb))) {
         traits = traits, trait_weights = comp_scenar, env = 1:n_patches,
         time = n_gen, species = n_species, patches = 25,
         composition = composition,
-        A = A, B = 1e-7, d = d, k = 2,
-        H = H ,
-        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        A = A, B = B, d = d, k = 2, H = H ,
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
         hierar_exponent = 2)
 
     comp_simuls[[i]] <- comp_simul
