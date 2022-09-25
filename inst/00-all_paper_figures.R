@@ -299,9 +299,13 @@ mismatch_cor = mismatch_extract %>%
                        values_from = mismatch_value) %>%
     tidyr::nest(mismatches = c(Species, MisAbPatchP, MisinstRPatchP,
                                MisavgGRPatchP, MismaxGRPatchP)) %>%
-    mutate(cor_mat = purrr::map(
-        mismatches, ~cor(.x[, -1], method = "spearman", use = "na.or.complete") %>%
-            round(2)))
+    mutate(
+        cor_mat = purrr::map(
+            mismatches,
+            ~cor(.x[, -1], method = "spearman", use = "na.or.complete") %>%
+            round(2)
+        )
+    )
 
 ## Convert correlation table to image
 # Limiting similarity scenario
@@ -321,9 +325,18 @@ limsim_table = as.data.frame(limsim_table, stringsAsFactors = FALSE) %>%
             bold = TRUE, escape = FALSE, align = "c")
     )
 limsim_table[1, 2:4] = c(
-    '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
-    '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
-    '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
+    paste0(
+        '<span style=" font-weight: bold;',
+        '    color: #F8766D !important;" >&#9679;</span>'
+    ),
+    paste0(
+        '<span style=" font-weight: bold;',
+        '    color: #00BFC4 !important;" >&#9632;</span>'
+    ),
+    paste0(
+        '<span style=" font-weight: bold;',
+        '    color: #7CAE00 !important;" >&#9650;</span>')
+    )
 limsim_table[2, 3] = ""
 limsim_table[3, 4] = ""
 
@@ -352,9 +365,18 @@ hiercomp_table = as.data.frame(hiercomp_table, stringsAsFactors = FALSE) %>%
             escape = FALSE)
     )
 hiercomp_table[1, 2:4] = c(
-    '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
-    '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
-    '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
+    paste0(
+        '<span style=" font-weight: bold;',
+        '    color: #F8766D !important;" >&#9679;</span>'
+    ),
+    paste0(
+        '<span style=" font-weight: bold;',
+        '    color: #00BFC4 !important;" >&#9632;</span>'
+    ),
+    paste0(
+        '<span style=" font-weight: bold;',
+        '    color: #7CAE00 !important;" >&#9650;</span>')
+    )
 hiercomp_table[2, 3] = ""
 hiercomp_table[3, 4] = ""
 
@@ -518,8 +540,10 @@ growth_simuls <- vector("list", nrow(var_growth_comb))
 for (i in seq_len(nrow(var_growth_comb))) {
 
     # Get trait dataset
-    traits <- data.frame(trait1 = uncor_traits[,var_growth_comb[i, "trait_comb"]],
-                         trait2 = second_trait)
+    traits <- data.frame(
+        trait1 = uncor_traits[,var_growth_comb[i, "trait_comb"]],
+        trait2 = second_trait
+    )
 
     # Get trait contribution scenario
     growth_scenar <- var_growth_scenars[[var_growth_comb[i, "growth_scenar"]]]
@@ -541,7 +565,9 @@ var_growth_cwm <- purrr::map2_dfr(
     growth_simuls, seq_len(nrow(var_growth_comb)), function(x, y) {
 
         # Extract actual growth contribution
-        growth_contribution <- var_growth_scenars[[var_growth_comb[y, "growth_scenar"]]]$growth_weight[[1]]
+        growth_contribution <- var_growth_scenars[[
+            var_growth_comb[y, "growth_scenar"]
+        ]]$growth_weight[[1]]
 
         # Extract final abundances
         abund_df <- x$compo[,,100] %>%
@@ -550,7 +576,9 @@ var_growth_cwm <- purrr::map2_dfr(
             tidyr::gather("species", "abundance", -patch)
 
         # Get back trait data
-        trait_df <- data.frame(trait1 = uncor_traits[,var_growth_comb[y, "trait_comb"]]) %>%
+        trait_df <- data.frame(
+            trait1 = uncor_traits[,var_growth_comb[y, "trait_comb"]]
+        ) %>%
             tibble::rownames_to_column("species")
 
         # Compute Community-Weighted Mean and Community-Weighted Variance
@@ -575,8 +603,10 @@ plot_cwm_cwv_growth = var_growth_cwm %>%
                 aes(slope = slope, intercept = 0), linetype = 2) +
     # Rest of the geoms
     stat_summary(geom = "smooth") +
-    facet_wrap(vars(cwm_name), scales = "free_y",
-               labeller = labeller(cwm_name = c(cwm = "CW Mean", cwv = "CW Variance"))) +
+    facet_wrap(
+        vars(cwm_name), scales = "free_y",
+        labeller = labeller(cwm_name = c(cwm = "CW Mean", cwv = "CW Variance"))
+    ) +
     labs(x = "Environment",
          y = "Community-Weighted Value") +
     scale_colour_manual(name = "Trait Contribution\nto growth",
@@ -752,8 +782,10 @@ plot_hierar_exp_species_mismatch = allmisA %>%
                  color = "grey", size = 2/3) +
     geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
     geom_point(size = 1.5) +
-    facet_wrap(vars(hierar_exp), ncol = 3,
-               labeller = as_labeller(label_hierar_exp, default = label_parsed)) +
+    facet_wrap(
+        vars(hierar_exp), ncol = 3,
+        labeller = as_labeller(label_hierar_exp, default = label_parsed)
+    ) +
     scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
     scale_color_discrete(labels = c(
         MisAbPatchP = "Abundance",
@@ -853,8 +885,12 @@ var_comp_cwm <- purrr::map2_dfr(
     comp_simuls, seq_len(nrow(var_comp_comb)), function(x, y) {
 
         # Extract trait contribution to competitions
-        comp_contribution <- var_comp_scenars[[var_comp_comb[y, "comp_scenar"]]]$compet_weight[[1]]
-        hier_contribution <- var_comp_scenars[[var_comp_comb[y, "comp_scenar"]]]$hierarchy_weight[[1]]
+        comp_contribution <- var_comp_scenars[[
+            var_comp_comb[y, "comp_scenar"]
+        ]]$compet_weight[[1]]
+        hier_contribution <- var_comp_scenars[[
+            var_comp_comb[y, "comp_scenar"]
+        ]]$hierarchy_weight[[1]]
 
         # Extract final abundances
         abund_df <- x$compo[,,100] %>%
@@ -863,7 +899,9 @@ var_comp_cwm <- purrr::map2_dfr(
             tidyr::gather("species", "abundance", -patch)
 
         # Get back trait data
-        trait_df <- data.frame(trait1 = uncor_traits[,var_comp_comb[y, "trait_comb"]]) %>%
+        trait_df <- data.frame(
+            trait1 = uncor_traits[,var_comp_comb[y, "trait_comb"]]
+        ) %>%
             tibble::rownames_to_column("species")
 
         # Compute Community-Weighted Mean and Community-Weighted Variance
