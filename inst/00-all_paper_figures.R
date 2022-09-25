@@ -15,9 +15,9 @@ devtools::load_all()  # Load all functions from package in local repo
 # Functions --------------------------------------------------------------------
 label_hierar_exp = function(string) {
 
-  lapply(unlist(string), function(x) {
-    paste0("hierarchical~distance^{", x, "}")
-  })
+    lapply(unlist(string), function(x) {
+        paste0("hierarchical~distance^{", x, "}")
+    })
 }
 
 # Initial Parameters -----------------------------------------------------------
@@ -75,16 +75,16 @@ list_hierar_expo <- c(0.5, 1, 2)
 comb <- expand.grid(
     k = list_k, A = list_A, H = list_H, trait_comb = trait_comb,
     hierar_exp = list_hierar_expo
-    ) %>%
-  data.frame()
+) %>%
+    data.frame()
 
 comb <- distinct(comb) # remove duplicates
 
 # Short handles for different scenarios
 scenarios = comb %>%
-  mutate(comb = paste(k, A, H, sep = "_")) %>%
-  distinct(comb) %>%
-  pull()
+    mutate(comb = paste(k, A, H, sep = "_")) %>%
+    distinct(comb) %>%
+    pull()
 
 names(scenarios) = c("none", "limsim", "hier", "both")
 
@@ -96,7 +96,7 @@ names(legend_comb) = c(scenarios[["limsim"]],
 # Main Simulations -------------------------------------------------------------
 simul <- vector("list", nrow(comb))    # list of simulations
 mis_i <- vector("list", nrow(comb))    # list of data.frame with species
-                                       # performance & patch of best performance
+# performance & patch of best performance
 tra_env <- vector("list", nrow(comb))  # Contain CWM by environment
 
 for (i in seq(nrow(comb))) {
@@ -110,7 +110,8 @@ for (i in seq(nrow(comb))) {
         A = comb[i, "A"], B = 1e-2, d = d, k = comb[i, "k"],
         H = comb[i, "H"],
         width = rep(width, n_patches), h_fun = "+", di_thresh = 24,
-        hierar_exponent = comb[i, "hierar_exp"], lim_sim_exponent = 1)
+        hierar_exponent = comb[i, "hierar_exp"], lim_sim_exponent = 1
+    )
 
     simul[[i]] <- simul_i
 
@@ -147,10 +148,10 @@ for (i in seq(nrow(comb))) {
         group_by(patch) %>%
         # Scale growth rates relatively in each site
         mutate(across(avg_growth_rate:int_growth_rate,
-                  ~scales::rescale(.x, c(0, 1)))) %>%
+                      ~scales::rescale(.x, c(0, 1)))) %>%
         # Weight trait values per site by growth rates
         summarise(across(avg_growth_rate:int_growth_rate,
-                     ~wtd_mean(tra, w = .x, na.rm = TRUE)),
+                         ~wtd_mean(tra, w = .x, na.rm = TRUE)),
                   .groups = "keep") %>%
         as.data.frame()
 
@@ -243,10 +244,10 @@ allmis <- allmis %>%
 # Get average of mismatches per species
 allmisA <- aggregate(allmis, by = list(allmis$Species, allmis$comb), "mean",
                      na.rm = TRUE) %>%
-  select(-Species, -trait_comb, -comb) %>%
-  rename(Species = Group.1,
-         comb = Group.2) %>%
-  select(k, A, H, hierar_exp, comb, Species, everything())
+    select(-Species, -trait_comb, -comb) %>%
+    rename(Species = Group.1,
+           comb = Group.2) %>%
+    select(k, A, H, hierar_exp, comb, Species, everything())
 # Convert back comb column in parameter combinations without hierarchical exp.
 allmisA <- allmisA %>%
     extract(comb, c("comb", "hierar_exp"), c("(.*)_(.+)$")) %>%
@@ -281,54 +282,54 @@ all_minmax_mismatch = allmisA %>%
 
 # Combine and keep only relevant information for figure 2
 mismatch_extract = allmisA %>%
-  select(k, A, H, Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
-         MismaxGRPatchP, MisavgGRPatchP) %>%
-  tidyr::pivot_longer(
-    c(MisAbPatchP, MisinstRPatchP, MismaxGRPatchP, MisavgGRPatchP),
-    names_to = "mismatch_name", values_to = "mismatch_value") %>%
-  inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
-  filter(comb != scenarios[["none"]], comb != scenarios[["both"]],
-         hierar_exp == 0.5)
+    select(k, A, H, Species, comb, hierar_exp, MisAbPatchP, MisinstRPatchP,
+           MismaxGRPatchP, MisavgGRPatchP) %>%
+    tidyr::pivot_longer(
+        c(MisAbPatchP, MisinstRPatchP, MismaxGRPatchP, MisavgGRPatchP),
+        names_to = "mismatch_name", values_to = "mismatch_value") %>%
+    inner_join(all_minmax_mismatch, by = c("Species", "comb", "hierar_exp")) %>%
+    filter(comb != scenarios[["none"]], comb != scenarios[["both"]],
+           hierar_exp == 0.5)
 
 # Get the correlation between mismatches
 mismatch_cor = mismatch_extract %>%
-  select(comb, Species, mismatch_name, mismatch_value) %>%
-  tidyr::pivot_wider(names_from = mismatch_name,
-                     values_from = mismatch_value) %>%
-  tidyr::nest(mismatches = c(Species, MisAbPatchP, MisinstRPatchP,
-                             MisavgGRPatchP, MismaxGRPatchP)) %>%
-  mutate(cor_mat = purrr::map(
-    mismatches, ~cor(.x[, -1], method = "spearman", use = "complete.obs") %>%
-                                round(2)))
+    select(comb, Species, mismatch_name, mismatch_value) %>%
+    tidyr::pivot_wider(names_from = mismatch_name,
+                       values_from = mismatch_value) %>%
+    tidyr::nest(mismatches = c(Species, MisAbPatchP, MisinstRPatchP,
+                               MisavgGRPatchP, MismaxGRPatchP)) %>%
+    mutate(cor_mat = purrr::map(
+        mismatches, ~cor(.x[, -1], method = "spearman", use = "complete.obs") %>%
+            round(2)))
 
 ## Convert correlation table to image
 # Limiting similarity scenario
 limsim_table = mismatch_cor$cor_mat[[1]][, 1:3]
 limsim_table[upper.tri(limsim_table)] = ""
 limsim_table = as.data.frame(limsim_table, stringsAsFactors = FALSE) %>%
-  tibble::rownames_to_column("mismatch_name") %>%
-  mutate(mismatch_name = case_when(
-    mismatch_name == "MisinstRPatchP" ~ "&#9632;",
-    mismatch_name == "MisavgGRPatchP" ~ "&#9650;",
-    mismatch_name == "MismaxGRPatchP" ~ "+",
-    TRUE ~ "",
-  )) %>%
-  mutate(
-    mismatch_name = kableExtra::cell_spec(
-      mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"),
-      bold = TRUE, escape = FALSE, align = "c")
-  )
+    tibble::rownames_to_column("mismatch_name") %>%
+    mutate(mismatch_name = case_when(
+        mismatch_name == "MisinstRPatchP" ~ "&#9632;",
+        mismatch_name == "MisavgGRPatchP" ~ "&#9650;",
+        mismatch_name == "MismaxGRPatchP" ~ "+",
+        TRUE ~ "",
+    )) %>%
+    mutate(
+        mismatch_name = kableExtra::cell_spec(
+            mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"),
+            bold = TRUE, escape = FALSE, align = "c")
+    )
 limsim_table[1, 2:4] = c(
-  '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
-  '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
-  '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
+    '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
+    '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
+    '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
 limsim_table[2, 3] = ""
 limsim_table[3, 4] = ""
 
 limsim_table %>%
-  kableExtra::kable(escape = FALSE, col.names = NULL) %>%
-  kableExtra::kable_minimal(full_width = FALSE, font_size = 14) %>%
-  kableExtra::as_image(file = "inst/figures/paper_figure2_limsimtable.png")
+    kableExtra::kable(escape = FALSE, col.names = NULL) %>%
+    kableExtra::kable_minimal(full_width = FALSE, font_size = 14) %>%
+    kableExtra::as_image(file = "inst/figures/paper_figure2_limsimtable.png")
 limsim_png = png::readPNG("inst/figures/paper_figure2_limsimtable.png",
                           native = TRUE)
 
@@ -336,79 +337,79 @@ limsim_png = png::readPNG("inst/figures/paper_figure2_limsimtable.png",
 hiercomp_table = mismatch_cor$cor_mat[[2]][, 1:3]
 hiercomp_table[upper.tri(hiercomp_table)] = ""
 hiercomp_table = as.data.frame(hiercomp_table, stringsAsFactors = FALSE) %>%
-  tibble::rownames_to_column("mismatch_name") %>%
-  mutate(mismatch_name = case_when(
-    mismatch_name == "MisinstRPatchP" ~ "&#9632;",
-    mismatch_name == "MisavgGRPatchP" ~ "&#9650;",
-    mismatch_name == "MismaxGRPatchP" ~ "+",
-    TRUE ~ "",
-  )) %>%
-  mutate(
-    mismatch_name = kableExtra::cell_spec(
-      mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"),
-      bold = TRUE,
-      escape = FALSE)
-  )
+    tibble::rownames_to_column("mismatch_name") %>%
+    mutate(mismatch_name = case_when(
+        mismatch_name == "MisinstRPatchP" ~ "&#9632;",
+        mismatch_name == "MisavgGRPatchP" ~ "&#9650;",
+        mismatch_name == "MismaxGRPatchP" ~ "+",
+        TRUE ~ "",
+    )) %>%
+    mutate(
+        mismatch_name = kableExtra::cell_spec(
+            mismatch_name, color = c("white", "#00BFC4", "#7CAE00", "#C77CFF"),
+            bold = TRUE,
+            escape = FALSE)
+    )
 hiercomp_table[1, 2:4] = c(
-  '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
-  '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
-  '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
+    '<span style=" font-weight: bold;    color: #F8766D !important;" >&#9679;</span>',
+    '<span style=" font-weight: bold;    color: #00BFC4 !important;" >&#9632;</span>',
+    '<span style=" font-weight: bold;    color: #7CAE00 !important;" >&#9650;</span>')
 hiercomp_table[2, 3] = ""
 hiercomp_table[3, 4] = ""
 
 hiercomp_table %>%
-  kableExtra::kable(escape = FALSE, col.names = NULL) %>%
-  kableExtra::row_spec(1, background = "white") %>%
-  kableExtra::row_spec(2, background = "white") %>%
-  kableExtra::row_spec(3, background = "white") %>%
-  kableExtra::row_spec(4, background = "white") %>%
-  kableExtra::kable_minimal(full_width = FALSE, font_size = 14) %>%
-  kableExtra::as_image(file = "inst/figures/paper_figure2_hiercomptable.png")
+    kableExtra::kable(escape = FALSE, col.names = NULL) %>%
+    kableExtra::row_spec(1, background = "white") %>%
+    kableExtra::row_spec(2, background = "white") %>%
+    kableExtra::row_spec(3, background = "white") %>%
+    kableExtra::row_spec(4, background = "white") %>%
+    kableExtra::kable_minimal(full_width = FALSE, font_size = 14) %>%
+    kableExtra::as_image(file = "inst/figures/paper_figure2_hiercomptable.png")
 hiercomp_png = png::readPNG("inst/figures/paper_figure2_hiercomptable.png",
                             native = TRUE)
 
 # Actual Main plot
 plot_species_mismatch = mismatch_extract %>%
-  mutate(comb = factor(comb, levels = c(scenarios[["limsim"]],
-                                        scenarios[["hier"]]))) %>%
-  ggplot(aes(mismatch_value, Species, color = mismatch_name,
-             shape = mismatch_name)) +
-  geom_segment(aes(x = min_mismatch, xend = max_mismatch,
-                   yend = Species),
-               color = "grey", size = 1/3) +
-  geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
-  geom_point(size = 1.5) +
-  facet_wrap(vars(comb), ncol = 2, labeller = labeller(comb = legend_comb)) +
-  scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
-  scale_color_discrete(labels = c(
-    MisAbPatchP = "Abundance",
-    MisavgGRPatchP = "Average Growth Rate",
-    MisinstRPatchP = "Intrinsic Growth Rate",
-    MismaxGRPatchP = "Maximum Growth Rate"
-  ), guide = guide_legend(nrow = 2)) +
-  scale_shape_discrete(labels = c(
-    MisAbPatchP = "Abundance",
-    MisavgGRPatchP = "Average Growth Rate",
-    MisinstRPatchP = "Intrinsic Growth Rate",
-    MismaxGRPatchP = "Maximum Growth Rate"
-  ), guide = guide_legend(nrow = 2)) +
-  labs(x     = "Patch Mismatch",
-       shape = "Performance\nMeasure",
-       color = "Performance\nMeasure") +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        panel.grid.major.x = element_line(size = 1.3),
-        panel.spacing.x = unit(4, "mm"),
-        strip.background = element_blank(),
-        panel.border = element_blank(),
-        legend.position = "top")
+    mutate(comb = factor(comb, levels = c(scenarios[["limsim"]],
+                                          scenarios[["hier"]]))) %>%
+    ggplot(aes(mismatch_value, Species, color = mismatch_name,
+               shape = mismatch_name)) +
+    geom_segment(aes(x = min_mismatch, xend = max_mismatch,
+                     yend = Species),
+                 color = "grey", size = 1/3) +
+    geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
+    geom_point(size = 1.5) +
+    facet_wrap(vars(comb), ncol = 2, labeller = labeller(comb = legend_comb)) +
+    scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
+    scale_color_discrete(labels = c(
+        MisAbPatchP = "Abundance",
+        MisavgGRPatchP = "Average Growth Rate",
+        MisinstRPatchP = "Intrinsic Growth Rate",
+        MismaxGRPatchP = "Maximum Growth Rate"
+    ), guide = guide_legend(nrow = 2)) +
+    scale_shape_discrete(labels = c(
+        MisAbPatchP = "Abundance",
+        MisavgGRPatchP = "Average Growth Rate",
+        MisinstRPatchP = "Intrinsic Growth Rate",
+        MismaxGRPatchP = "Maximum Growth Rate"
+    ), guide = guide_legend(nrow = 2)) +
+    labs(x     = "Patch Mismatch",
+         shape = "Performance\nMeasure",
+         color = "Performance\nMeasure") +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          panel.grid.major.x = element_line(size = 1.3),
+          panel.spacing.x = unit(4, "mm"),
+          strip.background = element_blank(),
+          panel.border = element_blank(),
+          legend.position = "top")
 
 paper_figure2 = plot_species_mismatch +
-  patchwork::inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7,
-                           align_to = "panel") +
-  patchwork::inset_element(hiercomp_png, 0.75, 0.5, 0.85, 0.7,
-                           align_to = "panel") +
-  theme_void()
+    patchwork::inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7,
+                             align_to = "panel") +
+    patchwork::inset_element(hiercomp_png, 0.75, 0.5, 0.85, 0.7,
+                             align_to = "panel") +
+    theme_void()
 
 paper_figure2
 
@@ -429,10 +430,10 @@ ggsave2("inst/figures/paper_figure2.png", paper_figure2,
 # Fig. 3: Deviation along the environment --------------------------------------
 
 all_trait_env = bind_rows(tra_env) %>%
-  tidyr::gather("cwm_type", "cwm_value", cwm,
-                avg_growth_rate:int_growth_rate) %>%
-  mutate(mismatch_value = cwm_value - env,
-         comb = paste(k, A, H, sep = "_"))
+    tidyr::gather("cwm_type", "cwm_value", cwm,
+                  avg_growth_rate:int_growth_rate) %>%
+    mutate(mismatch_value = cwm_value - env,
+           comb = paste(k, A, H, sep = "_"))
 
 saveRDS(all_trait_env, "inst/all_trait_env.Rds")
 
@@ -440,39 +441,39 @@ legend_comb[3] = "Environmental filtering\nonly"
 names(legend_comb)[3] = scenarios[["none"]]
 
 plot_deviation_env = all_trait_env %>%
-  filter(comb != scenarios[["both"]], hierar_exp == 2) %>%
-  mutate(comb = factor(comb,
-                       levels = c(scenarios[["none"]], scenarios[["limsim"]],
-                                  scenarios[["hier"]]))) %>%
-  ggplot(aes(env, mismatch_value, color = cwm_type, shape = cwm_type)) +
-  geom_hline(yintercept = 0, linetype = 2, color = "black") +
-  facet_wrap(vars(comb), ncol = 3, labeller = labeller(comb = legend_comb)) +
-  stat_summary(fun = "mean", geom = "line") +
-  stat_summary(fun = "mean", geom = "point", size = 1) +
-  scale_color_discrete(labels = c(
-    cwm = "CWM",
-    avg_growth_rate = "Avg. Growth Rate\nWeighted-Mean",
-    int_growth_rate = "Intrinsic Growth Rate\nWeighted-Mean",
-    max_growth_rate = "Maximum Growth Rate\nWeighted-Mean"
-  )) +
-  scale_shape_discrete(labels = c(
-    cwm = "CWM",
-    avg_growth_rate = "Avg. Growth Rate\nWeighted-Mean",
-    int_growth_rate = "Intrinsic Growth Rate\nWeighted-Mean",
-    max_growth_rate = "Maximum Growth Rate\nWeighted-Mean"
-  )) +
-  labs(x = "Environment",
-       y = "Deviation (Observed CWM vs. Expected CWM)",
-       color = "CWM\nType",
-       shape = "CWM\nType") +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        panel.grid.major.x = element_line(size = 1.3),
-        panel.spacing.x = unit(4, "mm"),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold"),
-        panel.border = element_blank(),
-        legend.position = "top")
+    filter(comb != scenarios[["both"]], hierar_exp == 2) %>%
+    mutate(comb = factor(comb,
+                         levels = c(scenarios[["none"]], scenarios[["limsim"]],
+                                    scenarios[["hier"]]))) %>%
+    ggplot(aes(env, mismatch_value, color = cwm_type, shape = cwm_type)) +
+    geom_hline(yintercept = 0, linetype = 2, color = "black") +
+    facet_wrap(vars(comb), ncol = 3, labeller = labeller(comb = legend_comb)) +
+    stat_summary(fun = "mean", geom = "line") +
+    stat_summary(fun = "mean", geom = "point", size = 1) +
+    scale_color_discrete(labels = c(
+        cwm = "CWM",
+        avg_growth_rate = "Avg. Growth Rate\nWeighted-Mean",
+        int_growth_rate = "Intrinsic Growth Rate\nWeighted-Mean",
+        max_growth_rate = "Maximum Growth Rate\nWeighted-Mean"
+    )) +
+    scale_shape_discrete(labels = c(
+        cwm = "CWM",
+        avg_growth_rate = "Avg. Growth Rate\nWeighted-Mean",
+        int_growth_rate = "Intrinsic Growth Rate\nWeighted-Mean",
+        max_growth_rate = "Maximum Growth Rate\nWeighted-Mean"
+    )) +
+    labs(x = "Environment",
+         y = "Deviation (Observed CWM vs. Expected CWM)",
+         color = "CWM\nType",
+         shape = "CWM\nType") +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          panel.grid.major.x = element_line(size = 1.3),
+          panel.spacing.x = unit(4, "mm"),
+          strip.background = element_blank(),
+          strip.text = element_text(face = "bold"),
+          panel.border = element_blank(),
+          legend.position = "top")
 
 plot_deviation_env
 
@@ -499,10 +500,10 @@ second_trait = generate_cor_traits_rand(n_patches, n_species,
 
 # Generate different scenarios where trait contributes differently to growth
 var_growth_scenars = lapply(seq(0, 1, length.out = 6), function(x) {
-  data.frame(trait            = c("trait1", "trait2"),
-             growth_weight    = c(x, 1-x),
-             compet_weight    = 0,
-             hierarchy_weight = 0)
+    data.frame(trait            = c("trait1", "trait2"),
+               growth_weight    = c(x, 1-x),
+               compet_weight    = 0,
+               hierarchy_weight = 0)
 })
 
 # Get a combinations of simulations parameters
@@ -515,77 +516,77 @@ growth_simuls <- vector("list", nrow(var_growth_comb))
 # Simulations of varying trait growth contribution
 for (i in seq_len(nrow(var_growth_comb))) {
 
-  # Get trait dataset
-  traits <- data.frame(trait1 = uncor_traits[,var_growth_comb[i, "trait_comb"]],
-                       trait2 = second_trait)
+    # Get trait dataset
+    traits <- data.frame(trait1 = uncor_traits[,var_growth_comb[i, "trait_comb"]],
+                         trait2 = second_trait)
 
-  # Get trait contribution scenario
-  growth_scenar <- var_growth_scenars[[var_growth_comb[i, "growth_scenar"]]]
+    # Get trait contribution scenario
+    growth_scenar <- var_growth_scenars[[var_growth_comb[i, "growth_scenar"]]]
 
-  # Actual Simulation
-  growth_simul <- multigen(
-    traits = traits, trait_weights = growth_scenar, env = 1:n_patches,
-    time = n_gen, species = n_species, patches = 25,
-    composition = composition,
-    A = 0, B = 1e-7, d = d, k = 2,
-    H = 0 ,
-    width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-    hierar_exponent = 2)
+    # Actual Simulation
+    growth_simul <- multigen(
+        traits = traits, trait_weights = growth_scenar, env = 1:n_patches,
+        time = n_gen, species = n_species, patches = 25,
+        composition = composition,
+        A = 0, B = 1e-7, d = d, k = 2,
+        H = 0 ,
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        hierar_exponent = 2)
 
-  growth_simuls[[i]] <- growth_simul
+    growth_simuls[[i]] <- growth_simul
 }
 
 var_growth_cwm <- purrr::map2_dfr(
-  growth_simuls, seq_len(nrow(var_growth_comb)), function(x, y) {
+    growth_simuls, seq_len(nrow(var_growth_comb)), function(x, y) {
 
-    # Extract actual growth contribution
-    growth_contribution <- var_growth_scenars[[var_growth_comb[y, "growth_scenar"]]]$growth_weight[[1]]
+        # Extract actual growth contribution
+        growth_contribution <- var_growth_scenars[[var_growth_comb[y, "growth_scenar"]]]$growth_weight[[1]]
 
-    # Extract final abundances
-    abund_df <- x$compo[,,100] %>%
-      as.data.frame() %>%
-      tibble::rownames_to_column("patch") %>%
-      tidyr::gather("species", "abundance", -patch)
+        # Extract final abundances
+        abund_df <- x$compo[,,100] %>%
+            as.data.frame() %>%
+            tibble::rownames_to_column("patch") %>%
+            tidyr::gather("species", "abundance", -patch)
 
-    # Get back trait data
-    trait_df <- data.frame(trait1 = uncor_traits[,var_growth_comb[y, "trait_comb"]]) %>%
-      tibble::rownames_to_column("species")
+        # Get back trait data
+        trait_df <- data.frame(trait1 = uncor_traits[,var_growth_comb[y, "trait_comb"]]) %>%
+            tibble::rownames_to_column("species")
 
-    # Compute Community-Weighted Mean and Community-Weighted Variance
-    cwm_df <- abund_df %>%
-      dplyr::inner_join(trait_df, by = "species") %>%
-      group_by(patch) %>%
-      summarise(cwm = wtd_mean(trait1, abundance),
-                cwv = wtd_var(trait1, abundance),
-                .groups = "drop") %>%
-      mutate(growth_weight = growth_contribution,
-             env = as.numeric(gsub("patches", "", patch)),
-             param_comb = y)
-})
+        # Compute Community-Weighted Mean and Community-Weighted Variance
+        cwm_df <- abund_df %>%
+            dplyr::inner_join(trait_df, by = "species") %>%
+            group_by(patch) %>%
+            summarise(cwm = wtd_mean(trait1, abundance),
+                      cwv = wtd_var(trait1, abundance),
+                      .groups = "drop") %>%
+            mutate(growth_weight = growth_contribution,
+                   env = as.numeric(gsub("patches", "", patch)),
+                   param_comb = y)
+    })
 
 saveRDS(var_growth_cwm, "inst/var_growth_cwm.Rds")
 
 plot_cwm_cwv_growth = var_growth_cwm %>%
-  tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
-  ggplot(aes(env, cwm_value, color = as.factor(growth_weight))) +
-  # 1:1 line only on CWM facet
-  geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
-              aes(slope = slope, intercept = 0), linetype = 2) +
-  # Rest of the geoms
-  stat_summary(geom = "smooth") +
-  facet_wrap(vars(cwm_name), scales = "free_y",
-             labeller = labeller(cwm_name = c(cwm = "CW Mean", cwv = "CW Variance"))) +
-  labs(x = "Environment",
-       y = "Community-Weighted Value") +
-  scale_colour_manual(name = "Trait Contribution\nto growth",
-                      values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
-                      labels = function(x) scales::percent(as.numeric(x))) +
-  guides(color = guide_legend(nrow = 1)) +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        legend.position = "top",
-        strip.background = element_blank(),
-        panel.grid = element_blank())
+    tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
+    ggplot(aes(env, cwm_value, color = as.factor(growth_weight))) +
+    # 1:1 line only on CWM facet
+    geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+                aes(slope = slope, intercept = 0), linetype = 2) +
+    # Rest of the geoms
+    stat_summary(geom = "smooth") +
+    facet_wrap(vars(cwm_name), scales = "free_y",
+               labeller = labeller(cwm_name = c(cwm = "CW Mean", cwv = "CW Variance"))) +
+    labs(x = "Environment",
+         y = "Community-Weighted Value") +
+    scale_colour_manual(name = "Trait Contribution\nto growth",
+                        values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
+                        labels = function(x) scales::percent(as.numeric(x))) +
+    guides(color = guide_legend(nrow = 1)) +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          legend.position = "top",
+          strip.background = element_blank(),
+          panel.grid = element_blank())
 
 plot_cwm_cwv_growth
 
@@ -606,33 +607,33 @@ ggsave2("inst/figures/paper_figure4.svg", plot_cwm_cwv_growth,
 # Table 2: model the influence of each parameter -------------------------------
 
 cwm_env_model = all_trait_env %>%
-  filter(hierar_exp == 0.5) %>%
-  select(-site, -time, -trait_comb, -param_comb, -hierar_exp, -comb) %>%
-  mutate(A = factor(A),
-         H = factor(H)) %>%
-  tidyr::nest(cwm_env = c(k, A, H, cwm_value, mismatch_value, env)) %>%
-  mutate(
-    cwm_mod = purrr::map(
-      cwm_env, function(x) lm(cwm_value ~ env + A*H, data = x)),
-    mis_mod = purrr::map(
-      cwm_env, function(x) lm(mismatch_value ~ env + A*H, data = x)),
-    cwm_coef = purrr::map(cwm_mod, broom::tidy),
-    mis_coef = purrr::map(cwm_mod, broom::tidy))
+    filter(hierar_exp == 0.5) %>%
+    select(-site, -time, -trait_comb, -param_comb, -hierar_exp, -comb) %>%
+    mutate(A = factor(A),
+           H = factor(H)) %>%
+    tidyr::nest(cwm_env = c(k, A, H, cwm_value, mismatch_value, env)) %>%
+    mutate(
+        cwm_mod = purrr::map(
+            cwm_env, function(x) lm(cwm_value ~ env + A*H, data = x)),
+        mis_mod = purrr::map(
+            cwm_env, function(x) lm(mismatch_value ~ env + A*H, data = x)),
+        cwm_coef = purrr::map(cwm_mod, broom::tidy),
+        mis_coef = purrr::map(cwm_mod, broom::tidy))
 
 table2_figure = sjPlot::plot_models(cwm_env_model$cwm_mod,
                                     m.labels = cwm_env_model$cwm_type) +
-  theme_bw() +
-  theme(aspect.ratio = 1,
-        legend.position = "top")
+    theme_bw() +
+    theme(aspect.ratio = 1,
+          legend.position = "top")
 
 # Supp. Fig. 1: Parameter space ------------------------------------------------
 
 # Generate parameter space
 param_space = expand.grid(
-  k          = c(2),
-  A          = c(0, 1e-7, 1e-5, 1e-4, 3e-4, 5e-4, 7e-4, 1e-3),
-  H          = c(0, 1e-4, 1e-3, 1e-2, 5e-2, 1e-1, 5e-1),
-  trait_comb = trait_comb[1:30]
+    k          = c(2),
+    A          = c(0, 1e-7, 1e-5, 1e-4, 3e-4, 5e-4, 7e-4, 1e-3),
+    H          = c(0, 1e-4, 1e-3, 1e-2, 5e-2, 1e-1, 5e-1),
+    trait_comb = trait_comb[1:30]
 )
 
 param_space_simuls <- vector("list", nrow(param_space))
@@ -640,78 +641,78 @@ param_space_simuls <- vector("list", nrow(param_space))
 # Simulations of varying trait growth contribution
 for (i in seq_len(nrow(param_space))) {
 
-  # Get trait dataset
-  traits <- data.frame(trait1 = uncor_traits[, param_space[i, "trait_comb"]])
+    # Get trait dataset
+    traits <- data.frame(trait1 = uncor_traits[, param_space[i, "trait_comb"]])
 
-  # Actual Simulation
-  param_space_simul <- multigen(
-    traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
-    time = n_gen, species = n_species, patches = 25,
-    composition = composition,
-    B = 1e-7, d = d,
-    A = param_space[i, "A"],
-    k = param_space[i, "k"],
-    H = param_space[i, "H"],
-    width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-    lim_sim_exponent = 1, hierar_exponent = 2)
+    # Actual Simulation
+    param_space_simul <- multigen(
+        traits = traits, trait_weights = trait_scenar, env = 1:n_patches,
+        time = n_gen, species = n_species, patches = 25,
+        composition = composition,
+        B = 1e-7, d = d,
+        A = param_space[i, "A"],
+        k = param_space[i, "k"],
+        H = param_space[i, "H"],
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        lim_sim_exponent = 1, hierar_exponent = 2)
 
-  param_space_simuls[[i]] <- param_space_simul
+    param_space_simuls[[i]] <- param_space_simul
 }
 
 param_space_abund <- purrr::map2_dfr(
-  param_space_simuls, seq_len(nrow(param_space)), function(x, y) {
-    # Extract final abundances
-    x$compo[,,100] %>%
-      as.data.frame() %>%
-      tibble::rownames_to_column("patch") %>%
-      tidyr::gather("species", "abundance", -patch) %>%
-      mutate(k = param_space[y, "k"],
-             A = param_space[y, "A"],
-             H = param_space[y, "H"],
-             trait_comb = param_space[y, "trait_comb"])
+    param_space_simuls, seq_len(nrow(param_space)), function(x, y) {
+        # Extract final abundances
+        x$compo[,,100] %>%
+            as.data.frame() %>%
+            tibble::rownames_to_column("patch") %>%
+            tidyr::gather("species", "abundance", -patch) %>%
+            mutate(k = param_space[y, "k"],
+                   A = param_space[y, "A"],
+                   H = param_space[y, "H"],
+                   trait_comb = param_space[y, "trait_comb"])
 
-  })
+    })
 
 saveRDS(param_space_abund, "inst/param_space_abund.Rds")
 
 param_space_avg = param_space_abund %>%
-  group_by(k, A, H, trait_comb, patch) %>%
-  summarise(n_sp = sum(abundance > 0),
-            avg_ab = mean(abundance))
+    group_by(k, A, H, trait_comb, patch) %>%
+    summarise(n_sp = sum(abundance > 0),
+              avg_ab = mean(abundance))
 
 plot_param_space_rich = param_space_avg %>%
-  ungroup() %>%
-  mutate(A_chr = format(A, scientific = FALSE),
-         H_chr = format(H, scientific = FALSE)) %>%
-  ggplot(aes(A_chr, H_chr, z = n_sp)) +
-  stat_summary_2d() +
-  scale_fill_viridis_c(name = "Species\nRichness") +
-  scale_x_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
-  scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
-  labs(x = "Limiting similarity intensity",
-       y = "Hierarchical competition intensity") +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        panel.background = element_blank(),
-        axis.text.x = element_text(angle = 45),
-        legend.position = "top")
+    ungroup() %>%
+    mutate(A_chr = format(A, scientific = FALSE),
+           H_chr = format(H, scientific = FALSE)) %>%
+    ggplot(aes(A_chr, H_chr, z = n_sp)) +
+    stat_summary_2d() +
+    scale_fill_viridis_c(name = "Species\nRichness") +
+    scale_x_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+    scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+    labs(x = "Limiting similarity intensity",
+         y = "Hierarchical competition intensity") +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          panel.background = element_blank(),
+          axis.text.x = element_text(angle = 45),
+          legend.position = "top")
 
 plot_param_space_abund = param_space_avg %>%
-  ungroup() %>%
-  mutate(A_chr = format(A, scientific = FALSE),
-         H_chr = format(H, scientific = FALSE)) %>%
-  ggplot(aes(A_chr, H_chr, z = avg_ab)) +
-  stat_summary_2d() +
-  scale_fill_viridis_c(name = "Average\nAbundance") +
-  scale_x_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
-  scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
-  labs(x = "Limiting similarity intensity",
-       y = "Hierarchical competition intensity") +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        panel.background = element_blank(),
-        axis.text.x = element_text(angle = 45),
-        legend.position = "top")
+    ungroup() %>%
+    mutate(A_chr = format(A, scientific = FALSE),
+           H_chr = format(H, scientific = FALSE)) %>%
+    ggplot(aes(A_chr, H_chr, z = avg_ab)) +
+    stat_summary_2d() +
+    scale_fill_viridis_c(name = "Average\nAbundance") +
+    scale_x_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+    scale_y_discrete(labels = function(x) scales::scientific(as.numeric(x))) +
+    labs(x = "Limiting similarity intensity",
+         y = "Hierarchical competition intensity") +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          panel.background = element_blank(),
+          axis.text.x = element_text(angle = 45),
+          legend.position = "top")
 
 plot_param_space = cowplot::plot_grid(plot_param_space_rich,
                                       plot_param_space_abund, labels = "AUTO")
@@ -799,17 +800,17 @@ ggsave2("inst/figures/paper_supp_fig2_hierar_exponent.svg",
 # Supp. Fig. 3: contribution to competition effect on CWM and CWV --------------
 
 var_comp_scenars = lapply(seq(0, 1, length.out = 6), function(x) {
-  data.frame(trait            = c("trait1", "trait2"),
-             growth_weight    = c(0, 1),
-             compet_weight    = c(x, 1-x),
-             hierarchy_weight = 0)
+    data.frame(trait            = c("trait1", "trait2"),
+               growth_weight    = c(0, 1),
+               compet_weight    = c(x, 1-x),
+               hierarchy_weight = 0)
 })
 
 var_hierar_scenars = lapply(seq(0, 1, length.out = 6), function(x) {
-  data.frame(trait            = c("trait1", "trait2"),
-             growth_weight    = c(0, 1),
-             compet_weight    = 0,
-             hierarchy_weight = c(x, 1-x))
+    data.frame(trait            = c("trait1", "trait2"),
+               growth_weight    = c(0, 1),
+               compet_weight    = 0,
+               hierarchy_weight = c(x, 1-x))
 })
 
 var_comp_scenars = c(var_comp_scenars, var_hierar_scenars)
@@ -824,110 +825,110 @@ comp_simuls <- vector("list", nrow(var_comp_comb))
 # Simulations of varying trait contribution to competition
 for (i in seq_len(nrow(var_comp_comb))) {
 
-  # Get trait dataset
-  traits <- data.frame(trait1 = uncor_traits[,var_comp_comb[i, "trait_comb"]],
-                       trait2 = second_trait)
+    # Get trait dataset
+    traits <- data.frame(trait1 = uncor_traits[,var_comp_comb[i, "trait_comb"]],
+                         trait2 = second_trait)
 
-  # Get trait contribution scenario
-  comp_scenar <- var_comp_scenars[[var_comp_comb[i, "comp_scenar"]]]
+    # Get trait contribution scenario
+    comp_scenar <- var_comp_scenars[[var_comp_comb[i, "comp_scenar"]]]
 
-  A = ifelse(comp_scenar$compet_weight[[1]] == 0, 0, list_A[[2]])
-  H = ifelse(comp_scenar$hierarchy_weight[[1]] == 0, 0, list_H[[2]])
+    A = ifelse(comp_scenar$compet_weight[[1]] == 0, 0, list_A[[2]])
+    H = ifelse(comp_scenar$hierarchy_weight[[1]] == 0, 0, list_H[[2]])
 
-  # Actual Simulation
-  comp_simul <- multigen(
-    traits = traits, trait_weights = comp_scenar, env = 1:n_patches,
-    time = n_gen, species = n_species, patches = 25,
-    composition = composition,
-    A = A, B = 1e-7, d = d, k = 2,
-    H = H ,
-    width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
-    hierar_exponent = 2)
+    # Actual Simulation
+    comp_simul <- multigen(
+        traits = traits, trait_weights = comp_scenar, env = 1:n_patches,
+        time = n_gen, species = n_species, patches = 25,
+        composition = composition,
+        A = A, B = 1e-7, d = d, k = 2,
+        H = H ,
+        width = rep(width, n_patches), h_fun = "+", di_thresh = 24, K = 100,
+        hierar_exponent = 2)
 
-  comp_simuls[[i]] <- comp_simul
+    comp_simuls[[i]] <- comp_simul
 }
 
 var_comp_cwm <- purrr::map2_dfr(
-  comp_simuls, seq_len(nrow(var_comp_comb)), function(x, y) {
+    comp_simuls, seq_len(nrow(var_comp_comb)), function(x, y) {
 
-    # Extract trait contribution to competitions
-    comp_contribution <- var_comp_scenars[[var_comp_comb[y, "comp_scenar"]]]$compet_weight[[1]]
-    hier_contribution <- var_comp_scenars[[var_comp_comb[y, "comp_scenar"]]]$hierarchy_weight[[1]]
+        # Extract trait contribution to competitions
+        comp_contribution <- var_comp_scenars[[var_comp_comb[y, "comp_scenar"]]]$compet_weight[[1]]
+        hier_contribution <- var_comp_scenars[[var_comp_comb[y, "comp_scenar"]]]$hierarchy_weight[[1]]
 
-    # Extract final abundances
-    abund_df <- x$compo[,,100] %>%
-      as.data.frame() %>%
-      tibble::rownames_to_column("patch") %>%
-      tidyr::gather("species", "abundance", -patch)
+        # Extract final abundances
+        abund_df <- x$compo[,,100] %>%
+            as.data.frame() %>%
+            tibble::rownames_to_column("patch") %>%
+            tidyr::gather("species", "abundance", -patch)
 
-    # Get back trait data
-    trait_df <- data.frame(trait1 = uncor_traits[,var_comp_comb[y, "trait_comb"]]) %>%
-      tibble::rownames_to_column("species")
+        # Get back trait data
+        trait_df <- data.frame(trait1 = uncor_traits[,var_comp_comb[y, "trait_comb"]]) %>%
+            tibble::rownames_to_column("species")
 
-    # Compute Community-Weighted Mean and Community-Weighted Variance
-    cwm_df <- abund_df %>%
-      dplyr::inner_join(trait_df, by = "species") %>%
-      group_by(patch) %>%
-      summarise(cwm = wtd_mean(trait1, abundance),
-                cwv = wtd_var(trait1, abundance),
-                .groups = "drop") %>%
-      mutate(comp_weight = comp_contribution,
-             hier_weight = hier_contribution,
-             env = as.numeric(gsub("patches", "", patch)),
-             param_comb = y)
-  })
+        # Compute Community-Weighted Mean and Community-Weighted Variance
+        cwm_df <- abund_df %>%
+            dplyr::inner_join(trait_df, by = "species") %>%
+            group_by(patch) %>%
+            summarise(cwm = wtd_mean(trait1, abundance),
+                      cwv = wtd_var(trait1, abundance),
+                      .groups = "drop") %>%
+            mutate(comp_weight = comp_contribution,
+                   hier_weight = hier_contribution,
+                   env = as.numeric(gsub("patches", "", patch)),
+                   param_comb = y)
+    })
 
 saveRDS(var_comp_cwm, "inst/var_comp_cwm.Rds")
 
 plot_cwm_cwv_comp = var_comp_cwm %>%
-  filter(hier_weight == 0) %>%
-  tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
-  ggplot(aes(env, cwm_value, color = as.factor(comp_weight))) +
-  # 1:1 line only on CWM facet
-  geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
-              aes(slope = slope, intercept = 0), linetype = 2) +
-  stat_summary(geom = "smooth") +
-  facet_wrap(vars(cwm_name), scales = "free_y",
-             labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
-  labs(x = "Environment",
-       y = "CWM or CWV value") +
-  scale_colour_manual(name = "Trait Contribution\nto limiting similarity",
-                      values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
-                      labels = function(x) scales::percent(as.numeric(x))) +
-  guides(color = guide_legend(nrow = 1)) +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        legend.position = "top",
-        strip.background = element_blank(),
-        panel.grid = element_blank())
+    filter(hier_weight == 0) %>%
+    tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
+    ggplot(aes(env, cwm_value, color = as.factor(comp_weight))) +
+    # 1:1 line only on CWM facet
+    geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+                aes(slope = slope, intercept = 0), linetype = 2) +
+    stat_summary(geom = "smooth") +
+    facet_wrap(vars(cwm_name), scales = "free_y",
+               labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
+    labs(x = "Environment",
+         y = "CWM or CWV value") +
+    scale_colour_manual(name = "Trait Contribution\nto limiting similarity",
+                        values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
+                        labels = function(x) scales::percent(as.numeric(x))) +
+    guides(color = guide_legend(nrow = 1)) +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          legend.position = "top",
+          strip.background = element_blank(),
+          panel.grid = element_blank())
 
 plot_cwm_cwv_hier = var_comp_cwm %>%
-  filter(comp_weight == 0) %>%
-  tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
-  ggplot(aes(env, cwm_value, color = as.factor(hier_weight))) +
-  # 1:1 line only on CWM facet
-  geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
-              aes(slope = slope, intercept = 0), linetype = 2) +
-  stat_summary(geom = "smooth") +
-  facet_wrap(vars(cwm_name), scales = "free_y",
-             labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
-  labs(x = "Environment",
-       y = "CWM or CWV value") +
-  scale_colour_manual(name = "Trait Contribution\nto hierarchical comp.",
-                      values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
-                      labels = function(x) scales::percent(as.numeric(x))) +
-  guides(color = guide_legend(nrow = 1)) +
-  theme_bw(10) +
-  theme(aspect.ratio = 1,
-        legend.position = "top",
-        strip.background = element_blank(),
-        panel.grid = element_blank())
+    filter(comp_weight == 0) %>%
+    tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
+    ggplot(aes(env, cwm_value, color = as.factor(hier_weight))) +
+    # 1:1 line only on CWM facet
+    geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+                aes(slope = slope, intercept = 0), linetype = 2) +
+    stat_summary(geom = "smooth") +
+    facet_wrap(vars(cwm_name), scales = "free_y",
+               labeller = labeller(cwm_name = c(cwm = "CWM", cwv = "CWV"))) +
+    labs(x = "Environment",
+         y = "CWM or CWV value") +
+    scale_colour_manual(name = "Trait Contribution\nto hierarchical comp.",
+                        values = RColorBrewer::brewer.pal(7, "YlOrRd")[2:7],
+                        labels = function(x) scales::percent(as.numeric(x))) +
+    guides(color = guide_legend(nrow = 1)) +
+    theme_bw(10) +
+    theme(aspect.ratio = 1,
+          legend.position = "top",
+          strip.background = element_blank(),
+          panel.grid = element_blank())
 
 plot_cwm_cwv_comp_contrib = cowplot::plot_grid(
-  plot_cwm_cwv_comp,
-  plot_cwm_cwv_hier,
-  labels = "AUTO",
-  ncol = 1, nrow = 2)
+    plot_cwm_cwv_comp,
+    plot_cwm_cwv_hier,
+    labels = "AUTO",
+    ncol = 1, nrow = 2)
 
 saveRDS(plot_cwm_cwv_comp_contrib,
         "inst/figures/paper_supp_fig3_comp_contrib.Rds")
