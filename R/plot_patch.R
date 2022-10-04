@@ -40,7 +40,7 @@ plot_patch <- function(results, patch, time, equilibrium = FALSE){
   if (!isTRUE(equilibrium)) {
     # Plot
     ggplot(patch_data, aes_string("time", "n_ind")) +
-      geom_line(aes_string(color = "as.factor(sp)"), linewidth = 1) +
+      geom_line(aes_string(color = "as.factor(sp)"), size = 1) +
       scale_color_discrete(name = "Species") +
       labs(
           x = "Time", y = "Number of individuals",
@@ -87,7 +87,7 @@ plot_patch <- function(results, patch, time, equilibrium = FALSE){
 
     # Plot
     ggplot(patch_data, aes_string("time", "n_ind")) +
-      geom_line(aes_string(color = "as.factor(sp)"), linewidth = 1) +
+      geom_line(aes_string(color = "as.factor(sp)"), size = 1) +
       geom_vline(xintercept = first_0, linetype = 2) +
       scale_color_discrete(name = "Species") +
       labs(x = "Time", y = "Number of individuals") +
