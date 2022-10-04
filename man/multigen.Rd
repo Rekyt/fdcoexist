@@ -21,8 +21,7 @@ multigen(
   h_fun = "+",
   di_thresh = 24,
   lim_sim_exponent = 2,
-  hierar_exponent = 0.5,
-  K
+  hierar_exponent = 0.5
 )
 }
 \arguments{

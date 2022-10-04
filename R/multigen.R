@@ -27,10 +27,11 @@
 #' @param hierar_exponent  exponent to use for hierarchical compet. distances
 #'
 #' @export
-multigen <- function(traits, trait_weights, env, time, species, patches,
-                     composition, A = A, B = B, d, k, width, H, h_fun = "+",
-                     di_thresh = 24, lim_sim_exponent = 2,
-                     hierar_exponent = 0.5, K) {
+multigen <- function(
+        traits, trait_weights, env, time, species, patches, composition,
+        A = A, B = B, d, k, width, H, h_fun = "+", di_thresh = 24,
+        lim_sim_exponent = 2, hierar_exponent = 0.5
+) {
 
     # Check k dimensions
     if ((length(k) != 1 & length(k) != species)) {
@@ -73,8 +74,9 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
 
     for (m in seq(1, time - 1)) {
         # Calculate niche term (alpha) including carrying capacity
-        alpha <- alphaterm(disttraits, composition[,,m], A = A, B = B,
-                           di_thresh = di_thresh)
+        alpha <- alphaterm(
+            disttraits, composition[,,m], A = A, B = B, di_thresh = di_thresh
+        )
 
         alphalist[[m]] <- alpha
 
@@ -97,14 +99,14 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         r_tot[,, m] <- R_tot
 
         # Update composition
-        composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha, K)
+        composition[,, m + 1] <- bevHoltFct(R_tot, composition[,,m], alpha)
 
         # threshold number of individuals
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
                                         composition[,, m + 1])
 
         # Potential abundances, under the sole effect of environmental filtering
-        env_ab[,, m + 1] <- bevHoltFct(Rmatrix, env_ab[,,m], alpha = 0, K)
+        env_ab[,, m + 1] <- bevHoltFct(Rmatrix, env_ab[,,m], alpha = 0)
         env_ab[,, m + 1] <- ifelse(env_ab[,, m + 1] < 2, 0,
                                    env_ab[,, m + 1])
 
@@ -127,11 +129,15 @@ multigen <- function(traits, trait_weights, env, time, species, patches,
         composition[,, m + 1] <- ifelse(composition[,, m + 1] < 2, 0,
                                         composition[,, m + 1])
     }
-    return(list(compo   = composition,
-                r_tot   = r_tot,
-                env_ab  = env_ab,
-                rmatrix = Rmatrix,
-                rhlist  = rh_list,
-                ls_exponent = lim_sim_exponent,
-                hierar_exponent = hierar_exponent))
+    return(
+        list(
+            compo   = composition,
+            r_tot   = r_tot,
+            env_ab  = env_ab,
+            rmatrix = Rmatrix,
+            rhlist  = rh_list,
+            ls_exponent = lim_sim_exponent,
+            hierar_exponent = hierar_exponent
+        )
+    )
 }

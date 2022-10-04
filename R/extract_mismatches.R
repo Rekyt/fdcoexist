@@ -1,5 +1,8 @@
 #' Extract species mismatches
 #'
+#' @param x Simulation object from [multigen()]
+#' @param z Number of the species
+#'
 #' @export
 extract_mismatches <- function(x, z){
 	dat <- x[["env_all"]]

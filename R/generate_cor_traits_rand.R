@@ -6,6 +6,13 @@
 #' little white noise to it and scale it to a minimum of 0 if negative and
 #' maximum of 25 if maximum value is over 25.
 #'
+#' @param number_patches Number of patches to consider
+#' @param number_species Number of species to which generate the traits
+#' @param number_other (default = 9) Number of other traits to generate
+#' @param cor_coef (default = 0.7) Correlation coefficient between first and
+#'   other traits
+#' @param min_value absolute minimum trait value
+#'
 #' @export
 generate_cor_traits_rand <- function (number_patches, number_species,
                                       number_other = 9, cor_coef = 0.7,

@@ -1,5 +1,8 @@
 #' Extract different growth rates from fdcoexist simulation
 #'
+#' @param simul Simulation object from [multigen()]
+#' @param chosen_time numeric timestep at which to extract growth rates
+#'
 #' @importFrom stats coef lm rnorm runif
 #' @export
 extract_growth_rates = function(simul, chosen_time = NULL){

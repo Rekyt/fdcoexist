@@ -50,67 +50,88 @@ test_that("testing check_trait_weights()", {
 # compute_compet_distance() ----------------------------------------------------
 test_that("compute_compet_distance() works", {
 
-    simple_distance = matrix(c(0, 1, 1, 1, 0, 2, 1, 2, 0), ncol = 3,
-                             dimnames = list(paste0("sp", 1:3),
-                                             paste0("sp", 1:3)))
+    simple_distance = matrix(
+        c(0, 1, 1, 1, 0, 2, 1, 2, 0), ncol = 3,
+        dimnames = list(paste0("sp", 1:3),
+                        paste0("sp", 1:3))
+    )
 
     # Consider distances using a single trait with no exponent
-    expect_equal(compute_compet_distance(trait_weights, sp_traits),
-                 simple_distance/2)
+    expect_equal(
+        compute_compet_distance(trait_weights, sp_traits), simple_distance
+    )
 
     # With exponent
-    expect_equal(compute_compet_distance(trait_weights, sp_traits,
-                                         exponent = 2),
-                 (simple_distance^2)/4)
+    expect_equal(
+        compute_compet_distance(trait_weights, sp_traits, exponent = 2),
+        simple_distance^2
+    )
 
     # When no trait contribute to competition there is no competition
     expect_equal(
         compute_compet_distance(
-            data.frame(trait = paste0("trait", 1:2),
-                       growth_weight = c(1, 0),
-                       compet_weight = c(0, 0)),
+            data.frame(
+                trait = paste0("trait", 1:2),
+                growth_weight = c(1, 0),
+                compet_weight = c(0, 0)
+            ),
             sp_traits),
-        matrix(1, ncol = 3, nrow = 3,
-               dimnames = list(rownames(sp_traits), rownames(sp_traits))))
+        matrix(
+            1, ncol = 3, nrow = 3,
+            dimnames = list(rownames(sp_traits), rownames(sp_traits))
+        )
+    )
 
     ## Multitrait distance
     multi_trait_dist = as.matrix(dist(sp_traits))
 
     # Each trait weighs half of contribution
     multi_0.5 = as.matrix(dist(t(t(sp_traits) * c(sqrt(0.5), sqrt(0.5)))))
-    expect_equal(compute_compet_distance(
-        data.frame(trait = paste0("trait", 1:2),
-                   growth_weight = c(1, 0),
-                   compet_weight = c(0.5, 0.5)),
-        sp_traits),
-        multi_0.5/max(multi_0.5))
+    expect_equal(
+        compute_compet_distance(
+            data.frame(trait = paste0("trait", 1:2),
+                       growth_weight = c(1, 0),
+                       compet_weight = c(0.5, 0.5)),
+            sp_traits
+        ),
+        multi_0.5
+    )
 
     # Each trait 30%
     multi_0.3 = as.matrix(dist(t(t(sp_traits) * c(sqrt(0.3), sqrt(0.3)))))
-    expect_equal(compute_compet_distance(
-        data.frame(trait = paste0("trait", 1:2),
-                   growth_weight = c(1, 0),
-                   compet_weight = c(0.3, 0.3)),
-        sp_traits),
-        multi_0.3 / max(multi_0.3))
+    expect_equal(
+        compute_compet_distance(
+            data.frame(trait = paste0("trait", 1:2),
+                       growth_weight = c(1, 0),
+                       compet_weight = c(0.3, 0.3)),
+            sp_traits
+        ),
+        multi_0.3
+    )
 
     # First one 70% other one 30%
     multi_0.7 = as.matrix(dist(t(t(sp_traits) * c(sqrt(0.7), sqrt(0.3)))))
-    expect_equal(compute_compet_distance(
-        data.frame(trait = paste0("trait", 1:2),
-                   growth_weight = c(1, 0),
-                   compet_weight = c(0.7, 0.3)),
-        sp_traits),
-        multi_0.7 / max(multi_0.7))
+    expect_equal(
+        compute_compet_distance(
+            data.frame(trait = paste0("trait", 1:2),
+                       growth_weight = c(1, 0),
+                       compet_weight = c(0.7, 0.3)),
+            sp_traits
+        ),
+        multi_0.7
+    )
 
 
     # Same weights but 1
-    expect_equal(compute_compet_distance(
-        data.frame(trait = paste0("trait", 1:2),
-                   growth_weight = c(1, 0),
-                   compet_weight = c(1, 1)),
-        sp_traits),
-        multi_trait_dist/max(multi_trait_dist))
+    expect_equal(
+        compute_compet_distance(
+            data.frame(trait = paste0("trait", 1:2),
+                       growth_weight = c(1, 0),
+                       compet_weight = c(1, 1)),
+            sp_traits
+        ),
+        multi_trait_dist
+    )
 })
 
 # bevHoltFct() -----------------------------------------------------------------
@@ -202,11 +223,11 @@ test_that("env_curve() works as expected", {
                  fixed = TRUE)
 
     expect_silent(env_curve(sp_traits[3,, drop = FALSE], 1,
-                           data.frame(trait = paste0("trait", 1:2),
-                                      growth_weight = c(0.5, 0.5),
-                                      compet_weight = c(1, 1),
-                                      hierarchy_weight = c(1, 1)),
-                           1.25, 1))
+                            data.frame(trait = paste0("trait", 1:2),
+                                       growth_weight = c(0.5, 0.5),
+                                       compet_weight = c(1, 1),
+                                       hierarchy_weight = c(1, 1)),
+                            1.25, 1))
 })
 
 # alphaterm() ------------------------------------------------------------------

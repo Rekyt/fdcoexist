@@ -6,6 +6,11 @@
 \usage{
 extract_growth_rates(simul, chosen_time = NULL)
 }
+\arguments{
+\item{simul}{Simulation object from \code{\link[=multigen]{multigen()}}}
+
+\item{chosen_time}{numeric timestep at which to extract growth rates}
+}
 \description{
 Extract different growth rates from fdcoexist simulation
 }

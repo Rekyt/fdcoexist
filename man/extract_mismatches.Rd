@@ -6,6 +6,11 @@
 \usage{
 extract_mismatches(x, z)
 }
+\arguments{
+\item{x}{Simulation object from \code{\link[=multigen]{multigen()}}}
+
+\item{z}{Number of the species}
+}
 \description{
 Extract species mismatches
 }

@@ -80,7 +80,7 @@ sp_ab_gr <- function(simul, n_patches, sp, time){
         max_r_env_hierarch[, c("sp", "max_r_env_hierarch")], by = "sp"
     )
 
-    obs_ab <- dpyr::left_join(
+    obs_ab <- dplyr::left_join(
         obs_ab, max_obs_ab[, c("sp", "max_obs_ab")], by = "sp"
     )
 

@@ -16,6 +16,18 @@ generate_cor_traits_rand(
   min_value = 1
 )
 }
+\arguments{
+\item{number_patches}{Number of patches to consider}
+
+\item{number_species}{Number of species to which generate the traits}
+
+\item{number_other}{(default = 9) Number of other traits to generate}
+
+\item{cor_coef}{(default = 0.7) Correlation coefficient between first and
+other traits}
+
+\item{min_value}{absolute minimum trait value}
+}
 \description{
 Generate random traits
 Compared to generate_cor_traits() introduce a little of variability in first
