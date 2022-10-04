@@ -85,8 +85,12 @@ env_resp_plot <- ggplot(env_resp[[1]], aes(env, r_env)) +
         aes(color = as.factor(sp),
             label = ifelse(env == max_r_env, sp, NA)),
         size = 3) +
-    scale_color_brewer(palette = "Dark2") +
-    scale_fill_brewer(palette = "Dark2") +
+    scale_color_manual(
+        values = c(sp1 = "#1B9E77", sp2 = "#D95F02", sp3 = "#7570B3")
+    ) +
+    scale_fill_manual(
+        values = c(sp1 = "#1B9E77", sp2 = "#D95F02", sp3 = "#7570B3")
+    ) +
     labs(x = "Patch", y = expression("r"["env"]),
          title = "Environmental response curve of species") +
     theme_classic() +
@@ -97,11 +101,12 @@ env_resp_plot <- ggplot(env_resp[[1]], aes(env, r_env)) +
 # Species-trait table
 table_tra_theme <- ttheme_minimal(
     core = list(fg_params = list(cex = 1),
-                bg_params = list(fill = c("grey90", "grey89", "grey70"),
+                bg_params = list(fill = c("grey90", "grey90", "grey70"),
                                  col = NA)), # blues9[1:3]
     colhead = list(fg_params = list(cex = 2)),
-    rowhead = list(fg_params = list(cex = 2,
-                                    col = brewer.pal(n = 3, name = "Dark2"))))
+    rowhead = list(
+        fg_params = list(cex = 2, col = c("#7570B3", "#1B9E77", "#D95F02")))
+)
 
 sp_tra <- uncor_traits
 colnames(sp_tra) <- "Trait"
@@ -110,10 +115,14 @@ rownames(sp_tra) <- paste0("sp", seq(1:3))
 tra_tbl <- tableGrob(sp_tra, theme = table_tra_theme)
 
 # Species dynamics (no competition)
-plotk_3sp <- plot_patch(simul_list[[1]]$compo, patch = 5, time =  20,
-                        equilibrium = FALSE) +
-    scale_color_brewer(palette = "Dark2") +
-    scale_y_continuous(limits = c(0, 50)) +
+plotk_3sp <- plot_patch(
+    simul_list[[1]]$compo, patch = 5, time =  20, equilibrium = FALSE
+) +
+    scale_color_manual(
+        values = c(
+            species1 = "#1B9E77", species2 = "#D95F02", species3 = "#7570B3"
+        )
+    ) +
     guides(color = FALSE) +
     geom_label_repel(
         size = 5, show.legend = FALSE, force = 2, nudge_y = 0.5,
@@ -125,8 +134,11 @@ plotk_3sp <- plot_patch(simul_list[[1]]$compo, patch = 5, time =  20,
 # Species dynamics (lim.sim.)
 plotA_3sp <- plot_patch(simul_list[[2]]$compo, patch = 5, time =  20,
                         equilibrium = FALSE) +
-    scale_color_brewer(palette = "Dark2") +
-    scale_y_continuous(limits = c(0, 50)) +
+    scale_color_manual(
+        values = c(
+            species1 = "#1B9E77", species2 = "#D95F02", species3 = "#7570B3"
+        )
+    ) +
     guides(color = FALSE) +
     geom_label_repel(
         size = 5, show.legend = FALSE, force = 2, nudge_y = 0.5,
@@ -134,7 +146,6 @@ plotA_3sp <- plot_patch(simul_list[[2]]$compo, patch = 5, time =  20,
             label = ifelse(time == 20, gsub("species", "sp", as.character(sp)),
                            NA))) +
     labs(title = paste0("Patch 5; Limiting similarity")) +
-    # \n(A=", three_scenarios[[2]]$list_A, ")")) +
     theme(axis.title.y = element_blank(),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank())
@@ -142,16 +153,19 @@ plotA_3sp <- plot_patch(simul_list[[2]]$compo, patch = 5, time =  20,
 # Species dynamics (hierarchical competition)
 plotH_3sp <- plot_patch(simul_list[[3]]$compo, patch = 5, time =  20,
                         equilibrium = FALSE) +
-    scale_color_brewer(palette = "Dark2") +
-    scale_y_continuous(limits = c(0, 50)) +
+    scale_color_manual(
+        values = c(
+            species1 = "#1B9E77", species2 = "#D95F02", species3 = "#7570B3"
+        )
+    ) +
     guides(color = FALSE) +
     geom_label_repel(
         size = 5, show.legend = FALSE, force = 2, nudge_y = 0.5,
-        aes(color = as.factor(sp),
+        aes(
+            color = as.factor(sp),
             label = ifelse(time == 20, gsub("species", "sp", as.character(sp)),
                            NA))) +
     labs(title = paste0("Patch 5; Hierarchical competition")) +
-    # (H=", three_scenarios[[3]]$list_H, ")")) +
     theme(axis.title.y = element_blank(),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank())
@@ -159,11 +173,19 @@ plotH_3sp <- plot_patch(simul_list[[3]]$compo, patch = 5, time =  20,
 ## Combined plot --------------------------------------------------------------
 # All plots together
 paper_figure3spexample <-
-    plot_grid(plot_grid(grid.arrange(tra_tbl, env_resp_plot, nrow = 1,
-                                     as.table = TRUE, widths = c(0.5, 1))),
-              plot_grid(plotk_3sp, plotA_3sp, plotH_3sp, nrow = 1,
-                        rel_widths = c(1, 0.9, 0.9)),
-              labels = c("a)", "b)"), nrow = 2)
+    plot_grid(
+        plot_grid(
+            grid.arrange(
+                tra_tbl, env_resp_plot, nrow = 1, as.table = TRUE,
+                widths = c(0.5, 1))
+            ),
+        plot_grid(
+            plotk_3sp, plotA_3sp, plotH_3sp, nrow = 1,
+            rel_widths = c(1, 0.9, 0.9)
+        ),
+        labels = c("a)", "b)"), nrow = 2
+    )
+
 paper_figure3spexample
 
 # Saving figure
