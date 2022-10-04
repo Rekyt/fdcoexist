@@ -66,7 +66,7 @@ for (i in trait_comb[-1]) {
 
 # Parameter values - reduced for speed
 list_k <- c(2)
-list_A <- c(0, 1e-2)
+list_A <- c(0, 1e-4)
 list_H <- c(0, 5e-3)
 list_hierar_expo <- c(0.5, 1, 2)
 
@@ -393,29 +393,43 @@ hiercomp_png = png::readPNG("inst/figures/paper_figure2_hiercomptable.png",
 
 # Actual Main plot
 plot_species_mismatch = mismatch_extract %>%
-    mutate(comb = factor(comb, levels = c(scenarios[["limsim"]],
-                                          scenarios[["hier"]]))) %>%
-    ggplot(aes(mismatch_value, Species, color = mismatch_name,
-               shape = mismatch_name)) +
-    geom_segment(aes(x = min_mismatch, xend = max_mismatch,
-                     yend = Species),
-                 color = "grey", size = 1/3) +
+    mutate(
+        comb = factor(
+            comb, levels = c(scenarios[["limsim"]], scenarios[["hier"]])
+            )
+    ) %>%
+    ggplot(
+        aes(mismatch_value, Species, color = mismatch_name,
+            shape = mismatch_name)
+    ) +
+    geom_segment(
+        aes(x = min_mismatch, xend = max_mismatch, yend = Species),
+        color = "grey", linewidth = 1/3
+    ) +
     geom_vline(xintercept = 0, linetype = 1, size = 1/2, color = "black") +
     geom_point(size = 1.5) +
-    facet_wrap(vars(comb), ncol = 2, labeller = labeller(comb = legend_comb)) +
-    scale_y_continuous(limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)) +
-    scale_color_discrete(labels = c(
-        MisAbPatchP = "Abundance",
-        MisavgGRPatchP = "Average Growth Rate",
-        MisinstRPatchP = "Intrinsic Growth Rate",
-        MismaxGRPatchP = "Maximum Growth Rate"
-    ), guide = guide_legend(nrow = 2)) +
-    scale_shape_discrete(labels = c(
-        MisAbPatchP = "Abundance",
-        MisavgGRPatchP = "Average Growth Rate",
-        MisinstRPatchP = "Intrinsic Growth Rate",
-        MismaxGRPatchP = "Maximum Growth Rate"
-    ), guide = guide_legend(nrow = 2)) +
+    facet_wrap(
+        vars(comb), ncol = 2, labeller = labeller(comb = legend_comb)
+    ) +
+    scale_y_continuous(
+        limits = c(1, 50), breaks = c(1, c(1,2,3,4,5)*10)
+    ) +
+    scale_color_discrete(
+        labels = c(
+            MisAbPatchP = "Abundance",
+            MisavgGRPatchP = "Average Growth Rate",
+            MisinstRPatchP = "Intrinsic Growth Rate",
+            MismaxGRPatchP = "Maximum Growth Rate"
+        ), guide = guide_legend(nrow = 2)
+    ) +
+    scale_shape_discrete(
+        labels = c(
+            MisAbPatchP = "Abundance",
+            MisavgGRPatchP = "Average Growth Rate",
+            MisinstRPatchP = "Intrinsic Growth Rate",
+            MismaxGRPatchP = "Maximum Growth Rate"
+        ), guide = guide_legend(nrow = 2)
+    ) +
     labs(x     = "Patch Mismatch",
          shape = "Performance\nMeasure",
          color = "Performance\nMeasure") +
@@ -430,7 +444,7 @@ plot_species_mismatch = mismatch_extract %>%
 paper_figure2 = plot_species_mismatch +
     patchwork::inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7,
                              align_to = "panel") +
-    patchwork::inset_element(hiercomp_png, 0.75, 0.5, 0.85, 0.7,
+    patchwork::inset_element(hiercomp_png, 0.5, 0.5, 0.6, 0.7,
                              align_to = "panel") +
     theme_void()
 
