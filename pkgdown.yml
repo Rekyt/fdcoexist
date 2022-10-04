@@ -3,7 +3,7 @@ pkgdown: 2.0.6
 pkgdown_sha: ~
 articles:
   equation_only: equation_only.html
-last_built: 2022-09-21T15:13Z
+last_built: 2022-10-04T15:54Z
 urls:
   reference: https://rekyt.github.io/fdcoexist/reference
   article: https://rekyt.github.io/fdcoexist/articles
