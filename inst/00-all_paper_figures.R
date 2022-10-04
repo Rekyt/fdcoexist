@@ -442,9 +442,9 @@ plot_species_mismatch = mismatch_extract %>%
           legend.position = "top")
 
 paper_figure2 = plot_species_mismatch +
-    patchwork::inset_element(limsim_png,   0.15, 0.5, 0.25,  0.7,
+    patchwork::inset_element(limsim_png,   0.15, 0.2, 0.25,  0.4,
                              align_to = "panel") +
-    patchwork::inset_element(hiercomp_png, 0.5, 0.5, 0.6, 0.7,
+    patchwork::inset_element(hiercomp_png, 0.5, 0.2, 0.6, 0.4,
                              align_to = "panel") +
     theme_void()
 
@@ -611,10 +611,14 @@ saveRDS(var_growth_cwm, "inst/var_growth_cwm.Rds")
 
 plot_cwm_cwv_growth = var_growth_cwm %>%
     tidyr::gather("cwm_name", "cwm_value", cwm, cwv) %>%
-    ggplot(aes(env, cwm_value, color = as.factor(growth_weight))) +
+    ggplot(
+        aes(env, cwm_value, color = as.factor(growth_weight))
+    ) +
     # 1:1 line only on CWM facet
-    geom_abline(data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
-                aes(slope = slope, intercept = 0), linetype = 2) +
+    geom_abline(
+        data = data.frame(cwm_name = "cwm", slope = 1, intercept = 0),
+                aes(slope = slope, intercept = 0), linetype = 2
+    ) +
     # Rest of the geoms
     stat_summary(geom = "smooth") +
     facet_wrap(
