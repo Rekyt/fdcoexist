@@ -25,11 +25,11 @@ with $N_{t+1, i, x}$ the abundance of species $i$ in patch $x$ at time $t + 1$, 
 $$
 \begin{aligned}
 \alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}\\
-R_{i, x} = k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times l^2}\right)
+R_{i, x} = k \times \exp\left(- \frac{(t_i - t_{opt(x)})^2}{2\times l^2}\right)
 \end{aligned}
 $$
 
-with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $e_x$ the environmental value of patch $x$ and $l^2$ the width of the environmental filter across all patches.
+with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $t_opt(x)$ the environmental value of patch $x$ and $l^2$ the width of the environmental filter across all patches.
 
 
 If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
@@ -60,27 +60,28 @@ with $T$ the number of traits, $t_{i, c}$ trait $c$ of species $i$ and $t_{j, c}
 
 ### Variable contribution of traits to limiting similarity
 
-Different traits $t$ can contribute to limiting similarity in different
-proportions $w_c$ (we have $\sum_{c = 1}^{T} w_c = 1$). If want to take the contribution of traits to competition we have to modify the dissimilarity computation by weighting them by a factor $\sqrt{w_c}$, as follow:
+Different traits $r$ can contribute to limiting similarity in different
+proportions $a_r$ (we have $\sum_{r = 1}^{T} a_r = 1$). If want to take the contribution of traits to competition we have to modify the dissimilarity computation by weighting them by a factor $\sqrt{a_r}$, as follow:
 
 $$
 \begin{aligned}
-\delta_{ij} = \sqrt{\sum_{c = 1}^{T} \left[ \sqrt{w_c} (t_{i, c} - t_{j, c})\right]^2}\\
-\delta_{ij} = \sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2},
+\delta_{ij} = \sqrt{\sum_{r = 1}^{T} \left[ \sqrt{a_r} (t_{i, r} - t_{j, r})\right]^2}\\
+\delta_{ij} = \sqrt{\sum_{r = 1}^{T} a_r \times (t_{i, r} - t_{j, r})^2},
 \end{aligned}
 $$
 
-with $w_c$ the contribution of trait $c$ in limiting similarity and we have $\sum_{c = 1}^{T_c} w_c = 1$.
+with $a_r$ the contribution of trait $r$ in limiting similarity
+and we have $\sum_{r = 1}^{T} a_r = 1$.
 
 
 ### Considering non-linear of traits on limiting similarity
 
-In order to consider that the effect of limiting similarity is non-linear we use an exponent on distances:
+In order to consider that the effect of limiting similarity is non-linear we use an exponent on distances $d$:
 $$
 \begin{aligned}
 {\delta_{ij}}' &= {\delta_{ij}}^2\\
-               &= \left(\sqrt{\sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2}\right)^2 \\
-               &= \sum_{c = 1}^{T} w_c \times (t_{i, c} - t_{j, c})^2
+               &= \left(\sqrt{\sum_{r = 1}^{T} a_r \times (t_{i, r} - t_{j, r})^2}\right)^2 \\
+               &= \sum_{r = 1}^{T} a_r \times (t_{i, r} - t_{j, r})^2
 \end{aligned}
 $$
 
@@ -140,12 +141,24 @@ $$
 
 ## Adding Hierarchical Competition
 
-### Basic Hierarchical Competition
-
-We want hierarchical competition to depends on the species present in the community and the distance of species such that smallest species get their growth reduced by tallest species in proportion of their distances and abundances. So the competition term of a species $i$ in patch $x$ at time $t$ can be:
+We consider hierarchical competition by considering its influence on
+growth rate. To do so, we break down the growth rate term $R_{ix}$ into
+two components:
 
 $$
-H_{t,i,x} = H \sum_{
+R_{ix} = R_{i, x, env} + R_{i, x, hierarch}
+$$
+with $R_ix$ the total growth rate as numerator of the global equation;
+$R_{i, x, env}$ the growth rate based on the environmental fitting of the species
+as developed above; and $R_{i, x, hierarch}$ the effect of hierarchical
+competition on growth rate that we develop beneath.
+
+### Basic Hierarchical Competition
+
+We want hierarchical competition to depends on the species present in the community and the distance of species such that smallest species get their growth reduced by tallest species in proportion of their distances and abundances. So the hierarchical competition term $R_{i, x, hierarch}$ of a species $i$ in patch $x$ at time $t$ can be:
+
+$$
+R_{t, i, x, hierarch} = H \sum_{
                 \substack{j = 1\\
                           t_j \ge t_i}}^S
            (t_j - t_i) N_{t,j,x}
