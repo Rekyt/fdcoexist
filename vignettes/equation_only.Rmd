@@ -25,18 +25,19 @@ with $N_{t+1, i, x}$ the abundance of species $i$ in patch $x$ at time $t + 1$, 
 $$
 \begin{aligned}
 \alpha_i = \sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}\\
-R_{i, x} = k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times {l_x}^2}\right)
+R_{i, x} = k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times l^2}\right)
 \end{aligned}
 $$
 
-with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $e_x$ the environmental value of patch $x$ and ${l_x}^2$ the width of the environmental filter in patch $x$.
+with $\sigma_{ij}$ the functional similarity between species $i$ and $j$; we see that $\alpha_i$ gets bigger as species $i$ and $j$ are more similar and as species $j$ is more abundant. And with $t_i$ the trait of species $i$, $e_x$ the environmental value of patch $x$ and $l^2$ the width of the environmental filter across all patches.
 
 
 If we replace $\alpha_i$ and $R_{i, x}$ in the first equation it gives:
 
 $$
 N_{t+1, i, x} = \frac{
-k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right] \times N_{t, i, x}}{
+    k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{
+        2\times l^2 }\right] \times N_{t, i, x}}{
 1 + A \times \displaystyle\sum_{j = 1, j \neq i}^{S} N_{t, j, x} \times \sigma_{ij}
 }
 $$
@@ -103,7 +104,7 @@ Thus the equation becomes:
 
 $$
 N_{t+1, i, x} = \frac{
-k \times \exp\left(- \displaystyle\frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) \times N_{t, i, x}}{
+k \times \exp\left(- \displaystyle\frac{(t_i - e_x)^2}{2\times l^2}\right) \times N_{t, i, x}}{
 1 + A \displaystyle\sum_{j = 1,~j \neq i}^{S} N_{t, j, x} \times \sigma_{ij} +
 B \times N_{t,i,x}
 }
@@ -114,10 +115,10 @@ with $B$ the coefficient scaling intra-specific competition.
 
 ## Variable contribution of traits to environmental filtering
 
-Because several traits participate to the growth term depending on their contribution we can rewrite the growth term as:
+Because several traits contribute to the growth term depending on their contribution we can rewrite the growth term as:
 
 $$
-R_{i, x} = \sum_{g = 1}^{T} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times {l_x}^2} \right)
+R_{i, x} = \sum_{g = 1}^{T} w_g \times k \times \exp\left(- \frac{(t_{i, g} - e_x)^2}{2\times l^2} \right)
 $$
 
 with $g$ the trait number, $0 \leq w_g \leq 1$ the contribution of this trait to growth (and $\sum_{g = 1}^{T} w_g = 1$), $t_{i, g}$ the trait number $g$ of species $i$.
@@ -133,7 +134,7 @@ with $w_g$ the contribution of trait to growth such that $\sum w_g = 1$, $t_g$ t
 And thus $R_{i, x}$ becomes:
 
 $$
-R_{i, x} = k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
+R_{i, x} = k \times \exp\left[- \frac{\displaystyle\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times l^2}\right]
 $$
 
 
@@ -224,7 +225,7 @@ $$
 \begin{aligned}
 N_{t+1, i, x} &= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N_{t, i, x} + D_{t, i, x}\\
               &= \frac{
-               \displaystyle k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times {l_x}^2}\right) - H \sum_{\substack{j = 1\\ t_j > t_i}}^S N_{t, j, x} \sqrt{t_j - t_i}
+               \displaystyle k \times \exp\left(- \frac{(t_i - e_x)^2}{2\times l^2}\right) - H \sum_{\substack{j = 1\\ t_j > t_i}}^S N_{t, j, x} \sqrt{t_j - t_i}
                }{
                \displaystyle 1 +
                A \left( \sum_{j = 1, j \neq i}^{S} N_{t, j, x} (t_i - t_j)^2\right) +
@@ -242,7 +243,7 @@ $$
 \begin{aligned}
 N_{t+1, i, x} &= \frac{R_{i,x} + H_{t,i,x}}{1 + A_{t, i, x} + B_{t, i, x}} N_{t, i, x} + D_{t, i, x}\\
               &= \frac{
-               \displaystyle k \times \exp\left[- \frac{\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times {l_x}^2}\right]
+               \displaystyle k \times \exp\left[- \frac{\left(\sum_{g = 1}^T w_g t_g - e_x\right)^2}{2\times l^2}\right]
                - H \sum_{h = 1}^T \sum_{\substack{j = 1\\ t_{j, h} \ge t_{i, h}}}^S w_h \, N_{tjx} \,\sqrt{t_{j, h} - t_{i, h}}
                }{
                \displaystyle 1 +
