@@ -11,8 +11,6 @@ test_that("plot_patch() works", {
         lapply(seq(1, 0.25, length.out = 5), function(x) x * N0)
     )
 
-    expect_silent(plot_patch(given_compo, "p1", 5))
-
     p1_plot = plot_patch(given_compo, "p1", 5)
 
     expect_is(p1_plot, "ggplot")

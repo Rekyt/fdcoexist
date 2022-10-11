@@ -3,7 +3,7 @@ title: "fdcoexist equation only"
 author:
     - Pierre Denelle, Matthias Grenié, Cyrille Violle, François Munoz and Caroline M. Tucker
 date: "`r format(Sys.time(), '%d %B %Y')`"
-output: rmarkdown::pdf_document
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Full equation of the model}
   %\VignetteEngine{knitr::rmarkdown}
